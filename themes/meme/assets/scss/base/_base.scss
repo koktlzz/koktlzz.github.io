@@ -33,7 +33,7 @@ body {
 
 .main {
     padding: 2em 1em 15em;
-    display: block;
+    display: flex;
 }
 
 @if ($headerLayoutFlex) {
@@ -43,8 +43,9 @@ body {
 }
 
 .main-inner {
-    margin: 0 auto;
+    // margin:0% auto;
     display: block;
+    margin-left: 21.375%;
 }
 
 .icon {
@@ -125,4 +126,15 @@ a {
 .edit-page svg {
     margin-right: 0.5rem;
     margin-bottom: 0.25rem;
+}
+
+.toc {
+    order: 2;
+    // padding-right: 0%;
+    margin-left: 10%;
+    font-size: 16px;
+    padding-top: 1.5%;
+    h2{
+        font-size: 18px;
+    }
 }
