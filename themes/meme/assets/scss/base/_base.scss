@@ -64,6 +64,8 @@ h3,
 h4,
 h5,
 h6 {
+    font-family: "SF Pro Text", "Helvetica Neue", "Helvetica", "Arial", "PingFang SC", "Hiragino Sans GB", "Heiti SC",
+        "Microsoft YaHei", "WenQuanYi Micro Hei", sans-serif;
     margin: 1.618em 0 1em;
     color: var(--color-contrast-higher);
     a {
@@ -129,12 +131,27 @@ a {
 }
 
 .toc {
-    order: 2;
-    // padding-right: 0%;
+    padding-right: 0%;
     margin-left: 10%;
+    width: 100%;
     font-size: 16px;
-    padding-top: 1.5%;
-    h2{
+    // padding-top: 0.5%;
+
+    h2 {
         font-size: 18px;
+    }
+    ol {
+        padding-left: 20%;
+    }
+}
+
+@supports ((position: -webkit-sticky) or (position: sticky)) {
+    .toc {
+        position: -webkit-sticky;
+        position: sticky;
+        width: 100%;
+        top: 4rem;
+        height: calc(100vh - 4rem);
+        overflow-y: auto;
     }
 }
