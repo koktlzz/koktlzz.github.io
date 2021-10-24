@@ -31,7 +31,7 @@ enableEmoji = true
 footnoteReturnLinkContents = "↩"
 
 # Enable `.GitInfo` object for each page?
-enableGitInfo = false
+enableGitInfo = true
 
 # Enable generation of `robots.txt` file?
 enableRobotsTXT = true
@@ -1002,7 +1002,7 @@ uglyURLs = false
     ######################################
     ## Font Size (unit: px)
 
-    fontSize = 18
+    fontSize = 22
 
     ######################################
     ## Tab Size
@@ -1115,14 +1115,14 @@ uglyURLs = false
     ######################################
     # Post Gitinfo
 
-    enablePostGitInfo = false
+    enablePostGitInfo = true
 
     displayPostGitInfo = false
     # Note: *global settings*
     #       `gitinfo` in post’s Front Matter
     #       has a higher priority than here
 
-    repoURL = ""
+    repoURL = "https://github.com/koktlzz/koktlzz.github.io"
     repoEditURL = ""
 
     gitIcon = "code-branch"

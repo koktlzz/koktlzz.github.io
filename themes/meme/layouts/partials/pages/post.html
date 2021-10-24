@@ -62,7 +62,9 @@
 
         {{ partial "components/post-nav.html" . }}
 
-        {{ partial "components/comments.html" . }}
+        {{/*  {{ partial "components/comments.html" . }}  */}}
+
+        {{partial "components/edit-pages.html" .}}
 
         {{partial "components/utterances.html" .}}
 
