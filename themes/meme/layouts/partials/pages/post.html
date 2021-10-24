@@ -25,6 +25,8 @@
                 {{ end }}
             {{ end }}
 
+            {{ partial "components/post-tags.html" . }}
+
             {{ if .Params.meta | default .Site.Params.enablePostMeta }}
                 {{ partial "components/post-meta.html" (dict "$" . "isHome" false) }}
             {{ end }}
@@ -54,7 +56,7 @@
 
         {{ partial "components/related-posts.html" . }}
 
-        {{ partial "components/post-tags.html" . }}
+
 
         {{ partial "components/minimal-footer.html" . }}
 
