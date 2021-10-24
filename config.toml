@@ -835,14 +835,14 @@ uglyURLs = false
     ######################################
     # Table of Contents
 
-    enableTOC = false
+    enableTOC = true
     # Note: *global settings*
     #       `toc` in post’s Front Matter
     #       has a higher priority than here
 
     displayTOCTitle = true
 
-    displayTOCNum = true
+    displayTOCNum = false
     # Note: *global settings*
     #       `tocNum` in post’s Front Matter
     #       has a higher priority than here
