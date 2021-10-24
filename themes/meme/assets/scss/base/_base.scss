@@ -101,3 +101,28 @@ a {
 ::selection {
     background-color: alpha(var(--color-primary), 0.3);
 }
+
+.utterances {
+    margin-top: 30px;
+    margin-left: 0%;
+    max-width: 100%;
+}
+
+.utterances-frame {
+    padding-left: 0%;
+    padding-top: 30px;
+}
+
+.edit-page {
+    padding-top: 3rem;
+}
+
+.edit-page a {
+    color: var(--color-contrast-higher);
+    text-decoration: underline;
+}
+
+.edit-page svg {
+    margin-right: 0.5rem;
+    margin-bottom: 0.25rem;
+}

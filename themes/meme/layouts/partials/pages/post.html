@@ -42,6 +42,10 @@
 
             {{/*  {{ partial "components/post-copyright.html" . }}  */}}
 
+            {{partial "components/edit-pages.html" .}}
+
+            {{partial "components/utterances.html" .}}
+
         </article>
 
         {{ if and .Site.Params.enableGoogleAdUnits (eq hugo.Environment "production") -}}
@@ -50,13 +54,11 @@
 
         {{/*  {{ partial "components/post-updated-badge.html" . }}  */}}
 
-        {{ partial "components/post-gitinfo.html" . }}
+        {{/*  {{ partial "components/post-gitinfo.html" . }}  */}}
 
         {{/*  {{ partial "components/post-share.html" . }}  */}}
 
         {{ partial "components/related-posts.html" . }}
-
-
 
         {{ partial "components/minimal-footer.html" . }}
 
@@ -65,10 +67,6 @@
         {{ partial "components/post-nav.html" . }}
 
         {{/*  {{ partial "components/comments.html" . }}  */}}
-
-        {{partial "components/edit-pages.html" .}}
-
-        {{partial "components/utterances.html" .}}
 
     </div>
 </main>
