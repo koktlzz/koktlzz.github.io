@@ -4,7 +4,8 @@
     }
 }
 
-html, body {
+html,
+body {
     margin: 0;
     width: 100%;
     height: 100%;
@@ -56,12 +57,17 @@ svg {
     vertical-align: middle;
 }
 
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
     margin: 1.618em 0 1em;
     color: var(--color-contrast-higher);
     a {
         text-decoration: none !important;
-        color: var(--color-contrast-higher);
+        color: var(--color-primary);
     }
 }
 h1 {
@@ -84,7 +90,7 @@ h6 {
 }
 
 a {
-    color: var(--color-contrast-high);
+    color: var(--color-primary);
     text-decoration: none;
     transition: all $duration;
     &:hover {
