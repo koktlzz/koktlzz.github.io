@@ -104,11 +104,27 @@ blockquote {
 }
 
 .contents {
-    margin-top: 5em;
+    font-size: 16px;
+    h2 {
+        font-size: 18px;
+    }
     ol, ul {
         list-style: none;
+        padding-left: 5%;
     }
 }
+
+@supports ((position: -webkit-sticky) or (position: sticky)) {
+    .contents {
+        position: -webkit-sticky;
+        position: sticky;
+        width: 15vw;
+        top: 4rem;
+        height: calc(100vh - 4rem);
+        overflow-y: auto;
+    }
+}
+
 ol, ul {
     &.toc {
         padding: 0;
