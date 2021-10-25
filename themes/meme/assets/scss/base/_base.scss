@@ -116,7 +116,9 @@ a {
 }
 
 .edit-page {
-    padding-top: 3rem;
+    padding-top: 2rem;
+    padding-bottom: 2rem;
+    border-bottom: 1px solid var(--color-contrast-lower);
 }
 
 .edit-page a {
