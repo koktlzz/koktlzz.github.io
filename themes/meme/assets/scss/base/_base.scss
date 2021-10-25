@@ -33,7 +33,7 @@ body {
 
 .main {
     padding: 2em 1em 15em;
-    display: flex;
+    display: block;
 }
 
 @if ($headerLayoutFlex) {

@@ -4,6 +4,7 @@
 
 .post-title {
     text-align: center;
+    margin-top: 0%;
 }
 
 .post-subtitle {
@@ -20,7 +21,7 @@
 }
 
 .post-body {
-    margin-top: 5em !important;
+    margin-top: 0em !important;
     p a {
         color: var(--color-primary);
         text-decoration: none;
@@ -104,26 +105,29 @@ blockquote {
 }
 
 .contents {
-    font-size: 16px;
+    position: fixed;
+    font-size: 18px;
+    overflow-y: auto;
     h2 {
-        font-size: 18px;
+        font-size: 20px;
+        margin-top: 15%;
     }
     ol, ul {
         list-style: none;
-        padding-left: 5%;
+        padding-left: 10%;
     }
 }
 
-@supports ((position: -webkit-sticky) or (position: sticky)) {
-    .contents {
-        position: -webkit-sticky;
-        position: sticky;
-        width: 15vw;
-        top: 4rem;
-        height: calc(100vh - 4rem);
-        overflow-y: auto;
-    }
-}
+// @supports ((position: -webkit-sticky) or (position: sticky)) {
+//     .contents {
+//         position: -webkit-sticky;
+//         position: sticky;
+//         width: 15vw;
+//         top: 4rem;
+//         height: calc(100vh - 4rem);
+//         overflow-y: auto;
+//     }
+// }
 
 ol, ul {
     &.toc {

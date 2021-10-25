@@ -1305,7 +1305,7 @@ uglyURLs = false
 
     enableHighlight = true
 
-    enableOverflowY = true
+    enableOverflowY = false
     maxHeight = 20
     # Unit: em
 
