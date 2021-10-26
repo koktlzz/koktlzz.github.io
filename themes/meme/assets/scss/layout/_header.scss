@@ -4,7 +4,7 @@
 
 @if ($headerLayoutFlex) {
     .header {
-        // position: fixed;
+        position: fixed;
         width: 100%;
     }
     .header-wrapper {
