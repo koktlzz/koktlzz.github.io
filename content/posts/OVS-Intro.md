@@ -2,7 +2,7 @@
 title: "初探 Open vSwitch"
 date: 2020-05-13T09:19:42+01:00
 draft: false
-tags: ["Kubernetes", "Network", "CNI", "Open vSwitch"]
+tags: ["Kubernetes", "Openshift","Network", "CNI", "Open vSwitch"]
 ---
 
 ## 前言
