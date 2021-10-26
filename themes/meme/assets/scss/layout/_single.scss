@@ -119,6 +119,12 @@ blockquote {
     }
 }
 
+@media screen and (max-width: $postWidth) {
+    .contents{
+        display: none;
+    }
+}
+
 // @supports ((position: -webkit-sticky) or (position: sticky)) {
 //     .contents {
 //         position: -webkit-sticky;
