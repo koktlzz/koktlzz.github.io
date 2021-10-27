@@ -7,13 +7,13 @@ tags: ["Openshift","Network", "CNI", "Open vSwitch"]
 
 ## 前言
 
-Openshift SDN 是由 Overlay 网络 OVS（Open vSwitch）建立的，其使用的插件如下：
+在 [上一篇博客](/posts/kubernetes-sdn/) 中，我们简单地介绍了 Kubernetes 中的两种 SDN 网络模型：Underlay 和 Overlay。而 Openshift 中的 SDN 则是由 Overlay 网络 OVS（Open vSwitch）实现的，其使用的插件如下：
 
 - ovs-subnet: 默认插件，提供一个扁平化的 Pod 网络以实现 Pod 与其他任何 Pod 或 Service 的通信；
 - ovs-multitenant：实现多租户管理，隔离不同 Project 之间的网络通信。每个 Project 都有一个 NETID（即 VxLAN 中的 VNID），可以使用 **oc get netnamespaces** 命令查看；
 - ovs-networkpolicy：基于 Kubernetes 中的 NetworkPolicy 资源实现网络策略管理。
 
-在 Openshift 集群中的节点上，有以下几个网络设备：
+OVS 在每个 Openshift 节点上都创建了如下网络接口：
 
 - `br0`：OpenShift 创建和管理的 OVS 网桥，它会使用 OpenFlow 流表来实现数据包的转发和隔离；
 - `vxlan0`：VxLAN 隧道端点，即 VTEP（Virtual Tunnel End Point），用于集群内部 Pod 之间的通信；
@@ -75,7 +75,7 @@ kubernetes v1.6.1+5115d708d7
 
 ![202205132046](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/202205132046.jpeg)
 
-数据包首先通过`veth-pair`送往 OVS 网桥`br0`，随后便进入了`br0`上的 OpenFlow 流表。我们可以用 **ovs-ofctl -O OpenFlow13 dump-flows br0** 命令查看流表中的规则，同时为了让输出结果更加简洁，略去 cookie 和 duration 的信息：
+数据包首先通过`veth-pair`送往 OVS 网桥`br0`，随后便进入了`br0`上的 [OpenFlow](https://en.wikipedia.org/wiki/OpenFlow) 流表。我们可以用 **ovs-ofctl -O OpenFlow13 dump-flows br0** 命令查看流表中的规则，同时为了让输出结果更加简洁，略去 cookie 和 duration 的信息：
 
 - `table=0, n_packets=62751550874, n_bytes=25344802160312, priority=200,ip,in_port=1,nw_src=10.128.0.0/14,nw_dst=10.130.8.0/23 actions=move:NXM_NX_TUN_ID[0..31]->NXM_NX_REG0[],goto_table:10`
 - `table=0, n_packets=1081527047094, n_bytes=296066911370148, priority=200,ip,in_port=2 actions=goto_table:30`
@@ -262,7 +262,13 @@ Chain OPENSHIFT-MASQUERADE (1 references)
     inet 10.130.8.1/23 scope global tun0
 ```
 
-本例中 Service 的后端 Pod 均在 Pod1 所在的节点外，因此数据包第二次进入 OpenFlow 流表时匹配的规则与 Pod to Remote Pod 一致。其传递流程如下图所示：
+本例中 Service 的后端 Pod 均在 Pod1 所在的节点外，因此数据包第二次进入 OpenFlow 流表时匹配的规则基本与 Pod to Remote Pod 一致：
+
+- `table=0, n_packets=1081527047094, n_bytes=296066911370148, priority=200,ip,in_port=2 actions=goto_table:30`
+- `table=30, n_packets=59672345347, n_bytes=41990349575805, priority=100,ip,nw_dst=10.128.0.0/14 actions=goto_table:90`
+- `table=90, n_packets=15802525677, n_bytes=6091612778189, priority=100,ip,nw_dst=10.131.8.0/23 actions=move:NXM_NX_REG0[]->NXM_NX_TUN_ID[0..31],set_field:10.122.28.8->tun_dst,output:1`
+
+其传递流程如下图所示：
 
 ![202205132044](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/202205132044.jpeg)
 
@@ -271,7 +277,7 @@ Pod2 返回的数据包在到达 Node1 后将被`vxlan0`解封装，然后根据
 - `table=0, n_packets=1084362760247, n_bytes=297224518823222, priority=200,ip,in_port=2 actions=goto_table:30`
 - `table=30, n_packets=20784385211, n_bytes=4742514750371, priority=300,ip,nw_dst=10.130.8.1 actions=output:2`
 
-数据包从 2 号端口`tun0`流出后进入节点的 iptables 规则，随后将触发 iptables 的 [Connection Tracking](https://superuser.com/questions/1269859/linux-netfilter-how-does-connection-tracking-track-connections-changed-by-nat) 操作：根据 **/proc/net/nf_conntrack** 文件中的记录进行“DeNAT”。返回数据包的源/目的地址从 Pod2 IP 10.131.8.206 和 tun0 IP 10.130.8.1，变回 Service 的 ClusterIP 172.30.107.57 和 Pod1 IP 10.130.9.154。
+数据包从 2 号端口`tun0`流出后进入节点的 iptables 规则，随后将触发 iptables 的 [Connection Tracking](https://superuser.com/questions/1269859/linux-netfilter-how-does-connection-tracking-track-connections-changed-by-nat) 操作：根据 /proc/net/nf_conntrack 文件中的记录进行“DeNAT”。返回数据包的源/目的地址从 Pod2 IP 10.131.8.206 和 tun0 IP 10.130.8.1，变回 Service 的 ClusterIP 172.30.107.57 和 Pod1 IP 10.130.9.154。
 
 ```bash
 [root@node1 ~]# cat /proc/net/nf_conntrack | grep -E "src=10.130.9.154.*dst=172.30.107.57.*dport=8080.*src=10.131.8.206"
@@ -301,14 +307,28 @@ Chain OPENSHIFT-MASQUERADE (1 references)
  322M   19G MASQUERADE  all  --  *      *       10.128.0.0/14        0.0.0.0/0            /* masquerade pod-to-service and pod-to-external traffic */
 ```
 
-访问集群外部显然需要通过节点的默认网关，因此数据包将从节点网卡`eth0`送出。而在`POSTROUTING`链中，数据包的源地址由 Pod IP 转换为了`eth0`的 IP 10.122.28.7。完整流程如下图所示：
+访问集群外部显然需要通过节点的默认网关，因此数据包将从节点网卡`eth0`送出。而在`POSTROUTING`链中，数据包的源地址由 Pod IP 转换为了`eth0`的 IP 10.122.28.7。完整流程如下图所示（图中的 Router 指的是路由器而非 Openshift 中的概念）：
 
 ![202205132045](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/202205132045.jpeg)
 
+## Future Work
+
+虽然本文已对 Openshift 中的 SDN 网络模型进行了较为深入地讨论，但仍有几个 Topic 值得我们继续探索：
+
+- 本文并未涉及 External to Pod 的场景，它是如何实现的？我们都知道 Openshift 是通过 Router（HAProxy）来暴露集群内部服务的，那么数据包在传输过程中的 NAT 操作是怎样进行的？
+- Openshift 4.X 版本的网络模型和本文介绍的有何区别？
+- 实际上除了本文提到的几种网络接口外，Openshift 节点上还存在着`ovs-system`和`vxlan-`。它们的作用是什么？
+
 ## 参考文献
+
+[OpenFlow - Wikipedia](https://en.wikipedia.org/wiki/OpenFlow)
 
 [OVS 在云项目中的使用](https://medoc.readthedocs.io/en/latest/docs/ovs/sharing/cloud_usage.html)
 
 [OpenShift SDN - OpenShift Container Platform 3.11](https://docs.openshift.com/container-platform/3.11/architecture/networking/sdn.html)
 
 [理解 OpenShift（3）：网络之 SDN](https://www.cnblogs.com/sammyliu/p/10064450.html)
+
+[[译] 深入理解 iptables 和 netfilter 架构](https://arthurchiao.art/blog/deep-dive-into-iptables-and-netfilter-arch-zh/)
+
+[Linux Netfilter: How does connection tracking track connections changed by NAT?](https://superuser.com/questions/1269859/linux-netfilter-how-does-connection-tracking-track-connections-changed-by-nat)
