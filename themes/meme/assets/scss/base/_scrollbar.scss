@@ -6,8 +6,8 @@
   background-color: var(--color-bg);
 }
 ::-webkit-scrollbar-thumb {
-  // background-color: var(--color-contrast-low);
-  background-color: var(--color-bg);
+  background-color: var(--color-contrast-low);
+  // background-color: var(--color-bg);
   &:hover {
       background-color: alpha(var(--color-primary), 0.5);
   }
