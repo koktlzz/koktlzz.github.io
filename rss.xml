@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>Inspire Hub</title><link>/</link><description>MemE is a powerful and highly customizable GoHugo theme for personal blogs.</description><generator>Hugo 0.88.1 https://gohugo.io/</generator><language>en</language><managingEditor>koktlgwr@gmail.com (koktlzz)</managingEditor><webMaster>koktlgwr@gmail.com (koktlzz)</webMaster><copyright>[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.en)</copyright><lastBuildDate>Wed, 27 Oct 2021 08:54:54 +0000</lastBuildDate><atom:link rel="self" type="application/rss+xml" href="/rss.xml"/><item><title>通过安装 CoreOS 系统了解 Linux 启动流程</title><link>/posts/linux-boot-intro/</link><guid isPermaLink="true">/posts/linux-boot-intro/</guid><pubDate>Wed, 20 Oct 2021 00:25:25 +0800</pubDate><author>koktlgwr@gmail.com (koktlzz)</author><copyright>[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.en)</copyright><description>&lt;h2 id="前言">前言&lt;/h2>
+<?xml version="1.0" encoding="utf-8"?><rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>Inspire Hub</title><link>/</link><description>MemE is a powerful and highly customizable GoHugo theme for personal blogs.</description><generator>Hugo 0.88.1 https://gohugo.io/</generator><language>en</language><managingEditor>koktlgwr@gmail.com (koktlzz)</managingEditor><webMaster>koktlgwr@gmail.com (koktlzz)</webMaster><copyright>[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.en)</copyright><lastBuildDate>Wed, 27 Oct 2021 14:45:07 +0000</lastBuildDate><atom:link rel="self" type="application/rss+xml" href="/rss.xml"/><item><title>通过安装 CoreOS 系统了解 Linux 启动流程</title><link>/posts/linux-boot-intro/</link><guid isPermaLink="true">/posts/linux-boot-intro/</guid><pubDate>Wed, 20 Oct 2021 00:25:25 +0800</pubDate><author>koktlgwr@gmail.com (koktlzz)</author><copyright>[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.en)</copyright><description>&lt;h2 id="前言">前言&lt;/h2>
 &lt;p>OpenShift 4.X 版本要求安装在操作系统为 CoreOS 的机器上，因此 &lt;a href="https://docs.openshift.com/container-platform/4.6/installing/installing_bare_metal/installing-restricted-networks-bare-metal.html#installation-user-infra-machines-pxe_installing-restricted-networks-bare-metal">官方文档&lt;/a> 给出了使用 PXE 或 IPXE 引导 CoreOS 系统的方法。我们可以参考其操作流程，将一台 CentOS 7.X 的机器改写为 CoreOS 系统，步骤如下：&lt;/p>
 &lt;ol>
 &lt;li>
@@ -397,13 +397,13 @@ graphical.target
 &lt;p>&lt;a href="https://opensource.com/article/17/2/linux-boot-and-startup">An Introduction To the Linux Boot and Startup Processes&lt;/a>&lt;/p>
 &lt;p>&lt;a href="https://www.gnu.org/software/grub/manual/grub/grub.html">GNU GRUB Manual 2.06&lt;/a>&lt;/p>
 &lt;p>&lt;a href="https://man7.org/linux/man-pages/man7/bootup.7.html">Bootup(7) - Linux manual page&lt;/a>&lt;/p></description><category domain="/tags/os/">OS</category><category domain="/tags/linux/">Linux</category><category domain="/tags/coreos/">CoreOs</category></item><item><title>Openshift 中的 SDN 网络模型</title><link>/posts/openshift-sdn/</link><guid isPermaLink="true">/posts/openshift-sdn/</guid><pubDate>Wed, 13 May 2020 09:19:42 +0100</pubDate><author>koktlgwr@gmail.com (koktlzz)</author><copyright>[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.en)</copyright><description>&lt;h2 id="前言">前言&lt;/h2>
-&lt;p>Openshift SDN 是由 Overlay 网络 OVS（Open vSwitch）建立的，其使用的插件如下：&lt;/p>
+&lt;p>在 &lt;a href="/posts/kubernetes-sdn/">上一篇博客&lt;/a> 中，我们简单地介绍了 Kubernetes 中的两种 SDN 网络模型：Underlay 和 Overlay。而 Openshift 中的 SDN 则是由 Overlay 网络 OVS（Open vSwitch）实现的，其使用的插件如下：&lt;/p>
 &lt;ul>
 &lt;li>ovs-subnet: 默认插件，提供一个扁平化的 Pod 网络以实现 Pod 与其他任何 Pod 或 Service 的通信；&lt;/li>
 &lt;li>ovs-multitenant：实现多租户管理，隔离不同 Project 之间的网络通信。每个 Project 都有一个 NETID（即 VxLAN 中的 VNID），可以使用 &lt;strong>oc get netnamespaces&lt;/strong> 命令查看；&lt;/li>
 &lt;li>ovs-networkpolicy：基于 Kubernetes 中的 NetworkPolicy 资源实现网络策略管理。&lt;/li>
 &lt;/ul>
-&lt;p>在 Openshift 集群中的节点上，有以下几个网络设备：&lt;/p>
+&lt;p>OVS 在每个 Openshift 节点上都创建了如下网络接口：&lt;/p>
 &lt;ul>
 &lt;li>&lt;code>br0&lt;/code>：OpenShift 创建和管理的 OVS 网桥，它会使用 OpenFlow 流表来实现数据包的转发和隔离；&lt;/li>
 &lt;li>&lt;code>vxlan0&lt;/code>：VxLAN 隧道端点，即 VTEP（Virtual Tunnel End Point），用于集群内部 Pod 之间的通信；&lt;/li>
@@ -497,7 +497,7 @@ kubernetes v1.6.1+5115d708d7
 &lt;/div>&lt;p>另外，实验用集群并未开启 ovs-multitenant，即未进行多租户隔离。整个集群 Pod 网络是扁平化的，所有 Pod 的 VNID 都为默认值 0。&lt;/p>
 &lt;h2 id="pod-to-local-pod">Pod to Local Pod&lt;/h2>
 &lt;p>&lt;img src="https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/202205132046.jpeg" alt="202205132046">&lt;/p>
-&lt;p>数据包首先通过&lt;code>veth-pair&lt;/code>送往 OVS 网桥&lt;code>br0&lt;/code>，随后便进入了&lt;code>br0&lt;/code>上的 OpenFlow 流表。我们可以用 &lt;strong>ovs-ofctl -O OpenFlow13 dump-flows br0&lt;/strong> 命令查看流表中的规则，同时为了让输出结果更加简洁，略去 cookie 和 duration 的信息：&lt;/p>
+&lt;p>数据包首先通过&lt;code>veth-pair&lt;/code>送往 OVS 网桥&lt;code>br0&lt;/code>，随后便进入了&lt;code>br0&lt;/code>上的 &lt;a href="https://en.wikipedia.org/wiki/OpenFlow">OpenFlow&lt;/a> 流表。我们可以用 &lt;strong>ovs-ofctl -O OpenFlow13 dump-flows br0&lt;/strong> 命令查看流表中的规则，同时为了让输出结果更加简洁，略去 cookie 和 duration 的信息：&lt;/p>
 &lt;ul>
 &lt;li>&lt;code>table=0, n_packets=62751550874, n_bytes=25344802160312, priority=200,ip,in_port=1,nw_src=10.128.0.0/14,nw_dst=10.130.8.0/23 actions=move:NXM_NX_TUN_ID[0..31]-&amp;gt;NXM_NX_REG0[],goto_table:10&lt;/code>&lt;/li>
 &lt;li>&lt;code>table=0, n_packets=1081527047094, n_bytes=296066911370148, priority=200,ip,in_port=2 actions=goto_table:30&lt;/code>&lt;/li>
@@ -731,14 +731,20 @@ pkts bytes target prot opt in out &lt;span class="nb">source&lt;/span> destinati
 inet 10.130.8.1/23 scope global tun0
 &lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
 &lt;/div>
-&lt;/div>&lt;p>本例中 Service 的后端 Pod 均在 Pod1 所在的节点外，因此数据包第二次进入 OpenFlow 流表时匹配的规则与 Pod to Remote Pod 一致。其传递流程如下图所示：&lt;/p>
+&lt;/div>&lt;p>本例中 Service 的后端 Pod 均在 Pod1 所在的节点外，因此数据包第二次进入 OpenFlow 流表时匹配的规则基本与 Pod to Remote Pod 一致：&lt;/p>
+&lt;ul>
+&lt;li>&lt;code>table=0, n_packets=1081527047094, n_bytes=296066911370148, priority=200,ip,in_port=2 actions=goto_table:30&lt;/code>&lt;/li>
+&lt;li>&lt;code>table=30, n_packets=59672345347, n_bytes=41990349575805, priority=100,ip,nw_dst=10.128.0.0/14 actions=goto_table:90&lt;/code>&lt;/li>
+&lt;li>&lt;code>table=90, n_packets=15802525677, n_bytes=6091612778189, priority=100,ip,nw_dst=10.131.8.0/23 actions=move:NXM_NX_REG0[]-&amp;gt;NXM_NX_TUN_ID[0..31],set_field:10.122.28.8-&amp;gt;tun_dst,output:1&lt;/code>&lt;/li>
+&lt;/ul>
+&lt;p>其传递流程如下图所示：&lt;/p>
 &lt;p>&lt;img src="https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/202205132044.jpeg" alt="202205132044">&lt;/p>
 &lt;p>Pod2 返回的数据包在到达 Node1 后将被&lt;code>vxlan0&lt;/code>解封装，然后根据其目的地址&lt;code>tun0&lt;/code>进入 OpenFlow 流表：&lt;/p>
 &lt;ul>
 &lt;li>&lt;code>table=0, n_packets=1084362760247, n_bytes=297224518823222, priority=200,ip,in_port=2 actions=goto_table:30&lt;/code>&lt;/li>
 &lt;li>&lt;code>table=30, n_packets=20784385211, n_bytes=4742514750371, priority=300,ip,nw_dst=10.130.8.1 actions=output:2&lt;/code>&lt;/li>
 &lt;/ul>
-&lt;p>数据包从 2 号端口&lt;code>tun0&lt;/code>流出后进入节点的 iptables 规则，随后将触发 iptables 的 &lt;a href="https://superuser.com/questions/1269859/linux-netfilter-how-does-connection-tracking-track-connections-changed-by-nat">Connection Tracking&lt;/a> 操作：根据 &lt;strong>/proc/net/nf_conntrack&lt;/strong> 文件中的记录进行“DeNAT”。返回数据包的源/目的地址从 Pod2 IP 10.131.8.206 和 tun0 IP 10.130.8.1，变回 Service 的 ClusterIP 172.30.107.57 和 Pod1 IP 10.130.9.154。&lt;/p>
+&lt;p>数据包从 2 号端口&lt;code>tun0&lt;/code>流出后进入节点的 iptables 规则，随后将触发 iptables 的 &lt;a href="https://superuser.com/questions/1269859/linux-netfilter-how-does-connection-tracking-track-connections-changed-by-nat">Connection Tracking&lt;/a> 操作：根据 /proc/net/nf_conntrack 文件中的记录进行“DeNAT”。返回数据包的源/目的地址从 Pod2 IP 10.131.8.206 和 tun0 IP 10.130.8.1，变回 Service 的 ClusterIP 172.30.107.57 和 Pod1 IP 10.130.9.154。&lt;/p>
 &lt;div class="highlight">&lt;div class="chroma">
 &lt;table class="lntable">&lt;tr>&lt;td class="lntd">
 &lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
@@ -780,12 +786,22 @@ pkts bytes target prot opt in out &lt;span class="nb">source&lt;/span> destinati
 322M 19G MASQUERADE all -- * * 10.128.0.0/14 0.0.0.0/0 /* masquerade pod-to-service and pod-to-external traffic */
 &lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
 &lt;/div>
-&lt;/div>&lt;p>访问集群外部显然需要通过节点的默认网关，因此数据包将从节点网卡&lt;code>eth0&lt;/code>送出。而在&lt;code>POSTROUTING&lt;/code>链中，数据包的源地址由 Pod IP 转换为了&lt;code>eth0&lt;/code>的 IP 10.122.28.7。完整流程如下图所示：&lt;/p>
+&lt;/div>&lt;p>访问集群外部显然需要通过节点的默认网关，因此数据包将从节点网卡&lt;code>eth0&lt;/code>送出。而在&lt;code>POSTROUTING&lt;/code>链中，数据包的源地址由 Pod IP 转换为了&lt;code>eth0&lt;/code>的 IP 10.122.28.7。完整流程如下图所示（图中的 Router 指的是路由器而非 Openshift 中的概念）：&lt;/p>
 &lt;p>&lt;img src="https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/202205132045.jpeg" alt="202205132045">&lt;/p>
+&lt;h2 id="future-work">Future Work&lt;/h2>
+&lt;p>虽然本文已对 Openshift 中的 SDN 网络模型进行了较为深入地讨论，但仍有几个 Topic 值得我们继续探索：&lt;/p>
+&lt;ul>
+&lt;li>本文并未涉及 External to Pod 的场景，它是如何实现的？我们都知道 Openshift 是通过 Router（HAProxy）来暴露集群内部服务的，那么数据包在传输过程中的 NAT 操作是怎样进行的？&lt;/li>
+&lt;li>Openshift 4.X 版本的网络模型和本文介绍的有何区别？&lt;/li>
+&lt;li>实际上除了本文提到的几种网络接口外，Openshift 节点上还存在着&lt;code>ovs-system&lt;/code>和&lt;code>vxlan-&lt;/code>。它们的作用是什么？&lt;/li>
+&lt;/ul>
 &lt;h2 id="参考文献">参考文献&lt;/h2>
+&lt;p>&lt;a href="https://en.wikipedia.org/wiki/OpenFlow">OpenFlow - Wikipedia&lt;/a>&lt;/p>
 &lt;p>&lt;a href="https://medoc.readthedocs.io/en/latest/docs/ovs/sharing/cloud_usage.html">OVS 在云项目中的使用&lt;/a>&lt;/p>
 &lt;p>&lt;a href="https://docs.openshift.com/container-platform/3.11/architecture/networking/sdn.html">OpenShift SDN - OpenShift Container Platform 3.11&lt;/a>&lt;/p>
-&lt;p>&lt;a href="https://www.cnblogs.com/sammyliu/p/10064450.html">理解 OpenShift（3）：网络之 SDN&lt;/a>&lt;/p></description><category domain="/tags/openshift/">Openshift</category><category domain="/tags/network/">Network</category><category domain="/tags/cni/">CNI</category><category domain="/tags/open-vswitch/">Open vSwitch</category></item><item><title>Kubernetes 中的 SDN 网络模型</title><link>/posts/kubernetes-sdn/</link><guid isPermaLink="true">/posts/kubernetes-sdn/</guid><pubDate>Sat, 09 May 2020 09:19:42 +0100</pubDate><author>koktlgwr@gmail.com (koktlzz)</author><copyright>[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.en)</copyright><description>&lt;h2 id="前言">前言&lt;/h2>
+&lt;p>&lt;a href="https://www.cnblogs.com/sammyliu/p/10064450.html">理解 OpenShift（3）：网络之 SDN&lt;/a>&lt;/p>
+&lt;p>&lt;a href="https://arthurchiao.art/blog/deep-dive-into-iptables-and-netfilter-arch-zh/">[译] 深入理解 iptables 和 netfilter 架构&lt;/a>&lt;/p>
+&lt;p>&lt;a href="https://superuser.com/questions/1269859/linux-netfilter-how-does-connection-tracking-track-connections-changed-by-nat">Linux Netfilter: How does connection tracking track connections changed by NAT?&lt;/a>&lt;/p></description><category domain="/tags/openshift/">Openshift</category><category domain="/tags/network/">Network</category><category domain="/tags/cni/">CNI</category><category domain="/tags/open-vswitch/">Open vSwitch</category></item><item><title>Kubernetes 中的 SDN 网络模型</title><link>/posts/kubernetes-sdn/</link><guid isPermaLink="true">/posts/kubernetes-sdn/</guid><pubDate>Sat, 09 May 2020 09:19:42 +0100</pubDate><author>koktlgwr@gmail.com (koktlzz)</author><copyright>[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.en)</copyright><description>&lt;h2 id="前言">前言&lt;/h2>
 &lt;p>&lt;a href="https://sookocheff.com/post/kubernetes/understanding-kubernetes-networking-model/">A Guide to the Kubernetes Networking Model&lt;/a> 一文生动形象地介绍了 Kubernetes 中的网络模型，然而受篇幅所限，作者并没有对 Pod 跨节点通信时数据包在节点之间传递的细节进行过多讨论。&lt;/p>
 &lt;p>我们已经知道，Docker 使用端口映射的方式实现不同主机间容器的通信，Kubernetes 中同样也有 &lt;a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#pod-v1-core">&lt;code>hostPort&lt;/code>&lt;/a> 的概念。但是当节点和 Pod 的数量上升后，手动管理节点上绑定的端口是十分困难的，这也是&lt;code>NodePort&lt;/code>类型的 Service 的缺点之一。而一旦 Pod 不再“借用”节点的 IP 和端口来暴露自身的服务，就不得不面临一个棘手的问题：Pod 的本质是节点中的进程，节点外的物理网络设备（交换机/路由器）并不知晓 Pod 的存在。它们在接收目的地址为 Pod IP 的数据包时，无法完成进一步的传输工作。&lt;/p>
 &lt;p>为此我们需要使用一些 CNI（Container Network Interface）插件（如 Flannel、Calico、Cilium 和 Open vSwitch 等）来完善 Kubernetes 集群的网络模型，这种新型的网络设计理念称为 SDN（Software-defined Networking）。根据 SDN 实现的层级，我们可以将其分为 Underlay Network 和 Overlay Network：&lt;/p>
