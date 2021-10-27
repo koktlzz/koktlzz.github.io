@@ -1,5 +1,5 @@
 ---
-title: "Kubernetes 中的 SDN 网络模型"
+title: "Kubernetes 中 Pod 是如何跨节点通信的？"
 date: 2020-05-09T09:19:42+01:00
 draft: false
 tags: ["Kubernetes", "Network", "CNI"]
@@ -27,17 +27,21 @@ tags: ["Kubernetes", "Network", "CNI"]
 
 CNI 插件不仅为 Pod 分配 IP 地址，它还会将每个 Pod 所在的节点信息下发给 SDN 交换机。这样当 SDN 交换机接收到 ARP 请求时，将会答复 Pod2 所在节点 Node2 的 MAC 地址，数据包也就顺利地送到了 Node2 上。
 
+阿里云 [Terway](https://help.aliyun.com/document_detail/86500.html) 模式的 ACK 服务使用的便是这种网络模型，只不过 Pod 间通信使用的 SDN 交换机不再是节点的交换机（下图中的 Node VSwitch），而是单独创建的 Pod VSwitch：
+
+![p32414](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/p32414.png)
+
 ### 三层
 
 ![202105080143](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/202105080143.jpeg)
 
 如图所示，Pod 与节点的 IP 地址不再处于同一网段。当 Pod1 向另一节点上的 Pod2 发起通信时，数据包首先通过`veth-pair`和`cbr0`进入宿主机内核的路由表（Routing Table）。CNI 插件在该表中添加了若干条路由规则，如目的地址为 Pod2 IP 的网关为 Node2 的 IP。这样数据包的目的 MAC 地址就变为了 Node2 的 MAC 地址，它将会通过交换机发送到 Node2 上。
 
-由于这种实现方式基于三层协议，因此不要求 Node1 和 Node2 处于同一网段。如下图所示，此时需要将目的地址为 Pod2 IP 的网关设置为路由器的 IP。数据包的目的 MAC 地址首先变为路由器的 MAC 地址，然后经过路由器后再变为 Node2 的 MAC 地址。
+由于这种实现方式基于三层协议，因此不要求两节点处于同一网段。不过需要将目的地址为 Pod2 IP 的网关设置为 SDN 路由器的 IP，且该路由器能够知晓目的 Pod 所在的节点。这样数据包的目的 MAC 地址就会首先变为 SDN 路由器的 MAC 地址，经过路由器后再变为 Node2 的 MAC 地址：
 
-![202205080146](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/202205080146.jpeg)
+![202110211221](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/202110211221.jpeg)
 
-通过上面的描述我们可以发现，想要实现三层的 Underlay 网络，需要在多个节点间下发和同步路由表。于是很容易想到用于交换路由信息的 BGP（Border Gateway Protocol）协议：
+通过上面的讨论我们发现，想要实现三层的 Underlay 网络，需要在多个节点间下发和同步路由表。于是很容易想到用于交换路由信息的 BGP（Border Gateway Protocol）协议：
 
 > 边界网关协议（英语：Border Gateway Protocol，缩写：BGP）是互联网上一个核心的去中心化自治路由协议。它通过维护 IP 路由表或“前缀”表来实现自治系统（AS）之间的可达性，属于矢量路由协议。BGP 不使用传统的内部网关协议（IGP）的指标，而使用基于路径、网络策略或规则集来决定路由。因此，它更适合被称为矢量性协议，而不是路由协议。
 
@@ -62,12 +66,22 @@ Node1 上的 VTEP 收到 Pod1 发来的数据包后，首先会在本地的转�
 - 对底层网络设备的依赖性最小。即使 Pod 所在的节点发生迁移，依然可以通过 Overlay 网络与原集群实现二层网络的互通；
 - VNID 共有 24 位，因此可以构造出约 1600 万个互相隔离的虚拟网络。
 
+## Future Work
+
+本文从 Kubernetes 中 Pod 跨节点通信的方式入手，引入了一些对 SDN 网络模型的简单讨论。考虑到各种 CNI 插件的实现细节是十分复杂的，仍有许多 Topic 值得我们深入探索，比如：
+
+- Overlay 网络通过 IP 封包和控制平面可以减少集群中的 MAC 地址表项和 ARP 请求？
+- 本文在介绍 Underlay 网络时提到了 Terway 和 Calico，那么基于 Overlay 网络的 CNI 插件有哪些呢？
+- 近年来 Cilium 成为了
+
 ## 参考文献
 
 [About Kubernetes Networking](https://docs.projectcalico.org/about/about-kubernetes-networking)
 
-[边界网关协议](https://zh.wikipedia.org/wiki/%E8%BE%B9%E7%95%8C%E7%BD%91%E5%85%B3%E5%8D%8F%E8%AE%AE)
+[使用 Terway 网络插件](https://help.aliyun.com/document_detail/97467.html)
 
-[Configure BGP peering](https://docs.projectcalico.org/networking/bgp)
+[边界网关协议 - Wikipedia](https://zh.wikipedia.org/wiki/%E8%BE%B9%E7%95%8C%E7%BD%91%E5%85%B3%E5%8D%8F%E8%AE%AE)
+
+[Configure BGP peering - Calico](https://docs.projectcalico.org/networking/bgp)
 
 [为什么集群需要 Overlay 网络](https://draveness.me/whys-the-design-overlay-network/)
