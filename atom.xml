@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en"><title type="text">Inspire Hub</title><subtitle type="html">MemE is a powerful and highly customizable GoHugo theme for personal blogs.</subtitle><updated>2021-10-26T14:46:15+00:00</updated><id>/</id><link rel="alternate" type="text/html" href="/"/><link rel="self" type="application/atom+xml" href="/atom.xml"/><author><name>koktlzz</name><uri>/</uri><email>koktlgwr@gmail.com</email></author><rights>[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.en)</rights><generator uri="https://gohugo.io/" version="0.88.1">Hugo</generator><entry><title type="text">通过安装 CoreOS 系统了解 Linux 启动流程</title><link rel="alternate" type="text/html" href="/posts/linux-boot-intro/"/><id>/posts/linux-boot-intro/</id><updated>2021-10-25T22:18:43+08:00</updated><published>2021-10-20T00:25:25+08:00</published><author><name>koktlzz</name><uri>/</uri><email>koktlgwr@gmail.com</email></author><rights>[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.en)</rights><summary type="html">前言 OpenShift 4.X 版本要求安装在操作系统为 CoreOS 的机器上，因此 官方文档 给出了使用 PXE 或 IPXE 引导 CoreOS 系统的方法。我们可以参考其操作流程，将一台 CentOS 7.X 的机器改写为 CoreOS 系统，步骤如下：
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en"><title type="text">Inspire Hub</title><subtitle type="html">MemE is a powerful and highly customizable GoHugo theme for personal blogs.</subtitle><updated>2021-10-27T08:54:54+00:00</updated><id>/</id><link rel="alternate" type="text/html" href="/"/><link rel="self" type="application/atom+xml" href="/atom.xml"/><author><name>koktlzz</name><uri>/</uri><email>koktlgwr@gmail.com</email></author><rights>[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.en)</rights><generator uri="https://gohugo.io/" version="0.88.1">Hugo</generator><entry><title type="text">通过安装 CoreOS 系统了解 Linux 启动流程</title><link rel="alternate" type="text/html" href="/posts/linux-boot-intro/"/><id>/posts/linux-boot-intro/</id><updated>2021-10-25T22:18:43+08:00</updated><published>2021-10-20T00:25:25+08:00</published><author><name>koktlzz</name><uri>/</uri><email>koktlgwr@gmail.com</email></author><rights>[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.en)</rights><summary type="html">前言 OpenShift 4.X 版本要求安装在操作系统为 CoreOS 的机器上，因此 官方文档 给出了使用 PXE 或 IPXE 引导 CoreOS 系统的方法。我们可以参考其操作流程，将一台 CentOS 7.X 的机器改写为 CoreOS 系统，步骤如下：
 从 镜像下载页 下载安装所需版本的 kernel、initramfs 和 rootfs 文件，并将 rootfs 和点火文件（*.ign）上传到自建的 HTTP 服务器上；</summary><content type="html">&lt;h2 id="前言">前言&lt;/h2>
 &lt;p>OpenShift 4.X 版本要求安装在操作系统为 CoreOS 的机器上，因此 &lt;a href="https://docs.openshift.com/container-platform/4.6/installing/installing_bare_metal/installing-restricted-networks-bare-metal.html#installation-user-infra-machines-pxe_installing-restricted-networks-bare-metal">官方文档&lt;/a> 给出了使用 PXE 或 IPXE 引导 CoreOS 系统的方法。我们可以参考其操作流程，将一台 CentOS 7.X 的机器改写为 CoreOS 系统，步骤如下：&lt;/p>
 &lt;ol>
@@ -397,12 +397,12 @@ graphical.target
 &lt;p>&lt;a href="https://zh.wikipedia.org/wiki/%E4%B8%BB%E5%BC%95%E5%AF%BC%E8%AE%B0%E5%BD%95">主引导记录 - Wikipedia&lt;/a>&lt;/p>
 &lt;p>&lt;a href="https://opensource.com/article/17/2/linux-boot-and-startup">An Introduction To the Linux Boot and Startup Processes&lt;/a>&lt;/p>
 &lt;p>&lt;a href="https://www.gnu.org/software/grub/manual/grub/grub.html">GNU GRUB Manual 2.06&lt;/a>&lt;/p>
-&lt;p>&lt;a href="https://man7.org/linux/man-pages/man7/bootup.7.html">Bootup(7) - Linux manual page&lt;/a>&lt;/p></content><category scheme="/tags/os/" term="OS" label="OS"/><category scheme="/tags/linux/" term="Linux" label="Linux"/><category scheme="/tags/coreos/" term="CoreOs" label="CoreOs"/></entry><entry><title type="text">初探 Open vSwitch</title><link rel="alternate" type="text/html" href="/posts/ovs-intro/"/><id>/posts/ovs-intro/</id><updated>2021-10-26T15:22:26+08:00</updated><published>2020-05-13T09:19:42+01:00</published><author><name>koktlzz</name><uri>/</uri><email>koktlgwr@gmail.com</email></author><rights>[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.en)</rights><summary type="html">前言 Openshift SDN 是由 Overlay 网络 OVS（Open vSwitch）建立的，其使用的插件如下：
-ovs-subnet: 默认插件，提供一个扁平化的 Pod 网络以实现 Pod 与其他任何 Pod 或 Service 的通信； ovs-multitenant：实现多租户管理，隔离不同 Project 之间的网络通信。每个 Project 都有一个 NETID（即 VxLAN 中的 VNID），可以使用 oc get netnamspaces 命令查看； ovs-networkpolicy：基于 Kubernetes 中的 NetworkPolicy 资源实现网络策略管理。 在 Openshift 集群中的节点上，有以下几个网络设备：</summary><content type="html">&lt;h2 id="前言">前言&lt;/h2>
+&lt;p>&lt;a href="https://man7.org/linux/man-pages/man7/bootup.7.html">Bootup(7) - Linux manual page&lt;/a>&lt;/p></content><category scheme="/tags/os/" term="OS" label="OS"/><category scheme="/tags/linux/" term="Linux" label="Linux"/><category scheme="/tags/coreos/" term="CoreOs" label="CoreOs"/></entry><entry><title type="text">Openshift 中的 SDN 网络模型</title><link rel="alternate" type="text/html" href="/posts/openshift-sdn/"/><id>/posts/openshift-sdn/</id><updated>2021-10-27T16:54:33+08:00</updated><published>2020-05-13T09:19:42+01:00</published><author><name>koktlzz</name><uri>/</uri><email>koktlgwr@gmail.com</email></author><rights>[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.en)</rights><summary type="html">前言 Openshift SDN 是由 Overlay 网络 OVS（Open vSwitch）建立的，其使用的插件如下：
+ovs-subnet: 默认插件，提供一个扁平化的 Pod 网络以实现 Pod 与其他任何 Pod 或 Service 的通信； ovs-multitenant：实现多租户管理，隔离不同 Project 之间的网络通信。每个 Project 都有一个 NETID（即 VxLAN 中的 VNID），可以使用 oc get netnamespaces 命令查看； ovs-networkpolicy：基于 Kubernetes 中的 NetworkPolicy 资源实现网络策略管理。 在 Openshift 集群中的节点上，有以下几个网络设备：</summary><content type="html">&lt;h2 id="前言">前言&lt;/h2>
 &lt;p>Openshift SDN 是由 Overlay 网络 OVS（Open vSwitch）建立的，其使用的插件如下：&lt;/p>
 &lt;ul>
 &lt;li>ovs-subnet: 默认插件，提供一个扁平化的 Pod 网络以实现 Pod 与其他任何 Pod 或 Service 的通信；&lt;/li>
-&lt;li>ovs-multitenant：实现多租户管理，隔离不同 Project 之间的网络通信。每个 Project 都有一个 NETID（即 VxLAN 中的 VNID），可以使用 &lt;strong>oc get netnamspaces&lt;/strong> 命令查看；&lt;/li>
+&lt;li>ovs-multitenant：实现多租户管理，隔离不同 Project 之间的网络通信。每个 Project 都有一个 NETID（即 VxLAN 中的 VNID），可以使用 &lt;strong>oc get netnamespaces&lt;/strong> 命令查看；&lt;/li>
 &lt;li>ovs-networkpolicy：基于 Kubernetes 中的 NetworkPolicy 资源实现网络策略管理。&lt;/li>
 &lt;/ul>
 &lt;p>在 Openshift 集群中的节点上，有以下几个网络设备：&lt;/p>
@@ -412,7 +412,7 @@ ovs-subnet: 默认插件，提供一个扁平化的 Pod 网络以实现 Pod 与�
 &lt;li>&lt;code>tun0&lt;/code>：节点上所有 Pod 的默认网关，用于 Pod 与集群外部和 Pod 与 Service 之间的通信；&lt;/li>
 &lt;li>&lt;code>veth&lt;/code>：Pod 通过&lt;code>veth-pair&lt;/code>连接到&lt;code>br0&lt;/code>网桥的端点。&lt;/li>
 &lt;/ul>
-&lt;p>&lt;strong>ovs-ofctl -O OpenFlow13 show br0&lt;/strong> 命令可以查看&lt;code>br0&lt;/code>上的所有端口及其编号：&lt;/p>
+&lt;p>使用 &lt;strong>ovs-ofctl -O OpenFlow13 show br0&lt;/strong> 命令可以查看&lt;code>br0&lt;/code>上的所有端口及其编号：&lt;/p>
 &lt;div class="highlight">&lt;div class="chroma">
 &lt;table class="lntable">&lt;tr>&lt;td class="lntd">
 &lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
@@ -501,58 +501,40 @@ kubernetes v1.6.1+5115d708d7
 &lt;p>&lt;img src="https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/202205132046.jpeg" alt="202205132046">&lt;/p>
 &lt;p>数据包首先通过&lt;code>veth-pair&lt;/code>送往 OVS 网桥&lt;code>br0&lt;/code>，随后便进入了&lt;code>br0&lt;/code>上的 OpenFlow 流表。我们可以用 &lt;strong>ovs-ofctl -O OpenFlow13 dump-flows br0&lt;/strong> 命令查看流表中的规则，同时为了让输出结果更加简洁，略去 cookie 和 duration 的信息：&lt;/p>
 &lt;ul>
-&lt;li>
-&lt;p>&lt;code>table=0, n_packets=62751550874, n_bytes=25344802160312, priority=200,ip,in_port=1,nw_src=10.128.0.0/14,nw_dst=10.130.8.0/23 actions=move:NXM_NX_TUN_ID[0..31]-&amp;gt;NXM_NX_REG0[],goto_table:10&lt;/code>&lt;/p>
-&lt;/li>
-&lt;li>
-&lt;p>&lt;code>table=0, n_packets=1081527047094, n_bytes=296066911370148, priority=200,ip,in_port=2 actions=goto_table:30&lt;/code>&lt;/p>
-&lt;/li>
-&lt;li>
-&lt;p>&lt;code>table=0, n_packets=833353346930, n_bytes=329854403266173, priority=100,ip actions=goto_table:20&lt;/code>&lt;/p>
-&lt;p>table0 中关于 IP 数据包的规则主要有三条，其中前两条分别对应流入端口&lt;code>in_port&lt;/code>为 1 号端口&lt;code>vxlan0&lt;/code>和 2 号端口&lt;code>tun0&lt;/code>的数据包。这两条规则的优先级&lt;code>priority&lt;/code>都是 200，因此只有在两者均不符合情况下，才会匹配第三条规则。由于本地 Pod 发出的数据包是由&lt;code>veth&lt;/code>端口进入的，因此将转到 table20；&lt;/p>
-&lt;/li>
-&lt;li>
-&lt;p>&lt;code>table=20, n_packets=607178746, n_bytes=218036511085, priority=100,ip,in_port=8422,nw_src=10.130.9.154 actions=load:0-&amp;gt;NXM_NX_REG0[],goto_table:21&lt;/code>&lt;/p>
-&lt;/li>
-&lt;li>
-&lt;p>&lt;code>table=21, n_packets=833757781068, n_bytes=329871389393381, priority=0 actions=goto_table:30&lt;/code>&lt;/p>
-&lt;p>table20 会匹配源地址&lt;code>nw_src&lt;/code>为 10.130.9.154 且流入端口&lt;code>in_port&lt;/code>为 8422 的数据包，随后将 Pod1 的 VNID 0 作为源 VNID 存入寄存器 0 中，经由 table21 转到 table30；&lt;/p>
-&lt;/li>
-&lt;li>
-&lt;p>&lt;code>table=30, n_packets=1116329752668, n_bytes=294324730186808, priority=200,ip,nw_dst=10.130.8.0/23 actions=goto_table:70&lt;/code>&lt;/p>
-&lt;/li>
-&lt;li>
-&lt;p>&lt;code>table=30, n_packets=59672345347, n_bytes=41990349575805, priority=100,ip,nw_dst=10.128.0.0/14 actions=goto_table:90&lt;/code>&lt;/p>
-&lt;/li>
-&lt;li>
-&lt;p>&lt;code>table=30, n_packets=21061319859, n_bytes=29568807363654, priority=100,ip,nw_dst=172.30.0.0/16 actions=goto_table:60&lt;/code>&lt;/p>
-&lt;/li>
-&lt;li>
-&lt;p>&lt;code>table=30, n_packets=759636044089, n_bytes=280576476818108, priority=0,ip actions=goto_table:100&lt;/code>&lt;/p>
-&lt;p>table30 中匹配数据包目的地址&lt;code>nw_dst&lt;/code>的规则有四条，前三条分别对应本节点内 Pod 的 CIDR 网段 10.130.8.0/23、集群内 Pod 的 CIDR 网段 10.128.0.0/14 和 Service 的 ClusterIP 网段 172.30.0.0/16。第四条优先级最低，用于 Pod 对集群外部的访问。由于数据包的目的地址 10.130.9.158 符合第一条规则，且第一条规则的优先级最高，因此将转到 table70；&lt;/p>
-&lt;/li>
-&lt;li>
-&lt;p>&lt;code>table=70, n_packets=597219981, n_bytes=243824445346, priority=100,ip,nw_dst=10.130.9.158 actions=load:0-&amp;gt;NXM_NX_REG1[],load:0x20ea-&amp;gt;NXM_NX_REG2[],goto_table:80&lt;/code>&lt;/p>
-&lt;p>table70 匹配目的地址&lt;code>nw_dst&lt;/code>为 Pod2 IP 10.130.9.158 的数据包，并将 Pod2 的 VNID 0 作为目的 VNID 存入寄存器 1 中。同时端口号&lt;code>0x20ea&lt;/code>被保存到寄存器 2 中，然后转到 table80；&lt;/p>
-&lt;/li>
-&lt;li>
-&lt;p>&lt;code>table=80, n_packets=1112713040332, n_bytes=293801616636499, priority=200 actions=output:NXM_NX_REG2[]&lt;/code>&lt;/p>
-&lt;p>table80 比较寄存器 0 和寄存器 1 中保存的源/目的 VNID。若二者一致，则根据寄存器 2 中保存的端口号将数据包送出。&lt;/p>
-&lt;/li>
+&lt;li>&lt;code>table=0, n_packets=62751550874, n_bytes=25344802160312, priority=200,ip,in_port=1,nw_src=10.128.0.0/14,nw_dst=10.130.8.0/23 actions=move:NXM_NX_TUN_ID[0..31]-&amp;gt;NXM_NX_REG0[],goto_table:10&lt;/code>&lt;/li>
+&lt;li>&lt;code>table=0, n_packets=1081527047094, n_bytes=296066911370148, priority=200,ip,in_port=2 actions=goto_table:30&lt;/code>&lt;/li>
+&lt;li>&lt;code>table=0, n_packets=833353346930, n_bytes=329854403266173, priority=100,ip actions=goto_table:20&lt;/code>&lt;/li>
 &lt;/ul>
+&lt;p>table0 中关于 IP 数据包的规则主要有三条，其中前两条分别对应流入端口&lt;code>in_port&lt;/code>为 1 号端口&lt;code>vxlan0&lt;/code>和 2 号端口&lt;code>tun0&lt;/code>的数据包。这两条规则的优先级&lt;code>priority&lt;/code>都是 200，因此只有在两者均不符合情况下，才会匹配第三条规则。由于本地 Pod 发出的数据包是由&lt;code>veth&lt;/code>端口进入的，因此将转到 table20；&lt;/p>
+&lt;ul>
+&lt;li>&lt;code>table=20, n_packets=607178746, n_bytes=218036511085, priority=100,ip,in_port=8422,nw_src=10.130.9.154 actions=load:0-&amp;gt;NXM_NX_REG0[],goto_table:21&lt;/code>&lt;/li>
+&lt;li>&lt;code>table=21, n_packets=833757781068, n_bytes=329871389393381, priority=0 actions=goto_table:30&lt;/code>&lt;/li>
+&lt;/ul>
+&lt;p>table20 会匹配源地址&lt;code>nw_src&lt;/code>为 10.130.9.154 且流入端口&lt;code>in_port&lt;/code>为 8422 的数据包，随后将 Pod1 的 VNID 0 作为源 VNID 存入寄存器 0 中，经由 table21 转到 table30；&lt;/p>
+&lt;ul>
+&lt;li>&lt;code>table=30, n_packets=1116329752668, n_bytes=294324730186808, priority=200,ip,nw_dst=10.130.8.0/23 actions=goto_table:70&lt;/code>&lt;/li>
+&lt;li>&lt;code>table=30, n_packets=59672345347, n_bytes=41990349575805, priority=100,ip,nw_dst=10.128.0.0/14 actions=goto_table:90&lt;/code>&lt;/li>
+&lt;li>&lt;code>table=30, n_packets=21061319859, n_bytes=29568807363654, priority=100,ip,nw_dst=172.30.0.0/16 actions=goto_table:60&lt;/code>&lt;/li>
+&lt;li>&lt;code>table=30, n_packets=759636044089, n_bytes=280576476818108, priority=0,ip actions=goto_table:100&lt;/code>&lt;/li>
+&lt;/ul>
+&lt;p>table30 中匹配数据包目的地址&lt;code>nw_dst&lt;/code>的规则有四条，前三条分别对应本节点内 Pod 的 CIDR 网段 10.130.8.0/23、集群内 Pod 的 CIDR 网段 10.128.0.0/14 和 Service 的 ClusterIP 网段 172.30.0.0/16。第四条优先级最低，用于 Pod 对集群外部的访问。由于数据包的目的地址 10.130.9.158 符合第一条规则，且第一条规则的优先级最高，因此将转到 table70；&lt;/p>
+&lt;ul>
+&lt;li>&lt;code>table=70, n_packets=597219981, n_bytes=243824445346, priority=100,ip,nw_dst=10.130.9.158 actions=load:0-&amp;gt;NXM_NX_REG1[],load:0x20ea-&amp;gt;NXM_NX_REG2[],goto_table:80&lt;/code>&lt;/li>
+&lt;/ul>
+&lt;p>table70 匹配目的地址&lt;code>nw_dst&lt;/code>为 Pod2 IP 10.130.9.158 的数据包，并将 Pod2 的 VNID 0 作为目的 VNID 存入寄存器 1 中。同时端口号&lt;code>0x20ea&lt;/code>被保存到寄存器 2 中，然后转到 table80；&lt;/p>
+&lt;ul>
+&lt;li>&lt;code>table=80, n_packets=1112713040332, n_bytes=293801616636499, priority=200 actions=output:NXM_NX_REG2[]&lt;/code>&lt;/li>
+&lt;/ul>
+&lt;p>table80 比较寄存器 0 和寄存器 1 中保存的源/目的 VNID。若二者一致，则根据寄存器 2 中保存的端口号将数据包送出。&lt;/p>
 &lt;p>端口号&lt;code>0x20ea&lt;/code>是一个十六进制数字，即十进制数 8426。而 Pod2 正是通过 8426 号端口设备&lt;code>vethba48c6de&lt;/code>连接到&lt;code>br0&lt;/code>上，因此数据包便最终通过它流入到了 Pod2 中。&lt;/p>
 &lt;div class="highlight">&lt;div class="chroma">
 &lt;table class="lntable">&lt;tr>&lt;td class="lntd">
 &lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
 &lt;/span>&lt;span class="lnt">2
-&lt;/span>&lt;span class="lnt">3
-&lt;/span>&lt;span class="lnt">4
 &lt;/span>&lt;/code>&lt;/pre>&lt;/td>
 &lt;td class="lntd">
 &lt;pre tabindex="0" class="chroma">&lt;code class="language-bash" data-lang="bash">&lt;span class="o">[&lt;/span>root@node1 ~&lt;span class="o">]&lt;/span>&lt;span class="c1"># ovs-ofctl -O OpenFlow13 show br0 | grep 8426&lt;/span>
 8426&lt;span class="o">(&lt;/span>vethba48c6de&lt;span class="o">)&lt;/span>: addr:e6:b2:7e:42:41:91
-&lt;span class="o">[&lt;/span>root@node1 ~&lt;span class="o">]&lt;/span>&lt;span class="c1"># ip a | grep vethba48c6de&lt;/span>
-8442: vethba48c6de@if3: &amp;lt;BROADCAST,MULTICAST,UP,LOWER_UP&amp;gt; mtu &lt;span class="m">1450&lt;/span> qdisc noqueue master ovs-system state UP
 &lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
 &lt;/div>
 &lt;/div>&lt;h2 id="pod-to-remote-pod">Pod to Remote Pod&lt;/h2>
@@ -560,29 +542,21 @@ kubernetes v1.6.1+5115d708d7
 &lt;h3 id="packet-in-local-pod">Packet in Local Pod&lt;/h3>
 &lt;p>数据包依然首先通过&lt;code>veth-pair&lt;/code>送往 OVS 网桥&lt;code>br0&lt;/code>，随后便进入了&lt;code>br0&lt;/code>上的 OpenFlow 流表：&lt;/p>
 &lt;ul>
-&lt;li>
-&lt;p>&lt;code>table=0, n_packets=830232155588, n_bytes=328613498734351, priority=100,ip actions=goto_table:20&lt;/code>&lt;/p>
-&lt;/li>
-&lt;li>
-&lt;p>&lt;code>table=20, n_packets=1901, n_bytes=299279, priority=100,ip,in_port=6635,nw_src=10.130.9.154 actions=load:0-&amp;gt;NXM_NX_REG0[],goto_table:21&lt;/code>&lt;/p>
-&lt;/li>
-&lt;li>
-&lt;p>&lt;code>table=21, n_packets=834180030914, n_bytes=330064497351030, priority=0 actions=goto_table:30&lt;/code>&lt;/p>
-&lt;p>与 Pod to Local Pod 的流程一致，数据包根据规则转到 table30；&lt;/p>
-&lt;/li>
-&lt;li>
-&lt;p>&lt;code>table=30, n_packets=59672345347, n_bytes=41990349575805, priority=100,ip,nw_dst=10.128.0.0/14 actions=goto_table:90&lt;/code>&lt;/p>
-&lt;/li>
-&lt;li>
-&lt;p>&lt;code>table=30, n_packets=1116329752668, n_bytes=294324730186808, priority=200,ip,nw_dst=10.130.8.0/23 actions=goto_table:70&lt;/code>&lt;/p>
-&lt;p>数据包的目的地址为 Pod2 IP 10.131.8.206，不属于本节点 Pod 的 CIDR 网段 10.130.8.0/23，而属于集群 Pod 的 CIDR 网段 10.128.0.0/14，因此转到 table90；&lt;/p>
-&lt;/li>
-&lt;li>
-&lt;p>&lt;code>table=90, n_packets=15802525677, n_bytes=6091612778189, priority=100,ip,nw_dst=10.131.8.0/23 actions=move:NXM_NX_REG0[]-&amp;gt;NXM_NX_TUN_ID[0..31],set_field:10.122.28.8-&amp;gt;tun_dst,output:1&lt;/code>&lt;/p>
-&lt;p>table90 根据目的 IP 的所属网段 10.131.8.0/23 判断其位于 Node2 上，于是将 Node2 IP 10.122.28.8 设置为&lt;code>tun_dst&lt;/code>。并且从寄存器 0 中取出 VNID 的值，从 1 号端口&lt;code>vxlan0&lt;/code>输出。&lt;/p>
-&lt;/li>
+&lt;li>&lt;code>table=0, n_packets=830232155588, n_bytes=328613498734351, priority=100,ip actions=goto_table:20&lt;/code>&lt;/li>
+&lt;li>&lt;code>table=20, n_packets=1901, n_bytes=299279, priority=100,ip,in_port=6635,nw_src=10.130.9.154 actions=load:0-&amp;gt;NXM_NX_REG0[],goto_table:21&lt;/code>&lt;/li>
+&lt;li>&lt;code>table=21, n_packets=834180030914, n_bytes=330064497351030, priority=0 actions=goto_table:30&lt;/code>&lt;/li>
 &lt;/ul>
-&lt;p>&lt;code>vxlan0&lt;/code>作为一个 VTEP 设备（参见 &lt;a href="/kubernetes/kubernetes%E8%BF%9B%E9%98%B6/sdn/#overlay-network">Overlay Network&lt;/a>），将根据 table90 发来的信息，对数据包进行一层封装：&lt;/p>
+&lt;p>与 Pod to Local Pod 的流程一致，数据包根据规则转到 table30；&lt;/p>
+&lt;ul>
+&lt;li>&lt;code>table=30, n_packets=59672345347, n_bytes=41990349575805, priority=100,ip,nw_dst=10.128.0.0/14 actions=goto_table:90&lt;/code>&lt;/li>
+&lt;li>&lt;code>table=30, n_packets=1116329752668, n_bytes=294324730186808, priority=200,ip,nw_dst=10.130.8.0/23 actions=goto_table:70&lt;/code>&lt;/li>
+&lt;/ul>
+&lt;p>数据包的目的地址为 Pod2 IP 10.131.8.206，不属于本节点 Pod 的 CIDR 网段 10.130.8.0/23，而属于集群 Pod 的 CIDR 网段 10.128.0.0/14，因此转到 table90；&lt;/p>
+&lt;ul>
+&lt;li>&lt;code>table=90, n_packets=15802525677, n_bytes=6091612778189, priority=100,ip,nw_dst=10.131.8.0/23 actions=move:NXM_NX_REG0[]-&amp;gt;NXM_NX_TUN_ID[0..31],set_field:10.122.28.8-&amp;gt;tun_dst,output:1&lt;/code>&lt;/li>
+&lt;/ul>
+&lt;p>table90 根据目的 IP 的所属网段 10.131.8.0/23 判断其位于 Node2 上，于是将 Node2 IP 10.122.28.8 设置为&lt;code>tun_dst&lt;/code>。并且从寄存器 0 中取出 VNID 的值，从 1 号端口&lt;code>vxlan0&lt;/code>输出。&lt;/p>
+&lt;p>&lt;code>vxlan0&lt;/code>作为一个 VTEP 设备（参见 &lt;a href="/posts/kubernetes-sdn/#overlay-network">Overlay Network&lt;/a>），将根据 table90 发来的信息，对数据包进行一层封装：&lt;/p>
 &lt;ul>
 &lt;li>目的地址（dst IP） &amp;ndash;&amp;gt; &lt;code>tun_dst&lt;/code> &amp;ndash;&amp;gt; 10.122.28.8&lt;/li>
 &lt;li>源地址（src IP） &amp;ndash;&amp;gt; Node1 IP &amp;ndash;&amp;gt; 10.122.28.7&lt;/li>
@@ -592,46 +566,34 @@ kubernetes v1.6.1+5115d708d7
 &lt;h3 id="packet-in-remote-pod">Packet in Remote Pod&lt;/h3>
 &lt;p>Node2 上的&lt;code>vxlan0&lt;/code>对数据包进行解封，随后从&lt;code>br0&lt;/code>上的 1 号端口进入 OpenFlow 流表中：&lt;/p>
 &lt;ul>
-&lt;li>
-&lt;p>&lt;code>table=0, n_packets=52141153195, n_bytes=17269645342781, priority=200,ip,in_port=1,nw_src=10.128.0.0/14,nw_dst=10.131.8.0/23 actions=move:NXM_NX_TUN_ID[0..31]-&amp;gt;NXM_NX_REG0[],goto_table:10&lt;/code>&lt;/p>
-&lt;p>table0 判断数据包的流入端口&lt;code>in_port&lt;/code>、源 IP 所属网段&lt;code>nw_src&lt;/code>和目的 IP 所属网段&lt;code>nw_dst&lt;/code>均符合该条规则，于是保存数据包中的源 VNID 到寄存器 0 后转到 table10；&lt;/p>
-&lt;/li>
-&lt;li>
-&lt;p>&lt;code>table=10, n_packets=10147760036, n_bytes=4060517391502, priority=100,tun_src=10.122.28.7 actions=goto_table:30&lt;/code>&lt;/p>
-&lt;p>table10 确认 VxLAN 隧道的源 IP&lt;code>tun_src&lt;/code>就是节点 Node1 的 IP 地址，于是转到 table30；&lt;/p>
-&lt;/li>
-&lt;li>
-&lt;p>&lt;code>table=30, n_packets=678759566065, n_bytes=172831151192704, priority=200,ip,nw_dst=10.131.8.0/23 actions=goto_table:70&lt;/code>&lt;/p>
-&lt;p>table30 确认数据包的目的 IP（即 Pod2 IP）存在于 Node2 中 Pod 的 CIDR 网段内，因此转到 table70；&lt;/p>
-&lt;/li>
-&lt;li>
-&lt;p>&lt;code>table=70, n_packets=193211683, n_bytes=27881218388, priority=100,ip,nw_dst=10.131.8.206 actions=load:0-&amp;gt;NXM_NX_REG1[],load:0x220-&amp;gt;NXM_NX_REG2[],goto_table:80&lt;/code>&lt;/p>
-&lt;p>table70 发现数据包的目的 IP 与 Pod2 IP 相符，于是将 Pod2 的 VNID 作为目的 VNID 存于寄存器 1 中，将&lt;code>0x220&lt;/code>（十进制数 544）保存在寄存器 2 中，然后转到 table80；&lt;/p>
-&lt;/li>
-&lt;li>
-&lt;p>&lt;code>table=80, n_packets=676813794014, n_bytes=172576112594488, priority=200 actions=output:NXM_NX_REG2[]&lt;/code>&lt;/p>
-&lt;p>table80 会检查保存在寄存器 0 和寄存器 1 中的源/目的 VNID，若相等（此例中均为 0），则从 544 号端口输出。&lt;/p>
-&lt;/li>
+&lt;li>&lt;code>table=0, n_packets=52141153195, n_bytes=17269645342781, priority=200,ip,in_port=1,nw_src=10.128.0.0/14,nw_dst=10.131.8.0/23 actions=move:NXM_NX_TUN_ID[0..31]-&amp;gt;NXM_NX_REG0[],goto_table:10&lt;/code>&lt;/li>
 &lt;/ul>
-&lt;p>&lt;code>br0&lt;/code>上的 554 端口对应的网络接口是&lt;code>vethe9f523a9&lt;/code>，因此数据包便最终通过它流入到了 Pod2 中。&lt;/p>
+&lt;p>table0 判断数据包的流入端口&lt;code>in_port&lt;/code>、源 IP 所属网段&lt;code>nw_src&lt;/code>和目的 IP 所属网段&lt;code>nw_dst&lt;/code>均符合该条规则，于是保存数据包中的源 VNID 到寄存器 0 后转到 table10；&lt;/p>
+&lt;ul>
+&lt;li>&lt;code>table=10, n_packets=10147760036, n_bytes=4060517391502, priority=100,tun_src=10.122.28.7 actions=goto_table:30&lt;/code>&lt;/li>
+&lt;/ul>
+&lt;p>table10 确认 VxLAN 隧道的源 IP&lt;code>tun_src&lt;/code>就是节点 Node1 的 IP 地址，于是转到 table30；&lt;/p>
+&lt;ul>
+&lt;li>&lt;code>table=30, n_packets=678759566065, n_bytes=172831151192704, priority=200,ip,nw_dst=10.131.8.0/23 actions=goto_table:70&lt;/code>&lt;/li>
+&lt;/ul>
+&lt;p>table30 确认数据包的目的 IP（即 Pod2 IP）存在于 Node2 中 Pod 的 CIDR 网段内，因此转到 table70；&lt;/p>
+&lt;ul>
+&lt;li>&lt;code>table=70, n_packets=193211683, n_bytes=27881218388, priority=100,ip,nw_dst=10.131.8.206 actions=load:0-&amp;gt;NXM_NX_REG1[],load:0x220-&amp;gt;NXM_NX_REG2[],goto_table:80&lt;/code>&lt;/li>
+&lt;/ul>
+&lt;p>table70 发现数据包的目的 IP 与 Pod2 IP 相符，于是将 Pod2 的 VNID 作为目的 VNID 存于寄存器 1 中，将&lt;code>0x220&lt;/code>（十进制数 544）保存在寄存器 2 中，然后转到 table80；&lt;/p>
+&lt;ul>
+&lt;li>&lt;code>table=80, n_packets=676813794014, n_bytes=172576112594488, priority=200 actions=output:NXM_NX_REG2[]&lt;/code>&lt;/li>
+&lt;/ul>
+&lt;p>table80 会检查保存在寄存器 0 和寄存器 1 中的源/目的 VNID，若相等（此例中均为 0），则从 544 号端口输出。&lt;/p>
+&lt;p>&lt;code>br0&lt;/code>上的 544 端口对应的网络接口是&lt;code>vethe9f523a9&lt;/code>，因此数据包便最终通过它流入到了 Pod2 中。&lt;/p>
 &lt;div class="highlight">&lt;div class="chroma">
 &lt;table class="lntable">&lt;tr>&lt;td class="lntd">
 &lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
 &lt;/span>&lt;span class="lnt">2
-&lt;/span>&lt;span class="lnt">3
-&lt;/span>&lt;span class="lnt">4
-&lt;/span>&lt;span class="lnt">5
-&lt;/span>&lt;span class="lnt">6
-&lt;/span>&lt;span class="lnt">7
 &lt;/span>&lt;/code>&lt;/pre>&lt;/td>
 &lt;td class="lntd">
 &lt;pre tabindex="0" class="chroma">&lt;code class="language-bash" data-lang="bash">&lt;span class="o">[&lt;/span>root@node2 ~&lt;span class="o">]&lt;/span>&lt;span class="c1"># ovs-ofctl -O OpenFlow13 show br0 | grep 544&lt;/span>
 544&lt;span class="o">(&lt;/span>vethe9f523a9&lt;span class="o">)&lt;/span>: addr:b2:a1:61:00:dc:3b
-&lt;span class="o">[&lt;/span>root@node2 ~&lt;span class="o">]&lt;/span>&lt;span class="c1"># ip a show vethe9f523a9&lt;/span>
-559: vethe9f523a9@if3: &amp;lt;BROADCAST,MULTICAST,UP,LOWER_UP&amp;gt; mtu &lt;span class="m">1450&lt;/span> qdisc noqueue master ovs-system state UP
-link/ether b2:a1:61:00:dc:3b brd ff:ff:ff:ff:ff:ff link-netnsid &lt;span class="m">54&lt;/span>
-inet6 fe80::b0a1:61ff:fe00:dc3b/64 scope link
-valid_lft forever preferred_lft forever
 &lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
 &lt;/div>
 &lt;/div>&lt;h2 id="pod-to-service">Pod to Service&lt;/h2>
@@ -649,19 +611,17 @@ myService 172.30.107.57 &amp;lt;none&amp;gt; 8080/TCP 2y
 &lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
 &lt;/div>
 &lt;/div>&lt;ul>
-&lt;li>
-&lt;p>&lt;code>table=30, n_packets=21065939280, n_bytes=29573447694924, priority=100,ip,nw_dst=172.30.0.0/16 actions=goto_table:60&lt;/code>&lt;/p>
-&lt;p>数据包在送到 OpenFlow 流表 table30 前的步骤与 Pod to Local Pod 和 Pod to Remote Pod 中的情况一致，但数据包的目的地址变为了 myService 的 ClusterIP。因此将匹配&lt;code>nw_dst&lt;/code>中的 172.30.0.0/16 网段，转到 table60；&lt;/p>
-&lt;/li>
-&lt;li>
-&lt;p>&lt;code>table=60, n_packets=0, n_bytes=0, priority=100,tcp,nw_dst=172.30.107.57,tp_dst=8080 actions=load:0-&amp;gt;NXM_NX_REG1[],load:0x2-&amp;gt;NXM_NX_REG2[],goto_table:80&lt;/code>&lt;/p>
-&lt;p>table60 匹配目的地址&lt;code>nw_dst&lt;/code>为 172.30.107.57 且目的端口为 8080 的数据包，并将 Pod1 的 VNID 0 保存到寄存器 1 中，将&lt;code>0x2&lt;/code>（十进制数字 2）保存到寄存器 2 中，转到 table80；&lt;/p>
-&lt;/li>
-&lt;li>
-&lt;p>&lt;code>table=80, n_packets=1113435014018, n_bytes=294106102133061, priority=200 actions=output:NXM_NX_REG2[]&lt;/code>&lt;/p>
-&lt;p>table80 首先检查目的 Service 的 VNID 是否与寄存器 1 中的 VNID 一致，然后根据寄存器 2 中的数字将数据包从 2 号端口&lt;code>tun0&lt;/code>送出，最后进入节点的 iptables 规则中。&lt;/p>
-&lt;/li>
+&lt;li>&lt;code>table=30, n_packets=21065939280, n_bytes=29573447694924, priority=100,ip,nw_dst=172.30.0.0/16 actions=goto_table:60&lt;/code>&lt;/li>
 &lt;/ul>
+&lt;p>数据包在送到 OpenFlow 流表 table30 前的步骤与 Pod to Local Pod 和 Pod to Remote Pod 中的情况一致，但数据包的目的地址变为了 myService 的 ClusterIP。因此将匹配&lt;code>nw_dst&lt;/code>中的 172.30.0.0/16 网段，转到 table60；&lt;/p>
+&lt;ul>
+&lt;li>&lt;code>table=60, n_packets=0, n_bytes=0, priority=100,tcp,nw_dst=172.30.107.57,tp_dst=8080 actions=load:0-&amp;gt;NXM_NX_REG1[],load:0x2-&amp;gt;NXM_NX_REG2[],goto_table:80&lt;/code>&lt;/li>
+&lt;/ul>
+&lt;p>table60 匹配目的地址&lt;code>nw_dst&lt;/code>为 172.30.107.57 且目的端口为 8080 的数据包，并将 Pod1 的 VNID 0 保存到寄存器 1 中，将&lt;code>0x2&lt;/code>（十进制数字 2）保存到寄存器 2 中，转到 table80；&lt;/p>
+&lt;ul>
+&lt;li>&lt;code>table=80, n_packets=1113435014018, n_bytes=294106102133061, priority=200 actions=output:NXM_NX_REG2[]&lt;/code>&lt;/li>
+&lt;/ul>
+&lt;p>table80 首先检查目的 Service 的 VNID 是否与寄存器 1 中的 VNID 一致，然后根据寄存器 2 中的数字将数据包从 2 号端口&lt;code>tun0&lt;/code>送出，最后进入节点的 iptables 规则中。&lt;/p>
 &lt;p>iptables 对数据包的处理流程如下图所示：&lt;/p>
 &lt;p>&lt;img src="https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20210516142844.png" alt="20210516142844">&lt;/p>
 &lt;p>由于 Service 的实现依赖于 NAT（上图中的紫色方框），因此我们可以在 NAT 表中查看到与之相关的规则：&lt;/p>
@@ -826,8 +786,8 @@ pkts bytes target prot opt in out &lt;span class="nb">source&lt;/span> destinati
 &lt;p>&lt;img src="https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/202205132045.jpeg" alt="202205132045">&lt;/p>
 &lt;h2 id="参考文献">参考文献&lt;/h2>
 &lt;p>&lt;a href="https://medoc.readthedocs.io/en/latest/docs/ovs/sharing/cloud_usage.html">OVS 在云项目中的使用&lt;/a>&lt;/p>
-&lt;p>&lt;a href="https://docs.openshift.com/container-platform/3.11/architecture/networking/sdn.html">OpenShift SDN - Networking | Architecture | OpenShift Container Platform 3.11&lt;/a>&lt;/p>
-&lt;p>&lt;a href="https://www.cnblogs.com/sammyliu/p/10064450.html">理解 OpenShift（3）：网络之 SDN&lt;/a>&lt;/p></content><category scheme="/tags/kubernetes/" term="Kubernetes" label="Kubernetes"/><category scheme="/tags/openshift/" term="Openshift" label="Openshift"/><category scheme="/tags/network/" term="Network" label="Network"/><category scheme="/tags/cni/" term="CNI" label="CNI"/><category scheme="/tags/open-vswitch/" term="Open vSwitch" label="Open vSwitch"/></entry><entry><title type="text">Kubernetes 中的 SDN 网络模型</title><link rel="alternate" type="text/html" href="/posts/kubernetes-sdn/"/><id>/posts/kubernetes-sdn/</id><updated>2021-10-26T22:45:52+08:00</updated><published>2020-05-09T09:19:42+01:00</published><author><name>koktlzz</name><uri>/</uri><email>koktlgwr@gmail.com</email></author><rights>[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.en)</rights><summary type="html">前言 A Guide to the Kubernetes Networking Model 一文生动形象地介绍了 Kubernetes 中的网络模型，然而受篇幅所限，作者并没有对 Pod 跨节点通信时数据包在节点之间传递的细节进行过多讨论。
+&lt;p>&lt;a href="https://docs.openshift.com/container-platform/3.11/architecture/networking/sdn.html">OpenShift SDN - OpenShift Container Platform 3.11&lt;/a>&lt;/p>
+&lt;p>&lt;a href="https://www.cnblogs.com/sammyliu/p/10064450.html">理解 OpenShift（3）：网络之 SDN&lt;/a>&lt;/p></content><category scheme="/tags/openshift/" term="Openshift" label="Openshift"/><category scheme="/tags/network/" term="Network" label="Network"/><category scheme="/tags/cni/" term="CNI" label="CNI"/><category scheme="/tags/open-vswitch/" term="Open vSwitch" label="Open vSwitch"/></entry><entry><title type="text">Kubernetes 中的 SDN 网络模型</title><link rel="alternate" type="text/html" href="/posts/kubernetes-sdn/"/><id>/posts/kubernetes-sdn/</id><updated>2021-10-26T22:45:52+08:00</updated><published>2020-05-09T09:19:42+01:00</published><author><name>koktlzz</name><uri>/</uri><email>koktlgwr@gmail.com</email></author><rights>[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.en)</rights><summary type="html">前言 A Guide to the Kubernetes Networking Model 一文生动形象地介绍了 Kubernetes 中的网络模型，然而受篇幅所限，作者并没有对 Pod 跨节点通信时数据包在节点之间传递的细节进行过多讨论。
 我们已经知道，Docker 使用端口映射的方式实现不同主机间容器的通信，Kubernetes 中同样也有 hostPort 的概念。但是当节点和 Pod 的数量上升后，手动管理节点上绑定的端口是十分困难的，这也是NodePort类型的 Service 的缺点之一。而一旦 Pod 不再“借用”节点的 IP 和端口来暴露自身的服务，就不得不面临一个棘手的问题：Pod 的本质是节点中的进程，节点外的物理网络设备（交换机/路由器）并不知晓 Pod 的存在。它们在接收目的地址为 Pod IP 的数据包时，无法完成进一步的传输工作。</summary><content type="html">&lt;h2 id="前言">前言&lt;/h2>
 &lt;p>&lt;a href="https://sookocheff.com/post/kubernetes/understanding-kubernetes-networking-model/">A Guide to the Kubernetes Networking Model&lt;/a> 一文生动形象地介绍了 Kubernetes 中的网络模型，然而受篇幅所限，作者并没有对 Pod 跨节点通信时数据包在节点之间传递的细节进行过多讨论。&lt;/p>
 &lt;p>我们已经知道，Docker 使用端口映射的方式实现不同主机间容器的通信，Kubernetes 中同样也有 &lt;a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#pod-v1-core">&lt;code>hostPort&lt;/code>&lt;/a> 的概念。但是当节点和 Pod 的数量上升后，手动管理节点上绑定的端口是十分困难的，这也是&lt;code>NodePort&lt;/code>类型的 Service 的缺点之一。而一旦 Pod 不再“借用”节点的 IP 和端口来暴露自身的服务，就不得不面临一个棘手的问题：Pod 的本质是节点中的进程，节点外的物理网络设备（交换机/路由器）并不知晓 Pod 的存在。它们在接收目的地址为 Pod IP 的数据包时，无法完成进一步的传输工作。&lt;/p>
