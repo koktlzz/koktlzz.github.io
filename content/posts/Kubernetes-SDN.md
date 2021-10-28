@@ -1,5 +1,5 @@
 ---
-title: "Kubernetes 中 Pod 是如何跨节点通信的？"
+title: "Pod 是如何跨节点通信的？"
 date: 2020-05-09T09:19:42+01:00
 draft: false
 tags: ["Kubernetes", "Network", "CNI"]
@@ -11,7 +11,7 @@ tags: ["Kubernetes", "Network", "CNI"]
 
 我们已经知道，Docker 使用端口映射的方式实现不同主机间容器的通信，Kubernetes 中同样也有 [`hostPort`](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#pod-v1-core) 的概念。但是当节点和 Pod 的数量上升后，手动管理节点上绑定的端口是十分困难的，这也是`NodePort`类型的 Service 的缺点之一。而一旦 Pod 不再“借用”节点的 IP 和端口来暴露自身的服务，就不得不面临一个棘手的问题：Pod 的本质是节点中的进程，节点外的物理网络设备（交换机/路由器）并不知晓 Pod 的存在。它们在接收目的地址为 Pod IP 的数据包时，无法完成进一步的传输工作。
 
-为此我们需要使用一些 CNI（Container Network Interface）插件（如 Flannel、Calico、Cilium 和 Open vSwitch 等）来完善 Kubernetes 集群的网络模型，这种新型的网络设计理念称为 SDN（Software-defined Networking）。根据 SDN 实现的层级，我们可以将其分为 Underlay Network 和 Overlay Network：
+为此我们需要使用一些 CNI（Container Network Interface）插件来完善 Kubernetes 集群的网络模型，这种新型的网络设计理念称为 SDN（Software-defined Networking）。根据 SDN 实现的层级，我们可以将其分为 Underlay Network 和 Overlay Network：
 
 > Overlay 网络允许设备跨越底层物理网络（Underlay Network）进行通信，而底层却并不知晓 Overlay 网络的存在。Underlay 网络是专门用来承载用户 IP 流量的基础架构层，它与 Overlay 网络之间的关系有点类似物理机和虚拟机。Underlay 网络和物理机都是真正存在的实体，它们分别对应着真实存在的网络设备和计算设备，而 Overlay 网络和虚拟机都是依托在下层实体使用软件虚拟出来的层级。
 
@@ -59,8 +59,6 @@ Overlay 网络的实现并不依赖于底层物理网络设备，因此我们就
 
 Node1 上的 VTEP 收到 Pod1 发来的数据包后，首先会在本地的转发表中查找目的 Pod 所在节点的 IP，即 192.168.1.100。随后它将本机 IP 地址 10.86.44.2、Node2 的 IP 地址 192.168.1.100 和 Pod1 的 VNID（VxLAN Network Identifier）封装在原始数据包外，从 Node1 的网络接口 eth0 送出。由于新构建的数据包源/目的地址均为节点的 IP，因此外部的路由器可以将其转发到 Node2 上。Node2 中的 VTEP 在接收到数据包后会首先进行解封，若源 VNID（Pod1 的 VNID）与目的 VNID（Pod2 的 VNID）一致，便会根据原始数据包中的目的地址 172.100.1.2 将其发送到 Pod2 上。此处的 VNID 检查，主要是为了实现集群的网络策略管理和多租户隔离。
 
-## 总结
-
 通过对上述几种 SDN 网络模型的讨论，我们发现只有 Overlay 网络需要对数据包进行封装和解封，因此它的性能相比于 Underlay 网络较差。但 Overlay 网络也有以下优点：
 
 - 对底层网络设备的依赖性最小。即使 Pod 所在的节点发生迁移，依然可以通过 Overlay 网络与原集群实现二层网络的互通；
@@ -68,11 +66,9 @@ Node1 上的 VTEP 收到 Pod1 发来的数据包后，首先会在本地的转�
 
 ## Future Work
 
-本文从 Kubernetes 中 Pod 跨节点通信的方式入手，引入了一些对 SDN 网络模型的简单讨论。考虑到各种 CNI 插件的实现细节是十分复杂的，仍有许多 Topic 值得我们深入探索，比如：
-
 - Overlay 网络通过 IP 封包和控制平面可以减少集群中的 MAC 地址表项和 ARP 请求？
-- 本文在介绍 Underlay 网络时提到了 Terway 和 Calico，那么基于 Overlay 网络的 CNI 插件有哪些呢？
-- 近年来 Cilium 成为了
+- ~~本文在讨论 Underlay 网络时提到了 Terway 和 Calico，那么基于 Overlay 网络的 CNI 插件又有哪些呢？~~ **更新**：我在 [对 Openshift SDN 网络模型的一些探索](/posts/openshift-sdn/) 中介绍了基于 Overlay 网络的 Open vSwitch；
+- 近年来发展迅速的 Cilium 是怎样实现 SDN 网络的？它所依赖的 eBPF 技术又是什么？
 
 ## 参考文献
 
