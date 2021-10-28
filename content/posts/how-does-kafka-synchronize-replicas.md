@@ -3,7 +3,7 @@ title: "Kafka 是如何同步副本的？"
 date: 2021-03-26T00:25:25+08:00
 draft: false
 tags: ["Kafka"]
-summary: "通常，Kafka 中的每个 Partiotion 中有多个副本 (Replica) 以实现高可用。想象一个场景，Consumer 正在消费 Leader 中 Offset=10 的数据，而此时 Follower 中只同步到 Offset=8。那么当 Leader 所在的 Broker 宕机后，当前 Follower 经选举成为新的 Leader，Consumer 再次消费时便会报错。因此，Kafka 引入了 HW（High Watermark，高水位）机制来保证副本数据的可靠性和一致性..."
+summary: "通常，Kafka 中的每个 Partiotion 中有多个副本 (Replica) 以实现高可用。想象一个场景，Consumer 正在消费 Leader 中 Offset=10 的数据，而此时 Follower 中只同步到 Offset=8。那么当 Leader 所在的 Broker 宕机后，当前 Follower 经选举成为新的 Leader，Consumer 再次消费时便会报错..."
 ---
 
 ## 前言
