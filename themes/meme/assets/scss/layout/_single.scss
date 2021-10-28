@@ -30,7 +30,7 @@
             text-decoration-color: alpha(var(--color-primary), 0.5);
         }
     }
-    ul li a{
+    ul li a {
         color: var(--color-primary);
         text-decoration: none;
         text-decoration-color: var(--color-contrast-low);
@@ -65,7 +65,8 @@
             text-decoration: none;
         }
     }
-    ol, ul {
+    ol,
+    ul {
         margin: 0;
         padding-left: 2em;
         line-height: $lineHeight;
@@ -114,16 +115,19 @@ blockquote {
 .contents {
     position: fixed;
     font-size: 18px;
-    overflow-y: auto;
-    padding-left: 2.5%;
+    overflow-y: scroll;
+    height: 75vh;
+    width: 25vh;
+    padding-left: 2%;
     h2 {
         font-size: 20px;
         margin-top: 15%;
         margin-bottom: 0%;
     }
-    ol, ul {
+    ol,
+    ul {
         list-style: none;
-        padding-left: 10%;
+        padding-left: 5%;
     }
     ::-webkit-scrollbar-thumb {
         background-color: var(--color-bg);
@@ -131,7 +135,7 @@ blockquote {
 }
 
 @media screen and (max-width: $postWidth) {
-    .contents{
+    .contents {
         display: none;
     }
 }
@@ -147,7 +151,8 @@ blockquote {
 //     }
 // }
 
-ol, ul {
+ol,
+ul {
     &.toc {
         padding: 0;
         overflow: auto hidden;
@@ -203,7 +208,13 @@ ol, ul {
         transition: all ($duration / 2);
     }
     .post {
-        h1, h2, h3, h4, h5, h6, .anchor-link {
+        h1,
+        h2,
+        h3,
+        h4,
+        h5,
+        h6,
+        .anchor-link {
             &:hover {
                 --anchor-opacity: 1;
             }
@@ -224,7 +235,8 @@ table {
 th {
     font-weight: 700;
 }
-th, td {
+th,
+td {
     font-size: 0.9em;
     padding: 0.4em;
     border: 1px solid var(--color-contrast-lower);
@@ -294,7 +306,8 @@ pre {
     }
 }
 
-.katex-display, mjx-container[jax="CHTML"][display="true"] {
+.katex-display,
+mjx-container[jax="CHTML"][display="true"] {
     overflow: auto hidden;
     text-indent: 0;
 }
