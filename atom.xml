@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en"><title type="text">Inspire Hub</title><subtitle type="html">MemE is a powerful and highly customizable GoHugo theme for personal blogs.</subtitle><updated>2021-10-28T07:20:49+00:00</updated><id>/</id><link rel="alternate" type="text/html" href="/"/><link rel="self" type="application/atom+xml" href="/atom.xml"/><author><name>koktlzz</name><uri>/</uri><email>koktlgwr@gmail.com</email></author><rights>[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.en)</rights><generator uri="https://gohugo.io/" version="0.88.1">Hugo</generator><entry><title type="text">通过安装 CoreOS 系统了解 Linux 启动流程</title><link rel="alternate" type="text/html" href="/posts/understand-linux-boot-process-by-installing-coreos/"/><id>/posts/understand-linux-boot-process-by-installing-coreos/</id><updated>2021-10-28T15:20:32+08:00</updated><published>2021-10-20T00:25:25+08:00</published><author><name>koktlzz</name><uri>/</uri><email>koktlgwr@gmail.com</email></author><rights>[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.en)</rights><summary type="html">前言 OpenShift 4.X 版本要求安装在操作系统为 CoreOS 的机器上，因此 官方文档 给出了使用 PXE 或 IPXE 引导 CoreOS 系统的方法。我们可以参考其操作流程，将一台 CentOS 7.X 的机器改写为 CoreOS 系统，步骤如下：
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en"><title type="text">Inspire Hub</title><subtitle type="html">MemE is a powerful and highly customizable GoHugo theme for personal blogs.</subtitle><updated>2021-10-28T07:39:51+00:00</updated><id>/</id><link rel="alternate" type="text/html" href="/"/><link rel="self" type="application/atom+xml" href="/atom.xml"/><author><name>koktlzz</name><uri>/</uri><email>koktlgwr@gmail.com</email></author><rights>[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.en)</rights><generator uri="https://gohugo.io/" version="0.88.1">Hugo</generator><entry><title type="text">通过安装 CoreOS 系统了解 Linux 启动流程</title><link rel="alternate" type="text/html" href="/posts/understand-linux-boot-process-by-installing-coreos/"/><id>/posts/understand-linux-boot-process-by-installing-coreos/</id><updated>2021-10-28T15:20:32+08:00</updated><published>2021-10-20T00:25:25+08:00</published><author><name>koktlzz</name><uri>/</uri><email>koktlgwr@gmail.com</email></author><rights>[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.en)</rights><summary type="html">前言 OpenShift 4.X 版本要求安装在操作系统为 CoreOS 的机器上，因此 官方文档 给出了使用 PXE 或 IPXE 引导 CoreOS 系统的方法。我们可以参考其操作流程，将一台 CentOS 7.X 的机器改写为 CoreOS 系统，步骤如下：
 从 镜像下载页 下载安装所需版本的 kernel、initramfs 和 rootfs 文件，并将 rootfs 和点火文件（*.ign）上传到自建的 HTTP 服务器上；</summary><content type="html">&lt;h2 id="前言">前言&lt;/h2>
 &lt;p>OpenShift 4.X 版本要求安装在操作系统为 CoreOS 的机器上，因此 &lt;a href="https://docs.openshift.com/container-platform/4.6/installing/installing_bare_metal/installing-restricted-networks-bare-metal.html#installation-user-infra-machines-pxe_installing-restricted-networks-bare-metal">官方文档&lt;/a> 给出了使用 PXE 或 IPXE 引导 CoreOS 系统的方法。我们可以参考其操作流程，将一台 CentOS 7.X 的机器改写为 CoreOS 系统，步骤如下：&lt;/p>
 &lt;ol>
@@ -396,7 +396,7 @@ graphical.target
 &lt;p>&lt;a href="https://zh.wikipedia.org/wiki/%E4%B8%BB%E5%BC%95%E5%AF%BC%E8%AE%B0%E5%BD%95">主引导记录 - Wikipedia&lt;/a>&lt;/p>
 &lt;p>&lt;a href="https://opensource.com/article/17/2/linux-boot-and-startup">An Introduction To the Linux Boot and Startup Processes&lt;/a>&lt;/p>
 &lt;p>&lt;a href="https://www.gnu.org/software/grub/manual/grub/grub.html">GNU GRUB Manual 2.06&lt;/a>&lt;/p>
-&lt;p>&lt;a href="https://man7.org/linux/man-pages/man7/bootup.7.html">Bootup(7) - Linux manual page&lt;/a>&lt;/p></content><category scheme="/tags/os/" term="OS" label="OS"/><category scheme="/tags/linux/" term="Linux" label="Linux"/><category scheme="/tags/coreos/" term="CoreOs" label="CoreOs"/></entry><entry><title type="text">对 Openshift SDN 网络模型的一些探索</title><link rel="alternate" type="text/html" href="/posts/explorations-on-the-openshift-sdn-network-model/"/><id>/posts/explorations-on-the-openshift-sdn-network-model/</id><updated>2021-10-28T15:20:32+08:00</updated><published>2020-05-13T09:19:42+01:00</published><author><name>koktlzz</name><uri>/</uri><email>koktlgwr@gmail.com</email></author><rights>[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.en)</rights><summary type="html">前言 在 Kubernetes Pod 是如何跨节点通信的？中，我们简单地介绍了 Kubernetes 中的两种 SDN 网络模型：Underlay 和 Overlay。而 Openshift 中的 SDN 则是由 Overlay 网络 OVS（Open vSwitch）实现的，其使用的插件如下：
+&lt;p>&lt;a href="https://man7.org/linux/man-pages/man7/bootup.7.html">Bootup(7) - Linux manual page&lt;/a>&lt;/p></content><category scheme="/tags/os/" term="OS" label="OS"/><category scheme="/tags/linux/" term="Linux" label="Linux"/><category scheme="/tags/coreos/" term="CoreOs" label="CoreOs"/></entry><entry><title type="text">对 Openshift SDN 网络模型的一些探索</title><link rel="alternate" type="text/html" href="/posts/explorations-on-the-openshift-sdn-network-model/"/><id>/posts/explorations-on-the-openshift-sdn-network-model/</id><updated>2021-10-28T15:26:00+08:00</updated><published>2021-05-13T09:19:42+01:00</published><author><name>koktlzz</name><uri>/</uri><email>koktlgwr@gmail.com</email></author><rights>[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.en)</rights><summary type="html">前言 在 Kubernetes Pod 是如何跨节点通信的？中，我们简单地介绍了 Kubernetes 中的两种 SDN 网络模型：Underlay 和 Overlay。而 Openshift 中的 SDN 则是由 Overlay 网络 OVS（Open vSwitch）实现的，其使用的插件如下：
 ovs-subnet: 默认插件，提供一个扁平化的 Pod 网络以实现 Pod 与其他任何 Pod 或 Service 的通信； ovs-multitenant：实现多租户管理，隔离不同 Project 之间的网络通信。每个 Project 都有一个 NETID（即 VxLAN 中的 VNID），可以使用 oc get netnamespaces 命令查看； ovs-networkpolicy：基于 Kubernetes 中的 NetworkPolicy 资源实现网络策略管理。 OVS 在每个 Openshift 节点上都创建了如下网络接口：</summary><content type="html">&lt;h2 id="前言">前言&lt;/h2>
 &lt;p>在 &lt;a href="/posts/how-kubernetes-pods-communicate-across-nodes/">Kubernetes Pod 是如何跨节点通信的？&lt;/a>中，我们简单地介绍了 Kubernetes 中的两种 SDN 网络模型：Underlay 和 Overlay。而 Openshift 中的 SDN 则是由 Overlay 网络 OVS（Open vSwitch）实现的，其使用的插件如下：&lt;/p>
 &lt;ul>
@@ -801,7 +801,7 @@ pkts bytes target prot opt in out &lt;span class="nb">source&lt;/span> destinati
 &lt;p>&lt;a href="https://docs.openshift.com/container-platform/3.11/architecture/networking/sdn.html">OpenShift SDN - OpenShift Container Platform 3.11&lt;/a>&lt;/p>
 &lt;p>&lt;a href="https://www.cnblogs.com/sammyliu/p/10064450.html">理解 OpenShift（3）：网络之 SDN&lt;/a>&lt;/p>
 &lt;p>&lt;a href="https://arthurchiao.art/blog/deep-dive-into-iptables-and-netfilter-arch-zh/">[译] 深入理解 iptables 和 netfilter 架构&lt;/a>&lt;/p>
-&lt;p>&lt;a href="https://superuser.com/questions/1269859/linux-netfilter-how-does-connection-tracking-track-connections-changed-by-nat">Linux Netfilter: How does connection tracking track connections changed by NAT?&lt;/a>&lt;/p></content><category scheme="/tags/openshift/" term="Openshift" label="Openshift"/><category scheme="/tags/network/" term="Network" label="Network"/><category scheme="/tags/cni/" term="CNI" label="CNI"/><category scheme="/tags/open-vswitch/" term="Open vSwitch" label="Open vSwitch"/></entry><entry><title type="text">Kubernetes Pod 是如何跨节点通信的？</title><link rel="alternate" type="text/html" href="/posts/how-kubernetes-pods-communicate-across-nodes/"/><id>/posts/how-kubernetes-pods-communicate-across-nodes/</id><updated>2021-10-28T15:20:32+08:00</updated><published>2020-05-09T09:19:42+01:00</published><author><name>koktlzz</name><uri>/</uri><email>koktlgwr@gmail.com</email></author><rights>[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.en)</rights><summary type="html">前言 A Guide to the Kubernetes Networking Model 一文生动形象地介绍了 Kubernetes 中的网络模型，然而受篇幅所限，作者并没有对 Pod 跨节点通信时数据包在节点之间传递的细节进行过多讨论。
+&lt;p>&lt;a href="https://superuser.com/questions/1269859/linux-netfilter-how-does-connection-tracking-track-connections-changed-by-nat">Linux Netfilter: How does connection tracking track connections changed by NAT?&lt;/a>&lt;/p></content><category scheme="/tags/openshift/" term="Openshift" label="Openshift"/><category scheme="/tags/network/" term="Network" label="Network"/><category scheme="/tags/cni/" term="CNI" label="CNI"/><category scheme="/tags/open-vswitch/" term="Open vSwitch" label="Open vSwitch"/></entry><entry><title type="text">Kubernetes Pod 是如何跨节点通信的？</title><link rel="alternate" type="text/html" href="/posts/how-kubernetes-pods-communicate-across-nodes/"/><id>/posts/how-kubernetes-pods-communicate-across-nodes/</id><updated>2021-10-28T15:26:15+08:00</updated><published>2021-05-09T09:19:42+01:00</published><author><name>koktlzz</name><uri>/</uri><email>koktlgwr@gmail.com</email></author><rights>[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.en)</rights><summary type="html">前言 A Guide to the Kubernetes Networking Model 一文生动形象地介绍了 Kubernetes 中的网络模型，然而受篇幅所限，作者并没有对 Pod 跨节点通信时数据包在节点之间传递的细节进行过多讨论。
 我们已经知道，Docker 使用端口映射的方式实现不同主机间容器的通信，Kubernetes 中同样也有 hostPort 的概念。但是当节点和 Pod 的数量上升后，手动管理节点上绑定的端口是十分困难的，这也是NodePort类型的 Service 的缺点之一。而一旦 Pod 不再“借用”节点的 IP 和端口来暴露自身的服务，就不得不面临一个棘手的问题：Pod 的本质是节点中的进程，节点外的物理网络设备（交换机/路由器）并不知晓 Pod 的存在。它们在接收目的地址为 Pod IP 的数据包时，无法完成进一步的传输工作。</summary><content type="html">&lt;h2 id="前言">前言&lt;/h2>
 &lt;p>&lt;a href="https://sookocheff.com/post/kubernetes/understanding-kubernetes-networking-model/">A Guide to the Kubernetes Networking Model&lt;/a> 一文生动形象地介绍了 Kubernetes 中的网络模型，然而受篇幅所限，作者并没有对 Pod 跨节点通信时数据包在节点之间传递的细节进行过多讨论。&lt;/p>
 &lt;p>我们已经知道，Docker 使用端口映射的方式实现不同主机间容器的通信，Kubernetes 中同样也有 &lt;a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#pod-v1-core">&lt;code>hostPort&lt;/code>&lt;/a> 的概念。但是当节点和 Pod 的数量上升后，手动管理节点上绑定的端口是十分困难的，这也是&lt;code>NodePort&lt;/code>类型的 Service 的缺点之一。而一旦 Pod 不再“借用”节点的 IP 和端口来暴露自身的服务，就不得不面临一个棘手的问题：Pod 的本质是节点中的进程，节点外的物理网络设备（交换机/路由器）并不知晓 Pod 的存在。它们在接收目的地址为 Pod IP 的数据包时，无法完成进一步的传输工作。&lt;/p>
@@ -850,4 +850,131 @@ pkts bytes target prot opt in out &lt;span class="nb">source&lt;/span> destinati
 &lt;p>&lt;a href="https://help.aliyun.com/document_detail/97467.html">使用 Terway 网络插件&lt;/a>&lt;/p>
 &lt;p>&lt;a href="https://zh.wikipedia.org/wiki/%E8%BE%B9%E7%95%8C%E7%BD%91%E5%85%B3%E5%8D%8F%E8%AE%AE">边界网关协议 - Wikipedia&lt;/a>&lt;/p>
 &lt;p>&lt;a href="https://docs.projectcalico.org/networking/bgp">Configure BGP peering - Calico&lt;/a>&lt;/p>
-&lt;p>&lt;a href="https://draveness.me/whys-the-design-overlay-network/">为什么集群需要 Overlay 网络&lt;/a>&lt;/p></content><category scheme="/tags/kubernetes/" term="Kubernetes" label="Kubernetes"/><category scheme="/tags/network/" term="Network" label="Network"/><category scheme="/tags/cni/" term="CNI" label="CNI"/></entry></feed>
+&lt;p>&lt;a href="https://draveness.me/whys-the-design-overlay-network/">为什么集群需要 Overlay 网络&lt;/a>&lt;/p></content><category scheme="/tags/kubernetes/" term="Kubernetes" label="Kubernetes"/><category scheme="/tags/network/" term="Network" label="Network"/><category scheme="/tags/cni/" term="CNI" label="CNI"/></entry><entry><title type="text">Kafka 是如何同步副本的？</title><link rel="alternate" type="text/html" href="/posts/how-does-kafka-synchronize-replicas/"/><id>/posts/how-does-kafka-synchronize-replicas/</id><updated>2021-10-28T15:39:30+08:00</updated><published>2021-03-26T00:25:25+08:00</published><author><name>koktlzz</name><uri>/</uri><email>koktlgwr@gmail.com</email></author><rights>[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.en)</rights><summary type="html">前言 通常，Kafka 中的每个 Partiotion 中有多个副本 (Replica) 以实现高可用。想象一个场景，Consumer 正在消费 Leader 中 Offset=10 的数据，而此时 Follower 中只同步到 Offset=8。那么当 Leader 所在的 Broker 宕机后，当前 Follower 经选举成为新的 Leader，Consumer 再次消费时便会报错。因此，Kafka 引入了 HW（High Watermark，高水位）机制来保证副本数据的可靠性和一致性。
+HW 是什么？ HW 定义了消息的可见性，即标识 Partition 中的哪些消息是可以被 Consumer 消费的，只有小于 HW 值的消息才被认为是已备份或已提交的（committed）。而 LEO（Log End Offset）则表示副本写入下一条消息的 Offset，因此同一副本的 HW 值永远不会大于其 LEO 值。</summary><content type="html">&lt;h2 id="前言">前言&lt;/h2>
+&lt;p>通常，Kafka 中的每个 Partiotion 中有多个副本 (Replica) 以实现高可用。想象一个场景，Consumer 正在消费 Leader 中 Offset=10 的数据，而此时 Follower 中只同步到 Offset=8。那么当 Leader 所在的 Broker 宕机后，当前 Follower 经选举成为新的 Leader，Consumer 再次消费时便会报错。因此，Kafka 引入了 HW（High Watermark，高水位）机制来保证副本数据的可靠性和一致性。&lt;/p>
+&lt;h2 id="hw-是什么">HW 是什么？&lt;/h2>
+&lt;p>HW 定义了消息的可见性，即标识 Partition 中的哪些消息是可以被 Consumer 消费的，只有小于 HW 值的消息才被认为是已备份或已提交的（committed）。而 LEO（Log End Offset）则表示副本写入&lt;strong>下一条&lt;/strong>消息的 Offset，因此同一副本的 HW 值永远不会大于其 LEO 值。&lt;/p>
+&lt;p>&lt;img src="https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/202103230302.jpeg" alt="202103230302">&lt;/p>
+&lt;p>当集群中副本所在的 Broker 发生故障而后恢复时，副本先将数据截断（Truncation）到其 HW 处（LEO 等于 HW），然后再开始向 Leader 同步数据。&lt;/p>
+&lt;h2 id="hw-的更新机制">HW 的更新机制&lt;/h2>
+&lt;p>每一个副本都保存了其 HW 值和 LEO 值，即 Leader HW（实际上也是 Partition HW）、Leader LEO 和 Follower HW、Follower LEO。而 Leader 所在的 Broker 上还保存了其他 Follower 的 LEO 值，称为 Remote LEO。上述几个值的更新流程如下：&lt;/p>
+&lt;p>&lt;img src="https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/202103230149.jpeg" alt="202103230149">&lt;/p>
+&lt;p>如图所示，当 Producer 向 log 文件写入数据时，Leader LEO 首先被更新。而 Remote LEO 要等到 Follower 向 Leader 发送同步请求（Fetch）时，才会根据请求携带的当前 Follower LEO 值更新。随后，Leader 计算所有副本 LEO 的最小值，将其作为新的 Leader HW。考虑到 Leader HW 只能单调递增，因此还增加了一个 LEO 最小值与当前 Leader HW 的比较，防止 Leader HW 值降低（&lt;code>max[Leader HW, min(All LEO)]&lt;/code>）。&lt;/p>
+&lt;p>Follower 在接收到 Leader 的响应（Response）后，首先将消息写入 log 文件中，随后更新 Follower LEO。由于 Response 中携带了新的 Leader HW，Follower 将其与刚刚更新过的 Follower LEO 相比较，取最小值作为 Follower HW（&lt;code>min(Follower LEO, Leader HW)&lt;/code>）。&lt;/p>
+&lt;p>举例来说，如果一开始 Leader 和 Follower 中没有任何数据，即所有值均为 0。那么当 Prouder 向 Leader 写入第一条消息，上述几个值的变化顺序如下：&lt;/p>
+&lt;table>
+&lt;thead>
+&lt;tr>
+&lt;th>&lt;/th>
+&lt;th>Leader LEO&lt;/th>
+&lt;th>Remote LEO&lt;/th>
+&lt;th>Leader HW&lt;/th>
+&lt;th>Follower LEO&lt;/th>
+&lt;th>Follower HW&lt;/th>
+&lt;/tr>
+&lt;/thead>
+&lt;tbody>
+&lt;tr>
+&lt;td>Producer Write&lt;/td>
+&lt;td>1&lt;/td>
+&lt;td>0&lt;/td>
+&lt;td>0&lt;/td>
+&lt;td>0&lt;/td>
+&lt;td>0&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>Follower Fetch&lt;/td>
+&lt;td>1&lt;/td>
+&lt;td>0&lt;/td>
+&lt;td>0&lt;/td>
+&lt;td>0&lt;/td>
+&lt;td>0&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>Leader Update HW&lt;/td>
+&lt;td>1&lt;/td>
+&lt;td>0&lt;/td>
+&lt;td>0&lt;/td>
+&lt;td>0&lt;/td>
+&lt;td>0&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>Leader Response&lt;/td>
+&lt;td>1&lt;/td>
+&lt;td>0&lt;/td>
+&lt;td>0&lt;/td>
+&lt;td>1&lt;/td>
+&lt;td>0&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>Follower Update HW&lt;/td>
+&lt;td>1&lt;/td>
+&lt;td>0&lt;/td>
+&lt;td>0&lt;/td>
+&lt;td>1&lt;/td>
+&lt;td>0&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>Follower Fetch&lt;/td>
+&lt;td>1&lt;/td>
+&lt;td>1&lt;/td>
+&lt;td>0&lt;/td>
+&lt;td>1&lt;/td>
+&lt;td>0&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>Leader Update HW&lt;/td>
+&lt;td>1&lt;/td>
+&lt;td>1&lt;/td>
+&lt;td>1&lt;/td>
+&lt;td>1&lt;/td>
+&lt;td>0&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>Leader Response&lt;/td>
+&lt;td>1&lt;/td>
+&lt;td>1&lt;/td>
+&lt;td>1&lt;/td>
+&lt;td>1&lt;/td>
+&lt;td>0&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>Follower Update HW&lt;/td>
+&lt;td>1&lt;/td>
+&lt;td>1&lt;/td>
+&lt;td>1&lt;/td>
+&lt;td>1&lt;/td>
+&lt;td>1&lt;/td>
+&lt;/tr>
+&lt;/tbody>
+&lt;/table>
+&lt;h2 id="hw-的隐患">HW 的隐患&lt;/h2>
+&lt;p>通过上面的表格我们发现，Follower 往往需要进行两次 Fetch 请求才能成功更新 HW。Follower HW 在某一阶段内总是落后于 Leader HW，因此副本在根据 HW 值截取数据时将有可能发生数据的丢失或不一致。&lt;/p>
+&lt;p>&lt;img src="https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/202103241107.jpeg" alt="202103241107">&lt;/p>
+&lt;p>图中两副本的 LEO 均为 2，但 Leader 副本 B 上的 HW 为 2，Follower 副本 A 上的 HW 为 1。正常情况下，副本 A 将在接收 Leader Response 后根据 Leader HW 更新其 Follower HW 为 2。但假如此时副本 A 所在的 Broker 重启，它会把 Follower LEO 修改为重启前自身的 HW 值 1，因此数据 M1（Offset=1）被截断。当副本 A 重新向副本 B 发送同步请求时，如果副本 B 所在的 Broker 发生宕机，副本 A 将被选举成为新的 Leader。即使副本 B 所在的 Broker 能够成功重启且其 LEO 值依然为 2，但只要它向当前 Leader（副本 A）发起同步请求后就会更新其 HW 为 1（计算&lt;code>min(Follower LEO, Leader HW)&lt;/code>），数据 M1（Offset=1）随即被截断。如果&lt;code>min.insync.replicas&lt;/code>参数为 1，那么 Producer 不会因副本 A 没有同步成功而重新发送消息，M1 也就永远丢失了。&lt;/p>
+&lt;p>&lt;img src="https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/202103241119.jpeg" alt="202103241119">&lt;/p>
+&lt;p>图中 Leader 副本 B 写入了两条数据 M0 和 M1，Follower 副本 A 只写入了一条数据 M0。此时 Leader HW 为 2，Follower HW 为 1。如果在 Follower 同步第二条数据前，两副本所在的 Broker 均发生重启且副本 B 所在的 Broker 先重启成功，那么副本 A 将成为新的 Leader。这时 Producer 向其写入数据 M2，副本 A 作为集群中的唯一副本，更新其 HW 为 2。当副本 B 所在的 Broker 重启后，它将向当前的 Leader 副本 A 同步数据。由于两者的 HW 均为 2，因此副本 B 不需要进行任何截断操作。在这种情况下，副本 B 中的数据为重启前的 M0 和 M1，副本 A 中的数据却是 M0 和 M2，副本间的数据出现了不一致。&lt;/p>
+&lt;h2 id="leader-epoch">Leader Epoch&lt;/h2>
+&lt;p>Kakfa 引入 Leader Epoch 后，Follower 就不再参考 HW，而是根据 Leader Epoch 信息来截断 Leader 中不存在的消息。这种机制可以弥补基于 HW 的副本同步机制的不足，Leader Epoch 由两部分组成：&lt;/p>
+&lt;ul>
+&lt;li>Epoch：一个单调增加的版本号。每当 Leader 副本发生变更时，都会增加该版本号。Epoch 值较小的 Leader 被认为是过期 Leader，不能再行使 Leader 的权力；&lt;/li>
+&lt;li>起始位移（Start Offset）：Leader 副本在该 Epoch 值上写入首条消息的 Offset。&lt;/li>
+&lt;/ul>
+&lt;p>举例来说，某个 Partition 有两个 Leader Epoch，分别为 (0, 0) 和 (1, 100)。这意味该 Partion 历经一次 Leader 副本变更，版本号为 0 的 Leader 从 Offset=0 处开始写入消息，共写入了 100 条。而版本号为 1 的 Leader 则从 Offset=100 处开始写入消息。&lt;/p>
+&lt;p>每个副本的 Leader Epoch 信息既缓存在内存中，也会定期写入消息目录下的 leaderer-epoch-checkpoint 文件中。当一个 Follower 副本从故障中恢复重新加入 ISR 中，它将：&lt;/p>
+&lt;ol>
+&lt;li>向 Leader 发送 LeaderEpochRequest，请求中包含了 Follower 的 Epoch 信息；&lt;/li>
+&lt;li>Leader 将返回其 Follower 所在 Epoch 的 Last Offset；&lt;/li>
+&lt;li>如果 Leader 与 Follower 处于同一 Epoch，那么 Last Offset 显然等于 Leader LEO；&lt;/li>
+&lt;li>如果 Follower 的 Epoch 落后于 Leader，则 Last Offset 等于 Follower Epoch + 1 所对应的 Start Offset。这可能有点难以理解，我们还是以 (0, 0) 和 (1, 100) 为例进行说明：Offset=100 的消息既是 Epoch=1 的 Start Offset，也是 Epoch=0 的 Last Offset；&lt;/li>
+&lt;li>Follower 接收响应后根据返回的 Last Offset 截断数据；&lt;/li>
+&lt;li>在数据同步期间，只要 Follower 发现 Leader 返回的 Epoch 信息与自身不一致，便会随之更新 Leader Epoch 并写入磁盘。&lt;/li>
+&lt;/ol>
+&lt;p>&lt;img src="https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/202103261242.jpeg" alt="202103261242">&lt;/p>
+&lt;p>在刚刚介绍的数据丢失场景中，副本 A 所在的 Broker 重启后根据自身的 HW 将数据 M1 截断。而现在，副本 A 重启后会先向副本 B 发送一个请求（LeaderEpochRequest）。由于两副本的 Epoch 均为 0，副本 B 返回的 Last Offset 为 Leader LEO 值 2。而副本 A 上并没有 Offset 大于等 2 的消息，因此无需进行数据截断，同时其 HW 也会更新为 2。之后副本 B 所在的 Broker 宕机，副本 A 成为新的 Leader，Leader Epoch 随即更新为 (1, 2)。当副本 B 重启回来并向当前 Leader 副本 A 发送 LeaderEpochRequest，得到的 Last Offset 为 Epoch=1 对应的 Start Offset 值 2。同样，副本 B 中消息的最大 Offset 值只有 1，因此也无需进行数据截断，消息 M1 成功保留了下来。&lt;/p>
+&lt;p>&lt;img src="https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/202103261249.jpeg" alt="202103261249">&lt;/p>
+&lt;p>在刚刚介绍的数据不一致场景中，由于最后两副本 HW 值相等，因此没有将不一致的数据截断。而现在，副本 A 重启后并便会更新 Leader Epoch 为 (1, 1)，同时也会更新其 HW 值为 2。副本 B 重启后向当前 Leader 副本 A 发送 LeaderEpochRequest，得到的 Last Offset 为 Epoch=1 对应的 Start Offset 值 1，因此截断 Offset=1 的消息 M1。这样只要副本 B 再次发起请求同步消息 M2，两副本的数据便可以保持一致。&lt;/p>
+&lt;p>值得一提的是，Leader Epoch 机制在&lt;code>min.insync.replicas&lt;/code>参数为 1 且&lt;code>unclean.leader.election.enabled&lt;/code>参数为&lt;code>true&lt;/code>时依然无法保证数据的可靠性。感兴趣的读者可以阅读 &lt;a href="https://cwiki.apache.org/confluence/display/KAFKA/KIP-101+-+Alter+Replication+Protocol+to+use+Leader+Epoch+rather+than+High+Watermark+for+Truncation">KIP-101 - Alter Replication Protocol to use Leader Epoch rather than High Watermark for Truncation&lt;/a> 文中的附录部分。&lt;/p>
+&lt;h2 id="参考文献">参考文献&lt;/h2>
+&lt;p>&lt;a href="https://cwiki.apache.org/confluence/display/KAFKA/KIP-101+-+Alter+Replication+Protocol+to+use+Leader+Epoch+rather+than+High+Watermark+for+Truncation">KIP-101 - Alter Replication Protocol to use Leader Epoch rather than High Watermark for Truncation&lt;/a>&lt;/p></content><category scheme="/tags/kafka/" term="Kafka" label="Kafka"/></entry></feed>
