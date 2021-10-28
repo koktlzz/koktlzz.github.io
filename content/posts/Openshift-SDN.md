@@ -7,7 +7,7 @@ tags: ["Openshift","Network", "CNI", "Open vSwitch"]
 
 ## 前言
 
-在 [Kubernetes Pod 是如何跨节点通信的？](/posts/kubernetes-sdn/) 中，我们简单地介绍了 Kubernetes 中的两种 SDN 网络模型：Underlay 和 Overlay。而 Openshift 中的 SDN 则是由 Overlay 网络 OVS（Open vSwitch）实现的，其使用的插件如下：
+在 [Kubernetes Pod 是如何跨节点通信的？](/posts/kubernetes-sdn/)中，我们简单地介绍了 Kubernetes 中的两种 SDN 网络模型：Underlay 和 Overlay。而 Openshift 中的 SDN 则是由 Overlay 网络 OVS（Open vSwitch）实现的，其使用的插件如下：
 
 - ovs-subnet: 默认插件，提供一个扁平化的 Pod 网络以实现 Pod 与其他任何 Pod 或 Service 的通信；
 - ovs-multitenant：实现多租户管理，隔离不同 Project 之间的网络通信。每个 Project 都有一个 NETID（即 VxLAN 中的 VNID），可以使用 **oc get netnamespaces** 命令查看；
@@ -315,7 +315,7 @@ Chain OPENSHIFT-MASQUERADE (1 references)
 
 - 本文并未涉及 External to Pod 的场景，它是如何实现的？我们都知道 Openshift 是通过 Router（HAProxy）来暴露集群内部服务的，那么数据包在传输过程中的 NAT 操作是怎样进行的？
 - 除了本文提到的几种网络接口外，Openshift 节点上还存在着`ovs-system`和`vxlan_sys_4789`。它们的作用是什么？
-- Openshift 4.X 版本的网络模型与本文实验所用的 3.6 版本相比有那些变化？
+- Openshift 4.X 版本的网络模型与本文实验用的 3.6 版本相比有那些变化？
 
 ## 参考文献
 
