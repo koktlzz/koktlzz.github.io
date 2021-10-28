@@ -3,12 +3,12 @@ title: "对 Openshift SDN 网络模型的一些探索"
 date: 2021-05-13T09:19:42+01:00
 draft: false
 tags: ["Openshift","Network", "CNI", "Open vSwitch"]
-summary: "在 [Kubernetes Pod 是如何跨节点通信的？](/posts/how-kubernetes-pods-communicate-across-nodes/)中，我们简单地介绍了 Kubernetes 中的两种 SDN 网络模型：Underlay 和 Overlay。而 Openshift 中的 SDN 则是由 Overlay 网络 OVS（Open vSwitch）实现的，其使用的插件如下 ..."
+summary: "在《Kubernetes Pod 是如何跨节点通信的？》中，我们简单地介绍了 Kubernetes 中的两种 SDN 网络模型：Underlay 和 Overlay。而 Openshift 中的 SDN 则是由 Overlay 网络 OVS（Open vSwitch）实现的，其使用的插件如下 ..."
 ---
 
 ## 前言
 
-在 [Kubernetes Pod 是如何跨节点通信的？](/posts/how-kubernetes-pods-communicate-across-nodes/)中，我们简单地介绍了 Kubernetes 中的两种 SDN 网络模型：Underlay 和 Overlay。而 Openshift 中的 SDN 则是由 Overlay 网络 OVS（Open vSwitch）实现的，其使用的插件如下：
+在 [Kubernetes Pod 是如何跨节点通信的？](/posts/how-kubernetes-pods-communicate-across-nodes/) 中，我们简单地介绍了 Kubernetes 中的两种 SDN 网络模型：Underlay 和 Overlay。而 Openshift 中的 SDN 则是由 Overlay 网络 OVS（Open vSwitch）实现的，其使用的插件如下：
 
 - ovs-subnet: 默认插件，提供一个扁平化的 Pod 网络以实现 Pod 与其他任何 Pod 或 Service 的通信；
 - ovs-multitenant：实现多租户管理，隔离不同 Project 之间的网络通信。每个 Project 都有一个 NETID（即 VxLAN 中的 VNID），可以使用 **oc get netnamespaces** 命令查看；
