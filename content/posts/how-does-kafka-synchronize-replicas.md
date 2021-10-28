@@ -5,21 +5,11 @@ draft: false
 tags: ["Kafka"]
 ---
 
-通常，Kafka 中的每个 Partiotion 中有多个副本 (Replica) 用于实现高可用，使用相关命令可以查看某一 Topic 中的 Partition 数量、Leader、Follower 以及 ISR 的情况：
+## 前言
 
-```bash
-[root@test-ece-kafka2 kafka]# ./bin/kafka-topics.sh --describe --zookeeper test-zk1:2181 --topic uat-log
-Topic:uat-log  PartitionCount:5        ReplicationFactor:2     Configs:
-        Topic: uat-log Partition: 0    Leader: 1       Replicas: 1,3   Isr: 3,1
-        Topic: uat-log Partition: 1    Leader: 2       Replicas: 2,1   Isr: 2,1
-        Topic: uat-log Partition: 2    Leader: 3       Replicas: 3,2   Isr: 2,3
-        Topic: uat-log Partition: 3    Leader: 1       Replicas: 1,2   Isr: 2,1
-        Topic: uat-log Partition: 4    Leader: 2       Replicas: 2,3   Isr: 2,3
-```
+通常，Kafka 中的每个 Partiotion 中有多个副本 (Replica) 以实现高可用。想象一个场景，Consumer 正在消费 Leader 中 Offset=10 的数据，而此时 Follower 中只同步到 Offset=8。那么当 Leader 所在的 Broker 宕机后，当前 Follower 经选举成为新的 Leader，Consumer 再次消费时便会报错。因此，Kafka 引入了 HW（High Watermark，高水位）机制来保证副本数据的可靠性和一致性。
 
-想象一个场景，Consumer 正在消费 Leader 中 Offset=10 的数据，而此时 Follower 中只同步到 Offset=8。那么当 Leader 所在的 Broker 宕机后，当前 Follower 经选举成为新的 Leader，Consumer 再次消费时便会报错。因此，Kafka 引入了 High Watermark（高水位）来保证副本数据的可靠性和一致性。
-
-## High Watermark（HW）
+## HW 是什么？
 
 HW 定义了消息的可见性，即标识 Partition 中的哪些消息是可以被 Consumer 消费的，只有小于 HW 值的消息才被认为是已备份或已提交的（committed）。而 LEO（Log End Offset）则表示副本写入**下一条**消息的 Offset，因此同一副本的 HW 值永远不会大于其 LEO 值。
 
@@ -89,7 +79,7 @@ Kakfa 引入 Leader Epoch 后，Follower 就不再参考 HW，而是根据 Leade
 
 在刚刚介绍的数据不一致场景中，由于最后两副本 HW 值相等，因此没有将不一致的数据截断。而现在，副本 A 重启后并便会更新 Leader Epoch 为 (1, 1)，同时也会更新其 HW 值为 2。副本 B 重启后向当前 Leader 副本 A 发送 LeaderEpochRequest，得到的 Last Offset 为 Epoch=1 对应的 Start Offset 值 1，因此截断 Offset=1 的消息 M1。这样只要副本 B 再次发起请求同步消息 M2，两副本的数据便可以保持一致。
 
-值得一提的是，Leader Epoch 机制在`min.insync.replicas`参数为 1 且`unclean.leader.election.enabled`参数为`true`时依然无法保证数据的可靠性。这里不再赘述，可参考 [KIP-101 - Alter Replication Protocol to use Leader Epoch rather than High Watermark for Truncation](https://cwiki.apache.org/confluence/display/KAFKA/KIP-101+-+Alter+Replication+Protocol+to+use+Leader+Epoch+rather+than+High+Watermark+for+Truncation) 文中的附录部分。
+值得一提的是，Leader Epoch 机制在`min.insync.replicas`参数为 1 且`unclean.leader.election.enabled`参数为`true`时依然无法保证数据的可靠性。感兴趣的读者可以阅读 [KIP-101 - Alter Replication Protocol to use Leader Epoch rather than High Watermark for Truncation](https://cwiki.apache.org/confluence/display/KAFKA/KIP-101+-+Alter+Replication+Protocol+to+use+Leader+Epoch+rather+than+High+Watermark+for+Truncation) 文中的附录部分。
 
 ## 参考文献
 
