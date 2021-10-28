@@ -3,6 +3,7 @@ title: "通过安装 CoreOS 系统了解 Linux 启动流程"
 date: 2021-10-20T00:25:25+08:00
 draft: false
 tags: ["OS", "Linux", "CoreOs"]
+summary: "OpenShift 4.X 版本要求安装在操作系统为 CoreOS 的机器上，因此官方文档给出了使用 PXE 或 IPXE 引导 CoreOS 系统的方法。我们可以参考其操作流程，将一台 CentOS 7.X 的机器改写为 CoreOS 系统，步骤如下..."
 ---
 
 ## 前言
