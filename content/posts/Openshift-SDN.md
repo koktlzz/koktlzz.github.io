@@ -1,5 +1,5 @@
 ---
-title: "Openshift 中的 SDN 网络模型"
+title: "对 Openshift SDN 的一些探索"
 date: 2020-05-13T09:19:42+01:00
 draft: false
 tags: ["Openshift","Network", "CNI", "Open vSwitch"]
@@ -56,7 +56,7 @@ OFPT_GET_CONFIG_REPLY (OF1.3) (xid=0x5): frags=nx-match miss_send_len=0
 - Pod 访问 Service：Pod to Service
 - Pod 与集群外部互访：Pod to External
 
-由于高版本（3.11 以上）的 Openshift 不再以守护进程而是以 Pod 的形式部署 OVS 组件，不方便对 OpenFlow 流表进行查看，因此本文选用的集群版本为 3.6：
+由于高版本（3.11 以上）的 Openshift 不再以守护进程而是以 Pod 的形式部署 OVS 组件，不方便对 [OpenFlow](https://en.wikipedia.org/wiki/OpenFlow) 流表进行查看，因此本文选用的集群版本为 3.6：
 
 ```bash
 [root@node1 ~]# oc version 
@@ -75,7 +75,7 @@ kubernetes v1.6.1+5115d708d7
 
 ![202205132046](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/202205132046.jpeg)
 
-数据包首先通过`veth-pair`送往 OVS 网桥`br0`，随后便进入了`br0`上的 [OpenFlow](https://en.wikipedia.org/wiki/OpenFlow) 流表。我们可以用 **ovs-ofctl -O OpenFlow13 dump-flows br0** 命令查看流表中的规则，同时为了让输出结果更加简洁，略去 cookie 和 duration 的信息：
+数据包首先通过`veth-pair`送往 OVS 网桥`br0`，随后便进入了`br0`上的 OpenFlow 流表。我们可以用 **ovs-ofctl -O OpenFlow13 dump-flows br0** 命令查看流表中的规则，同时为了让输出结果更加简洁，略去 cookie 和 duration 的信息：
 
 - `table=0, n_packets=62751550874, n_bytes=25344802160312, priority=200,ip,in_port=1,nw_src=10.128.0.0/14,nw_dst=10.130.8.0/23 actions=move:NXM_NX_TUN_ID[0..31]->NXM_NX_REG0[],goto_table:10`
 - `table=0, n_packets=1081527047094, n_bytes=296066911370148, priority=200,ip,in_port=2 actions=goto_table:30`
@@ -313,11 +313,11 @@ Chain OPENSHIFT-MASQUERADE (1 references)
 
 ## Future Work
 
-虽然本文已对 Openshift 中的 SDN 网络模型进行了较为深入地讨论，但仍有几个 Topic 值得我们继续探索：
+虽然本文已对 Openshift 中的 SDN 网络模型进行了较为深入地讨论，但仍有一些问题值得我们继续探索：
 
 - 本文并未涉及 External to Pod 的场景，它是如何实现的？我们都知道 Openshift 是通过 Router（HAProxy）来暴露集群内部服务的，那么数据包在传输过程中的 NAT 操作是怎样进行的？
-- Openshift 4.X 版本的网络模型和本文介绍的有何区别？
-- 实际上除了本文提到的几种网络接口外，Openshift 节点上还存在着`ovs-system`和`vxlan-`。它们的作用是什么？
+- 除了本文提到的几种网络接口外，Openshift 节点上还存在着`ovs-system`和`vxlan_sys_4789`。它们的作用是什么？
+- Openshift 4.X 版本的网络模型与本文实验所用的 3.6 版本相比有那些变化？
 
 ## 参考文献
 
