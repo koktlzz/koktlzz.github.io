@@ -1,6 +1,6 @@
 ---
 title: "Kubernetes Pod 是如何跨节点通信的？"
-date: 2020-05-09T09:19:42+01:00
+date: 2021-05-09T09:19:42+01:00
 draft: false
 tags: ["Kubernetes", "Network", "CNI"]
 ---
