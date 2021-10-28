@@ -3,7 +3,7 @@
 
 baseURL = "/"
 title = "Inspire Hub"
-languageCode = "en"
+languageCode = "zh-CN"
 hasCJKLanguage = false
 # Copyright information (Markdown supported)
 copyright = "[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.en)"
@@ -492,7 +492,7 @@ uglyURLs = false
     # Atom & RSS
 
     # Include full content?
-    includeContent = true
+    includeContent = false
     # Note: If false, only the summary of
     #       the post will be included. The
     #       summary, Hugo automatically
