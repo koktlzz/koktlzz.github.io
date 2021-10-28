@@ -313,8 +313,6 @@ Chain OPENSHIFT-MASQUERADE (1 references)
 
 ## Future Work
 
-虽然本文已对 Openshift 中的 SDN 网络模型进行了较为深入地讨论，但仍有一些问题值得我们继续探索：
-
 - 本文并未涉及 External to Pod 的场景，它是如何实现的？我们都知道 Openshift 是通过 Router（HAProxy）来暴露集群内部服务的，那么数据包在传输过程中的 NAT 操作是怎样进行的？
 - 除了本文提到的几种网络接口外，Openshift 节点上还存在着`ovs-system`和`vxlan_sys_4789`。它们的作用是什么？
 - Openshift 4.X 版本的网络模型与本文实验所用的 3.6 版本相比有那些变化？
