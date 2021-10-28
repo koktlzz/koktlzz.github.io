@@ -1,6 +1,6 @@
 ---
 title: "对 Openshift SDN 网络模型的一些探索"
-date: 2020-05-13T09:19:42+01:00
+date: 2021-05-13T09:19:42+01:00
 draft: false
 tags: ["Openshift","Network", "CNI", "Open vSwitch"]
 ---
