@@ -1,50 +1,355 @@
-<!doctype html><html lang=en><head prefix="og: http://ogp.me/ns# article: http://ogp.me/ns/article#"><meta charset=utf-8><meta name=generator content="Hugo 0.88.1"><meta name=theme-color content="#fff"><meta name=viewport content="width=device-width,initial-scale=1"><meta name=format-detection content="telephone=no, date=no, address=no, email=no"><meta http-equiv=cache-control content="no-transform"><meta http-equiv=cache-control content="no-siteapp"><title>通过安装 CoreOS 系统了解 Linux 启动流程 | Inspire Hub</title><link rel=stylesheet href=/css/meme.min.28f2f04dec4bcad2ed181d4a2a06c29247e962f3b57bcfbb8c6a8d8d1ce69f95.css><script src=https://cdn.jsdelivr.net/npm/lunr@2.3.9/lunr.min.js defer></script><script src=/js/meme.min.dfc1039d5d556df64bc1a24d28623313cb561960f9ca8cb162312e6b3a13cf30.js></script>
-<link rel=preconnect href=https://fonts.gstatic.com crossorigin><link rel=stylesheet href="https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:ital,wght@0,400;0,500;0,700;1,400;1,700&family=Source+Code+Pro:ital,wght@0,400;0,700;1,400;1,700&family=Comfortaa:wght@700&display=swap" media=print onload="this.media='all'"><noscript><link rel=stylesheet href="https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:ital,wght@0,400;0,500;0,700;1,400;1,700&family=Source+Code+Pro:ital,wght@0,400;0,700;1,400;1,700&family=Comfortaa:wght@700&display=swap"></noscript><meta name=author content="koktlzz"><meta name=description content="前言 OpenShift 4.X 版本要求安装在操作系统为 CoreOS 的机器上，因此 官方文档 给出了使用 PXE 或 IPXE 引导 CoreOS 系统的方法。我们可以参考其操作流程，将一台 CentOS 7.X 的机器改写为 CoreOS 系统，步骤如下：
-  从 镜像下载页 下载安装所需版本的 kernel、initramfs 和 rootfs 文件，并将 rootfs 和点火文件（*.ign）上传到自建的 HTTP 服务器上；"><link rel="shortcut icon" href=/favicon.ico type=image/x-icon><link rel=mask-icon href=/icons/safari-pinned-tab.svg color=#2a6df4><link rel=apple-touch-icon sizes=180x180 href=/icons/apple-touch-icon.png><meta name=apple-mobile-web-app-capable content="yes"><meta name=apple-mobile-web-app-title content="Inspire Hub"><meta name=apple-mobile-web-app-status-bar-style content="black"><meta name=mobile-web-app-capable content="yes"><meta name=application-name content="Inspire Hub"><meta name=msapplication-starturl content="../../"><meta name=msapplication-TileColor content="#fff"><meta name=msapplication-TileImage content="../../icons/mstile-150x150.png"><link rel=manifest href=/manifest.json><link rel=canonical href=/posts/linux-boot-intro/><script type=application/ld+json>{"@context":"https://schema.org","@type":"BlogPosting","datePublished":"2021-10-20T00:25:25+08:00","dateModified":"2021-10-28T10:37:37+08:00","url":"/posts/linux-boot-intro/","headline":"通过安装 CoreOS 系统了解 Linux 启动流程","description":"前言 OpenShift 4.X 版本要求安装在操作系统为 CoreOS 的机器上，因此 官方文档 给出了使用 PXE 或 IPXE 引导 CoreOS 系统的方法。我们可以参考其操作流程，将一台 CentOS 7.X 的机器改写为 CoreOS 系统，步骤如下：\n  从 镜像下载页 下载安装所需版本的 kernel、initramfs 和 rootfs 文件，并将 rootfs 和点火文件（*.ign）上传到自建的 HTTP 服务器上；","inLanguage":"en","articleSection":"posts","wordCount":1010,"image":["https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/202110171642.jpeg","https://cdn.jsdelivr.net/gh/koktlzz/NoteImg@main/20211015161614.png"],"author":{"@type":"Person","email":"koktlgwr@gmail.com","image":"/icons/apple-touch-icon.png","url":"/","name":"koktlzz"},"license":"[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.en)","publisher":{"@type":"Organization","name":"Inspire Hub","logo":{"@type":"ImageObject","url":"/icons/apple-touch-icon.png"},"url":"/"},"mainEntityOfPage":{"@type":"WebSite","@id":"/"}}</script><meta property="og:title" content="通过安装 CoreOS 系统了解 Linux 启动流程"><meta property="og:description" content="前言 OpenShift 4.X 版本要求安装在操作系统为 CoreOS 的机器上，因此 官方文档 给出了使用 PXE 或 IPXE 引导 CoreOS 系统的方法。我们可以参考其操作流程，将一台 CentOS 7.X 的机器改写为 CoreOS 系统，步骤如下：
-  从 镜像下载页 下载安装所需版本的 kernel、initramfs 和 rootfs 文件，并将 rootfs 和点火文件（*.ign）上传到自建的 HTTP 服务器上；"><meta property="og:url" content="/posts/linux-boot-intro/"><meta property="og:site_name" content="Inspire Hub"><meta property="og:locale" content="en"><meta property="og:image" content="https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/202110171642.jpeg"><meta property="og:type" content="article"><meta property="article:published_time" content="2021-10-20T00:25:25+08:00"><meta property="article:modified_time" content="2021-10-28T10:37:37+08:00"><meta property="article:section" content="posts"></head><body><div class=container><header class=header><div class=header-wrapper><div class="header-inner single"><div class=site-brand><a href=/ class=brand>Inspire Hub</a></div><nav class=nav><ul class=menu id=menu><li class=menu-item><a href=/posts/><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon archive"><path d="M32 448c0 17.7 14.3 32 32 32h384c17.7.0 32-14.3 32-32V160H32v288zm160-212c0-6.6 5.4-12 12-12h104c6.6.0 12 5.4 12 12v8c0 6.6-5.4 12-12 12H204c-6.6.0-12-5.4-12-12v-8zM480 32H32C14.3 32 0 46.3.0 64v48c0 8.8 7.2 16 16 16h480c8.8.0 16-7.2 16-16V64c0-17.7-14.3-32-32-32z"/></svg><span class=menu-item-name>Posts</span></a></li><li class=menu-item><a href=/tags/><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512" class="icon tags"><path d="M497.941 225.941 286.059 14.059A48 48 0 00252.118.0H48C21.49.0.0 21.49.0 48v204.118a48 48 0 0014.059 33.941l211.882 211.882c18.744 18.745 49.136 18.746 67.882.0l204.118-204.118c18.745-18.745 18.745-49.137.0-67.882zM112 160c-26.51.0-48-21.49-48-48s21.49-48 48-48 48 21.49 48 48-21.49 48-48 48zm513.941 133.823L421.823 497.941c-18.745 18.745-49.137 18.745-67.882.0l-.36-.36L527.64 323.522c16.999-16.999 26.36-39.6 26.36-63.64s-9.362-46.641-26.36-63.64L331.397.0h48.721a48 48 0 0133.941 14.059l211.882 211.882c18.745 18.745 18.745 49.137.0 67.882z"/></svg><span class=menu-item-name>Tags</span></a></li><li class=menu-item><a href></a></li><li class="menu-item search-item"><form id=search class=search role=search><label for=search-input><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon search-icon"><path d="M505 442.7 405.3 343c-4.5-4.5-10.6-7-17-7H372c27.6-35.3 44-79.7 44-128C416 93.1 322.9.0 208 0S0 93.1.0 208s93.1 208 208 208c48.3.0 92.7-16.4 128-44v16.3c0 6.4 2.5 12.5 7 17l99.7 99.7c9.4 9.4 24.6 9.4 33.9.0l28.3-28.3c9.4-9.4 9.4-24.6.1-34zM208 336c-70.7.0-128-57.2-128-128 0-70.7 57.2-128 128-128 70.7.0 128 57.2 128 128 0 70.7-57.2 128-128 128z"/></svg></label><input type=search id=search-input class=search-input></form><template id=search-result hidden><article class="content post"><h2 class=post-title><a class=summary-title-link></a></h2><summary class=summary></summary><div class=read-more-container><a class=read-more-link>Read More »</a></div></article></template></li></ul></nav></div></div><input type=checkbox id=nav-toggle aria-hidden=true>
-<label for=nav-toggle class=nav-toggle></label>
-<label for=nav-toggle class=nav-curtain></label></header><main class="main single" id=main><nav class=contents><h2 id=contents class=contents-title>On This Page</h2><ol class=toc><li><a id=contents:前言 href=#前言>前言</a></li><li><a id=contents:linux-启动流程 href=#linux-启动流程>Linux 启动流程</a></li><li><a id=contents:boot-阶段 href=#boot-阶段>Boot 阶段</a><ol><li><a id=contents:bios-post href=#bios-post>BIOS POST</a></li><li><a id=contents:boot-loader href=#boot-loader>Boot Loader</a><ol><li><a id=contents:stage-1 href=#stage-1>stage 1</a></li><li><a id=contents:stage-15 href=#stage-15>stage 1.5</a></li><li><a id=contents:stage-2 href=#stage-2>stage 2</a></li></ol></li><li><a id=contents:内核初始化 href=#内核初始化>内核初始化</a></li></ol></li><li><a id=contents:startup-阶段 href=#startup-阶段>Startup 阶段</a></li><li><a id=contents:future-work href=#future-work>Future Work</a></li><li><a id=contents:参考文献 href=#参考文献>参考文献</a></li></ol></nav><div class=main-inner><article class="content post h-entry" data-small-caps=true data-align=default data-type=posts><h1 class="post-title p-name">通过安装 CoreOS 系统了解 Linux 启动流程</h1><div class=post-tags><a href=/tags/os/ rel=tag class=post-tags-link><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon tag-icon"><path d="M0 252.118V48C0 21.49 21.49.0 48 0h204.118a48 48 0 0133.941 14.059l211.882 211.882c18.745 18.745 18.745 49.137.0 67.882L293.823 497.941c-18.745 18.745-49.137 18.745-67.882.0L14.059 286.059A48 48 0 010 252.118zM112 64c-26.51.0-48 21.49-48 48s21.49 48 48 48 48-21.49 48-48-21.49-48-48-48z"/></svg>OS</a>
-<a href=/tags/linux/ rel=tag class=post-tags-link><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon tag-icon"><path d="M0 252.118V48C0 21.49 21.49.0 48 0h204.118a48 48 0 0133.941 14.059l211.882 211.882c18.745 18.745 18.745 49.137.0 67.882L293.823 497.941c-18.745 18.745-49.137 18.745-67.882.0L14.059 286.059A48 48 0 010 252.118zM112 64c-26.51.0-48 21.49-48 48s21.49 48 48 48 48-21.49 48-48-21.49-48-48-48z"/></svg>Linux</a>
-<a href=/tags/coreos/ rel=tag class=post-tags-link><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon tag-icon"><path d="M0 252.118V48C0 21.49 21.49.0 48 0h204.118a48 48 0 0133.941 14.059l211.882 211.882c18.745 18.745 18.745 49.137.0 67.882L293.823 497.941c-18.745 18.745-49.137 18.745-67.882.0L14.059 286.059A48 48 0 010 252.118zM112 64c-26.51.0-48 21.49-48 48s21.49 48 48 48 48-21.49 48-48-21.49-48-48-48z"/></svg>CoreOs</a></div><div class="post-body e-content"><h2 id=前言><a href=#前言 class=anchor-link><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon anchor-icon"><path d="M326.612 185.391c59.747 59.809 58.927 155.698.36 214.59-.11.12-.24.25-.36.37l-67.2 67.2c-59.27 59.27-155.699 59.262-214.96.0-59.27-59.26-59.27-155.7.0-214.96l37.106-37.106c9.84-9.84 26.786-3.3 27.294 10.606.648 17.722 3.826 35.527 9.69 52.721 1.986 5.822.567 12.262-3.783 16.612l-13.087 13.087c-28.026 28.026-28.905 73.66-1.155 101.96 28.024 28.579 74.086 28.749 102.325.51l67.2-67.19c28.191-28.191 28.073-73.757.0-101.83-3.701-3.694-7.429-6.564-10.341-8.569a16.037 16.037.0 01-6.947-12.606c-.396-10.567 3.348-21.456 11.698-29.806l21.054-21.055c5.521-5.521 14.182-6.199 20.584-1.731a152.482 152.482.0 0120.522 17.197zM467.547 44.449c-59.261-59.262-155.69-59.27-214.96.0l-67.2 67.2c-.12.12-.25.25-.36.37-58.566 58.892-59.387 154.781.36 214.59a152.454 152.454.0 0020.521 17.196c6.402 4.468 15.064 3.789 20.584-1.731l21.054-21.055c8.35-8.35 12.094-19.239 11.698-29.806a16.037 16.037.0 00-6.947-12.606c-2.912-2.005-6.64-4.875-10.341-8.569-28.073-28.073-28.191-73.639.0-101.83l67.2-67.19c28.239-28.239 74.3-28.069 102.325.51 27.75 28.3 26.872 73.934-1.155 101.96l-13.087 13.087c-4.35 4.35-5.769 10.79-3.783 16.612 5.864 17.194 9.042 34.999 9.69 52.721.509 13.906 17.454 20.446 27.294 10.606l37.106-37.106c59.271-59.259 59.271-155.699.001-214.959z"/></svg></a><a href=#contents:前言 class=headings>前言</a></h2><p>OpenShift 4.X 版本要求安装在操作系统为 CoreOS 的机器上，因此 <a href=https://docs.openshift.com/container-platform/4.6/installing/installing_bare_metal/installing-restricted-networks-bare-metal.html#installation-user-infra-machines-pxe_installing-restricted-networks-bare-metal target=_blank rel=noopener>官方文档</a> 给出了使用 PXE 或 IPXE 引导 CoreOS 系统的方法。我们可以参考其操作流程，将一台 CentOS 7.X 的机器改写为 CoreOS 系统，步骤如下：</p><ol><li><p>从 <a href="https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/4.6/?extIdCarryOver=true&sc_cid=701f2000001Css5AAC" target=_blank rel=noopener>镜像下载页</a> 下载安装所需版本的 kernel、initramfs 和 rootfs 文件，并将 rootfs 和点火文件（*.ign）上传到自建的 HTTP 服务器上；</p></li><li><p>将 kernel 和 initramfs 文件拷贝到 CentOS 7.X 机器的 /boot 目录下；</p></li><li><p>根据需求修改 /boot/grub2 目录下的 grub.cfg 文件；</p></li><li><p>重启机器。</p></li></ol><p>对于操作系统初学者（比如我）来说，很难想象仅依靠添加和修改文件就能改变一台计算机的操作系统。为了解其实现原理，我们将对 Linux 的启动流程进行讨论，并从中说明上述操作是如何影响操作系统的。</p><h2 id=linux-启动流程><a href=#linux-启动流程 class=anchor-link><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon anchor-icon"><path d="M326.612 185.391c59.747 59.809 58.927 155.698.36 214.59-.11.12-.24.25-.36.37l-67.2 67.2c-59.27 59.27-155.699 59.262-214.96.0-59.27-59.26-59.27-155.7.0-214.96l37.106-37.106c9.84-9.84 26.786-3.3 27.294 10.606.648 17.722 3.826 35.527 9.69 52.721 1.986 5.822.567 12.262-3.783 16.612l-13.087 13.087c-28.026 28.026-28.905 73.66-1.155 101.96 28.024 28.579 74.086 28.749 102.325.51l67.2-67.19c28.191-28.191 28.073-73.757.0-101.83-3.701-3.694-7.429-6.564-10.341-8.569a16.037 16.037.0 01-6.947-12.606c-.396-10.567 3.348-21.456 11.698-29.806l21.054-21.055c5.521-5.521 14.182-6.199 20.584-1.731a152.482 152.482.0 0120.522 17.197zM467.547 44.449c-59.261-59.262-155.69-59.27-214.96.0l-67.2 67.2c-.12.12-.25.25-.36.37-58.566 58.892-59.387 154.781.36 214.59a152.454 152.454.0 0020.521 17.196c6.402 4.468 15.064 3.789 20.584-1.731l21.054-21.055c8.35-8.35 12.094-19.239 11.698-29.806a16.037 16.037.0 00-6.947-12.606c-2.912-2.005-6.64-4.875-10.341-8.569-28.073-28.073-28.191-73.639.0-101.83l67.2-67.19c28.239-28.239 74.3-28.069 102.325.51 27.75 28.3 26.872 73.934-1.155 101.96l-13.087 13.087c-4.35 4.35-5.769 10.79-3.783 16.612 5.864 17.194 9.042 34.999 9.69 52.721.509 13.906 17.454 20.446 27.294 10.606l37.106-37.106c59.271-59.259 59.271-155.699.001-214.959z"/></svg></a><a href=#contents:linux-启动流程 class=headings>Linux 启动流程</a></h2><p>启动一台 Linux 机器的过程可以分为两个部分：Boot 和 Startup。其中，Boot 起始于计算机启动，在内核初始化完成且 systemd 进程开始加载后结束。紧接着， Startup 接管任务，使计算机达到一个用户可操作的状态。</p><p><img src=https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/202110171642.jpeg alt=202110171642></p><h2 id=boot-阶段><a href=#boot-阶段 class=anchor-link><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon anchor-icon"><path d="M326.612 185.391c59.747 59.809 58.927 155.698.36 214.59-.11.12-.24.25-.36.37l-67.2 67.2c-59.27 59.27-155.699 59.262-214.96.0-59.27-59.26-59.27-155.7.0-214.96l37.106-37.106c9.84-9.84 26.786-3.3 27.294 10.606.648 17.722 3.826 35.527 9.69 52.721 1.986 5.822.567 12.262-3.783 16.612l-13.087 13.087c-28.026 28.026-28.905 73.66-1.155 101.96 28.024 28.579 74.086 28.749 102.325.51l67.2-67.19c28.191-28.191 28.073-73.757.0-101.83-3.701-3.694-7.429-6.564-10.341-8.569a16.037 16.037.0 01-6.947-12.606c-.396-10.567 3.348-21.456 11.698-29.806l21.054-21.055c5.521-5.521 14.182-6.199 20.584-1.731a152.482 152.482.0 0120.522 17.197zM467.547 44.449c-59.261-59.262-155.69-59.27-214.96.0l-67.2 67.2c-.12.12-.25.25-.36.37-58.566 58.892-59.387 154.781.36 214.59a152.454 152.454.0 0020.521 17.196c6.402 4.468 15.064 3.789 20.584-1.731l21.054-21.055c8.35-8.35 12.094-19.239 11.698-29.806a16.037 16.037.0 00-6.947-12.606c-2.912-2.005-6.64-4.875-10.341-8.569-28.073-28.073-28.191-73.639.0-101.83l67.2-67.19c28.239-28.239 74.3-28.069 102.325.51 27.75 28.3 26.872 73.934-1.155 101.96l-13.087 13.087c-4.35 4.35-5.769 10.79-3.783 16.612 5.864 17.194 9.042 34.999 9.69 52.721.509 13.906 17.454 20.446 27.294 10.606l37.106-37.106c59.271-59.259 59.271-155.699.001-214.959z"/></svg></a><a href=#contents:boot-阶段 class=headings>Boot 阶段</a></h2><p>如上图所示，Boot 阶段又可以细分为三个部分：</p><ul><li>BIOS POST</li><li>Boot Loader</li><li>内核初始化</li></ul><h3 id=bios-post><a href=#bios-post class=anchor-link><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon anchor-icon"><path d="M326.612 185.391c59.747 59.809 58.927 155.698.36 214.59-.11.12-.24.25-.36.37l-67.2 67.2c-59.27 59.27-155.699 59.262-214.96.0-59.27-59.26-59.27-155.7.0-214.96l37.106-37.106c9.84-9.84 26.786-3.3 27.294 10.606.648 17.722 3.826 35.527 9.69 52.721 1.986 5.822.567 12.262-3.783 16.612l-13.087 13.087c-28.026 28.026-28.905 73.66-1.155 101.96 28.024 28.579 74.086 28.749 102.325.51l67.2-67.19c28.191-28.191 28.073-73.757.0-101.83-3.701-3.694-7.429-6.564-10.341-8.569a16.037 16.037.0 01-6.947-12.606c-.396-10.567 3.348-21.456 11.698-29.806l21.054-21.055c5.521-5.521 14.182-6.199 20.584-1.731a152.482 152.482.0 0120.522 17.197zM467.547 44.449c-59.261-59.262-155.69-59.27-214.96.0l-67.2 67.2c-.12.12-.25.25-.36.37-58.566 58.892-59.387 154.781.36 214.59a152.454 152.454.0 0020.521 17.196c6.402 4.468 15.064 3.789 20.584-1.731l21.054-21.055c8.35-8.35 12.094-19.239 11.698-29.806a16.037 16.037.0 00-6.947-12.606c-2.912-2.005-6.64-4.875-10.341-8.569-28.073-28.073-28.191-73.639.0-101.83l67.2-67.19c28.239-28.239 74.3-28.069 102.325.51 27.75 28.3 26.872 73.934-1.155 101.96l-13.087 13.087c-4.35 4.35-5.769 10.79-3.783 16.612 5.864 17.194 9.042 34.999 9.69 52.721.509 13.906 17.454 20.446 27.294 10.606l37.106-37.106c59.271-59.259 59.271-155.699.001-214.959z"/></svg></a><a href=#contents:bios-post class=headings>BIOS POST</a></h3><p>开机自检（Power On Self Test，POST）是 <a href=https://zh.wikipedia.org/wiki/BIOS target=_blank rel=noopener>基本输入输出系统</a>（Basic I/O System，BIOS）的一部分，也是启动 Linux 机器的第一个步骤。其工作对象是计算机硬件，因此对于任何操作系统都是相同的。<strong>POST 检查硬件的基本可操作性</strong>，若失败则 Boot 过程将会被终止。</p><p>POST 检查完毕后会发出一个 BIOS 中断调用 <a href=https://en.wikipedia.org/wiki/INT_13H target=_blank rel=noopener>INT 13H</a>，它将在任何可连接且可引导的磁盘上搜索含有有效引导记录的引导扇区（Boot Sector），通常是 <a href=https://zh.wikipedia.org/wiki/%E4%B8%BB%E5%BC%95%E5%AF%BC%E8%AE%B0%E5%BD%95 target=_blank rel=noopener>主引导扇区</a>。引导扇区中的主引导记录（Master Boot Record，MBR）将被加载到 RAM 中，然后控制权就会转移到其手中。</p><h3 id=boot-loader><a href=#boot-loader class=anchor-link><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon anchor-icon"><path d="M326.612 185.391c59.747 59.809 58.927 155.698.36 214.59-.11.12-.24.25-.36.37l-67.2 67.2c-59.27 59.27-155.699 59.262-214.96.0-59.27-59.26-59.27-155.7.0-214.96l37.106-37.106c9.84-9.84 26.786-3.3 27.294 10.606.648 17.722 3.826 35.527 9.69 52.721 1.986 5.822.567 12.262-3.783 16.612l-13.087 13.087c-28.026 28.026-28.905 73.66-1.155 101.96 28.024 28.579 74.086 28.749 102.325.51l67.2-67.19c28.191-28.191 28.073-73.757.0-101.83-3.701-3.694-7.429-6.564-10.341-8.569a16.037 16.037.0 01-6.947-12.606c-.396-10.567 3.348-21.456 11.698-29.806l21.054-21.055c5.521-5.521 14.182-6.199 20.584-1.731a152.482 152.482.0 0120.522 17.197zM467.547 44.449c-59.261-59.262-155.69-59.27-214.96.0l-67.2 67.2c-.12.12-.25.25-.36.37-58.566 58.892-59.387 154.781.36 214.59a152.454 152.454.0 0020.521 17.196c6.402 4.468 15.064 3.789 20.584-1.731l21.054-21.055c8.35-8.35 12.094-19.239 11.698-29.806a16.037 16.037.0 00-6.947-12.606c-2.912-2.005-6.64-4.875-10.341-8.569-28.073-28.073-28.191-73.639.0-101.83l67.2-67.19c28.239-28.239 74.3-28.069 102.325.51 27.75 28.3 26.872 73.934-1.155 101.96l-13.087 13.087c-4.35 4.35-5.769 10.79-3.783 16.612 5.864 17.194 9.042 34.999 9.69 52.721.509 13.906 17.454 20.446 27.294 10.606l37.106-37.106c59.271-59.259 59.271-155.699.001-214.959z"/></svg></a><a href=#contents:boot-loader class=headings>Boot Loader</a></h3><p>大多数 Linux 发行版使用三种 Boot Loader 程序：GRUB1、GRUB2 和 LILO，其中 GRUB2 是最新且使用最为广泛的。GRUB2 代表“GRand Unified Bootloader, version 2”，<strong>它能够定位操作系统内核并将其加载到内存中</strong>。GRUB2 还允许用户选择从几种不同的内核中引导计算机，如果更新的内核版本出现兼容性问题，我们就可以恢复到先前内核版本。</p><p>GRUB1 的引导过程可以分为三个阶段：stage 1、stage 1.5 和 stage 2。虽然 GRUB2 中并没有 stage 的概念，但两者的工作方式基本相同。为了方便说明，我们在讨论 GRUB2 时将沿用 GRUB1 中 stage 的说法。</p><h4 id=stage-1><a href=#stage-1 class=anchor-link><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon anchor-icon"><path d="M326.612 185.391c59.747 59.809 58.927 155.698.36 214.59-.11.12-.24.25-.36.37l-67.2 67.2c-59.27 59.27-155.699 59.262-214.96.0-59.27-59.26-59.27-155.7.0-214.96l37.106-37.106c9.84-9.84 26.786-3.3 27.294 10.606.648 17.722 3.826 35.527 9.69 52.721 1.986 5.822.567 12.262-3.783 16.612l-13.087 13.087c-28.026 28.026-28.905 73.66-1.155 101.96 28.024 28.579 74.086 28.749 102.325.51l67.2-67.19c28.191-28.191 28.073-73.757.0-101.83-3.701-3.694-7.429-6.564-10.341-8.569a16.037 16.037.0 01-6.947-12.606c-.396-10.567 3.348-21.456 11.698-29.806l21.054-21.055c5.521-5.521 14.182-6.199 20.584-1.731a152.482 152.482.0 0120.522 17.197zM467.547 44.449c-59.261-59.262-155.69-59.27-214.96.0l-67.2 67.2c-.12.12-.25.25-.36.37-58.566 58.892-59.387 154.781.36 214.59a152.454 152.454.0 0020.521 17.196c6.402 4.468 15.064 3.789 20.584-1.731l21.054-21.055c8.35-8.35 12.094-19.239 11.698-29.806a16.037 16.037.0 00-6.947-12.606c-2.912-2.005-6.64-4.875-10.341-8.569-28.073-28.073-28.191-73.639.0-101.83l67.2-67.19c28.239-28.239 74.3-28.069 102.325.51 27.75 28.3 26.872 73.934-1.155 101.96l-13.087 13.087c-4.35 4.35-5.769 10.79-3.783 16.612 5.864 17.194 9.042 34.999 9.69 52.721.509 13.906 17.454 20.446 27.294 10.606l37.106-37.106c59.271-59.259 59.271-155.699.001-214.959z"/></svg></a><a href=#contents:stage-1 class=headings>stage 1</a></h4><p>上文提到，BIOS 中断调用会定位主引导扇区，其结构如下图所示：</p><p><img src=https://cdn.jsdelivr.net/gh/koktlzz/NoteImg@main/20211015161614.png alt=20211015161614></p><p>主引导记录首部的引导代码便是 stage 1 文件 boot.img，它和 stage 1.5 文件 core.img 均位于 /boot/grub2/i386-pc 目录下：</p><div class=highlight><div class=chroma><div class=table-container><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
-</span><span class=lnt>2
-</span><span class=lnt>3
-</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-shell data-lang=shell><span class=o>[</span>root@bastion ~<span class=o>]</span><span class=c1># du -b /boot/grub2/i386-pc/*.img </span>
-<span class=m>512</span>     /boot/grub2/i386-pc/boot.img
-<span class=m>26664</span>   /boot/grub2/i386-pc/core.img
-</code></pre></td></tr></table></div></div></div><p>它的作用是检查分区表是否正确，然后<strong>定位和加载 stage 1.5</strong> 文件。446 字节的 boot.img 放不下能够识别文件系统的代码，只能通过计算扇区的偏移量来寻找，因此 core.img 必须位于主引导记录和驱动器的第一个分区（partition）之间。第一个分区从扇区 63 开始，与位于扇区 0 的主引导记录之间有 62 个扇区（每个 512 字节），有足够的空间存储大小不足 30000 字节的 core.img 文件。当 core.img 文件加载到 RAM 后，控制权也随之转移。</p><h4 id=stage-15><a href=#stage-15 class=anchor-link><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon anchor-icon"><path d="M326.612 185.391c59.747 59.809 58.927 155.698.36 214.59-.11.12-.24.25-.36.37l-67.2 67.2c-59.27 59.27-155.699 59.262-214.96.0-59.27-59.26-59.27-155.7.0-214.96l37.106-37.106c9.84-9.84 26.786-3.3 27.294 10.606.648 17.722 3.826 35.527 9.69 52.721 1.986 5.822.567 12.262-3.783 16.612l-13.087 13.087c-28.026 28.026-28.905 73.66-1.155 101.96 28.024 28.579 74.086 28.749 102.325.51l67.2-67.19c28.191-28.191 28.073-73.757.0-101.83-3.701-3.694-7.429-6.564-10.341-8.569a16.037 16.037.0 01-6.947-12.606c-.396-10.567 3.348-21.456 11.698-29.806l21.054-21.055c5.521-5.521 14.182-6.199 20.584-1.731a152.482 152.482.0 0120.522 17.197zM467.547 44.449c-59.261-59.262-155.69-59.27-214.96.0l-67.2 67.2c-.12.12-.25.25-.36.37-58.566 58.892-59.387 154.781.36 214.59a152.454 152.454.0 0020.521 17.196c6.402 4.468 15.064 3.789 20.584-1.731l21.054-21.055c8.35-8.35 12.094-19.239 11.698-29.806a16.037 16.037.0 00-6.947-12.606c-2.912-2.005-6.64-4.875-10.341-8.569-28.073-28.073-28.191-73.639.0-101.83l67.2-67.19c28.239-28.239 74.3-28.069 102.325.51 27.75 28.3 26.872 73.934-1.155 101.96l-13.087 13.087c-4.35 4.35-5.769 10.79-3.783 16.612 5.864 17.194 9.042 34.999 9.69 52.721.509 13.906 17.454 20.446 27.294 10.606l37.106-37.106c59.271-59.259 59.271-155.699.001-214.959z"/></svg></a><a href=#contents:stage-15 class=headings>stage 1.5</a></h4><p>相比于只能读取原始扇区的 LILO，GRUB1 和 GRUB2 均可识别文件系统，这依赖于 stage 1.5 文件中内置的文件系统驱动程序。如果你拥有一台仍然使用 GRUB1 引导的 CentOS 6.X 机器，那么便可以在 /boot/grub/ 目录下找到这些适配不同文件系统的 stage 1.5 文件：</p><div class=highlight><div class=chroma><div class=table-container><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
-</span><span class=lnt> 2
-</span><span class=lnt> 3
-</span><span class=lnt> 4
-</span><span class=lnt> 5
-</span><span class=lnt> 6
-</span><span class=lnt> 7
-</span><span class=lnt> 8
-</span><span class=lnt> 9
-</span><span class=lnt>10
-</span><span class=lnt>11
-</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-shell data-lang=shell><span class=o>[</span>root@centos6.5 ~<span class=o>]</span><span class=c1># du -b /boot/grub/* | grep stage1_5</span>
-<span class=m>13380</span>    /boot/grub/e2fs_stage1_5
-<span class=m>12620</span>    /boot/grub/fat_stage1_5
-<span class=m>11748</span>    /boot/grub/ffs_stage1_5
-<span class=m>11756</span>    /boot/grub/iso9660_stage1_5
-<span class=m>13268</span>    /boot/grub/jfs_stage1_5
-<span class=m>11956</span>    /boot/grub/minix_stage1_5
-<span class=m>14412</span>    /boot/grub/reiserfs_stage1_5
-<span class=m>12024</span>    /boot/grub/ufs2_stage1_5
-<span class=m>11364</span>    /boot/grub/vstafs_stage1_5
-<span class=m>13964</span>    /boot/grub/xfs_stage1_5
-</code></pre></td></tr></table></div></div></div><p>GRUB2 中的 core.img 不仅整合了上述文件系统驱动，还新增了菜单处理等模块，这也是其优于 GRUB1 的地方。我们可以在 <a href=https://www.gnu.org/software/grub/manual/grub/html_node/Images.html#Images target=_blank rel=noopener>GNU GRUB Manual 2.06: Images</a> 中找到对各种 GRUB 镜像文件的详细介绍。</p><p>既然 core.img 文件可以识别文件系统，那么它就能够根据安装时确定的系统路径<strong>定位和加载 stage 2</strong> 文件。同样，当 stage 2 文件加载到 RAM 后，控制权也随之转移。</p><h4 id=stage-2><a href=#stage-2 class=anchor-link><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon anchor-icon"><path d="M326.612 185.391c59.747 59.809 58.927 155.698.36 214.59-.11.12-.24.25-.36.37l-67.2 67.2c-59.27 59.27-155.699 59.262-214.96.0-59.27-59.26-59.27-155.7.0-214.96l37.106-37.106c9.84-9.84 26.786-3.3 27.294 10.606.648 17.722 3.826 35.527 9.69 52.721 1.986 5.822.567 12.262-3.783 16.612l-13.087 13.087c-28.026 28.026-28.905 73.66-1.155 101.96 28.024 28.579 74.086 28.749 102.325.51l67.2-67.19c28.191-28.191 28.073-73.757.0-101.83-3.701-3.694-7.429-6.564-10.341-8.569a16.037 16.037.0 01-6.947-12.606c-.396-10.567 3.348-21.456 11.698-29.806l21.054-21.055c5.521-5.521 14.182-6.199 20.584-1.731a152.482 152.482.0 0120.522 17.197zM467.547 44.449c-59.261-59.262-155.69-59.27-214.96.0l-67.2 67.2c-.12.12-.25.25-.36.37-58.566 58.892-59.387 154.781.36 214.59a152.454 152.454.0 0020.521 17.196c6.402 4.468 15.064 3.789 20.584-1.731l21.054-21.055c8.35-8.35 12.094-19.239 11.698-29.806a16.037 16.037.0 00-6.947-12.606c-2.912-2.005-6.64-4.875-10.341-8.569-28.073-28.073-28.191-73.639.0-101.83l67.2-67.19c28.239-28.239 74.3-28.069 102.325.51 27.75 28.3 26.872 73.934-1.155 101.96l-13.087 13.087c-4.35 4.35-5.769 10.79-3.783 16.612 5.864 17.194 9.042 34.999 9.69 52.721.509 13.906 17.454 20.446 27.294 10.606l37.106-37.106c59.271-59.259 59.271-155.699.001-214.959z"/></svg></a><a href=#contents:stage-2 class=headings>stage 2</a></h4><p>stage 2 文件并非是一个 .img 的镜像，而是一些运行时内核模块：</p><div class=highlight><div class=chroma><div class=table-container><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
-</span><span class=lnt> 2
-</span><span class=lnt> 3
-</span><span class=lnt> 4
-</span><span class=lnt> 5
-</span><span class=lnt> 6
-</span><span class=lnt> 7
-</span><span class=lnt> 8
-</span><span class=lnt> 9
-</span><span class=lnt>10
-</span><span class=lnt>11
-</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-shell data-lang=shell><span class=o>[</span>root@bastion ~<span class=o>]</span><span class=c1># ls /boot/grub2/i386-pc/ | grep .mod | head</span>
+<!DOCTYPE html>
+<html lang="en">
+    <head prefix="og: http://ogp.me/ns# article: http://ogp.me/ns/article#">
+    <meta charset="UTF-8" />
+
+    <meta name="generator" content="Hugo 0.85.0" /><meta name="theme-color" content="#fff" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <meta name="format-detection" content="telephone=no, date=no, address=no, email=no" />
+    
+    <meta http-equiv="Cache-Control" content="no-transform" />
+    
+    <meta http-equiv="Cache-Control" content="no-siteapp" />
+
+    <title>通过安装 CoreOS 系统了解 Linux 的启动流程 | Inspire Hub</title>
+
+    <link rel="stylesheet" href="/css/meme.min.a111fdebbb4984a29906b0aaa067c490dfc17d2e3577efefded435b9f80248cc.css"/>
+
+    
+    
+        <script src="https://cdn.jsdelivr.net/npm/lunr@2.3.9/lunr.min.js" defer></script><script src="/js/meme.min.a74e28464a7eeed54b4e02aead6360ae76bbd5ee5745afdf0a47319b6541600e.js"></script>
+
+    
+
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM&#43;Plex&#43;Serif:ital,wght@0,400;0,500;0,700;1,400;1,700&amp;family=Source&#43;Code&#43;Pro:ital,wght@0,400;0,700;1,400;1,700&amp;family=Comfortaa:wght@700&amp;display=swap" media="print" onload="this.media='all'" />
+        <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM&#43;Plex&#43;Serif:ital,wght@0,400;0,500;0,700;1,400;1,700&amp;family=Source&#43;Code&#43;Pro:ital,wght@0,400;0,700;1,400;1,700&amp;family=Comfortaa:wght@700&amp;display=swap" /></noscript>
+
+    <meta name="author" content="koktlzz" /><meta name="description" content="前言 OpenShift 4.X 版本要求安装在操作系统为 CoreOS 的机器上，因此 官方文档 给出了使用 PXE 或 IPXE 引导 CoreOS 系统的方法。我们可以参考其操作流程，将一台 CentOS 7.X 的机器改写为 CoreOS 系统，步骤如下：
+  从 镜像下载页 下载安装所需版本的 kernel、initramfs 和 rootfs 文件，并将 rootfs 和点火文件（*.ign）上传到自建的 HTTP 服务器上；" />
+
+    <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />
+    <link rel="mask-icon" href="/icons/safari-pinned-tab.svg" color="#2a6df4" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Inspire Hub" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="application-name" content="Inspire Hub" />
+    <meta name="msapplication-starturl" content="../../" />
+    <meta name="msapplication-TileColor" content="#fff" />
+    <meta name="msapplication-TileImage" content="../../icons/mstile-150x150.png" />
+    <link rel="manifest" href="/manifest.json" />
+
+    
+    
+
+    
+    <link rel="canonical" href="/posts/linux-boot-intro/" />
+    
+
+<script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "BlogPosting",
+        "datePublished": "2021-10-20T00:25:25+08:00",
+        "dateModified": "2021-10-22T00:19:43+08:00",
+        "url": "/posts/linux-boot-intro/",
+        "headline": "通过安装 CoreOS 系统了解 Linux 的启动流程",
+        "description": "前言 OpenShift 4.X 版本要求安装在操作系统为 CoreOS 的机器上，因此 官方文档 给出了使用 PXE 或 IPXE 引导 CoreOS 系统的方法。我们可以参考其操作流程，将一台 CentOS 7.X 的机器改写为 CoreOS 系统，步骤如下：\n  从 镜像下载页 下载安装所需版本的 kernel、initramfs 和 rootfs 文件，并将 rootfs 和点火文件（*.ign）上传到自建的 HTTP 服务器上；",
+        "inLanguage" : "en",
+        "articleSection": "posts",
+        "wordCount":  1015 ,
+        "image": ["https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/202110171642.jpeg","https://cdn.jsdelivr.net/gh/koktlzz/NoteImg@main/20211015161614.png"],
+        "author": {
+            "@type": "Person",
+            "email": "koktlgwr@gmail.com",
+            "image": "/icons/apple-touch-icon.png",
+            "url": "/",
+            "name": "koktlzz"
+        },
+        "license": "[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.en)",
+        "publisher": {
+            "@type": "Organization",
+            "name": "Inspire Hub",
+            "logo": {
+                "@type": "ImageObject",
+                "url": "/icons/apple-touch-icon.png"
+            },
+            "url": "/"
+        },
+        "mainEntityOfPage": {
+            "@type": "WebSite",
+            "@id": "/"
+        }
+    }
+</script>
+
+    
+    
+
+
+
+<meta property="og:title" content="通过安装 CoreOS 系统了解 Linux 的启动流程" />
+<meta property="og:description" content="前言 OpenShift 4.X 版本要求安装在操作系统为 CoreOS 的机器上，因此 官方文档 给出了使用 PXE 或 IPXE 引导 CoreOS 系统的方法。我们可以参考其操作流程，将一台 CentOS 7.X 的机器改写为 CoreOS 系统，步骤如下：
+  从 镜像下载页 下载安装所需版本的 kernel、initramfs 和 rootfs 文件，并将 rootfs 和点火文件（*.ign）上传到自建的 HTTP 服务器上；" />
+<meta property="og:url" content="/posts/linux-boot-intro/" />
+<meta property="og:site_name" content="Inspire Hub" />
+<meta property="og:locale" content="en" /><meta property="og:image" content="https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/202110171642.jpeg" />
+<meta property="og:type" content="article" />
+    <meta property="article:published_time" content="2021-10-20T00:25:25&#43;08:00" />
+    <meta property="article:modified_time" content="2021-10-22T00:19:43&#43;08:00" />
+    
+    <meta property="article:section" content="posts" />
+
+
+
+    
+    
+
+    
+</head>
+
+    <body>
+        <div class="container">
+            
+    <header class="header">
+        
+            <div class="header-wrapper">
+                <div class="header-inner single">
+                    
+    <div class="site-brand">
+        
+            <a href="/" class="brand">Inspire Hub</a>
+        
+    </div>
+
+                    <nav class="nav">
+    <ul class="menu" id="menu">
+        
+            
+        
+        
+        
+        
+            
+                <li class="menu-item"><a href="/posts/"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon archive"><path d="M32 448c0 17.7 14.3 32 32 32h384c17.7 0 32-14.3 32-32V160H32v288zm160-212c0-6.6 5.4-12 12-12h104c6.6 0 12 5.4 12 12v8c0 6.6-5.4 12-12 12H204c-6.6 0-12-5.4-12-12v-8zM480 32H32C14.3 32 0 46.3 0 64v48c0 8.8 7.2 16 16 16h480c8.8 0 16-7.2 16-16V64c0-17.7-14.3-32-32-32z"/></svg><span class="menu-item-name">Posts</span></a>
+                </li>
+            
+        
+            
+                <li class="menu-item"><a href="/tags/"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512" class="icon tags"><path d="M497.941 225.941L286.059 14.059A48 48 0 0 0 252.118 0H48C21.49 0 0 21.49 0 48v204.118a48 48 0 0 0 14.059 33.941l211.882 211.882c18.744 18.745 49.136 18.746 67.882 0l204.118-204.118c18.745-18.745 18.745-49.137 0-67.882zM112 160c-26.51 0-48-21.49-48-48s21.49-48 48-48 48 21.49 48 48-21.49 48-48 48zm513.941 133.823L421.823 497.941c-18.745 18.745-49.137 18.745-67.882 0l-.36-.36L527.64 323.522c16.999-16.999 26.36-39.6 26.36-63.64s-9.362-46.641-26.36-63.64L331.397 0h48.721a48 48 0 0 1 33.941 14.059l211.882 211.882c18.745 18.745 18.745 49.137 0 67.882z"/></svg><span class="menu-item-name">Tags</span></a>
+                </li>
+            
+        
+            
+                
+                    
+                    
+                        <li class="menu-item">
+                            <a id="theme-switcher" href="#"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon theme-icon-light"><path d="M193.2 104.5l48.8-97.5a18 18 0 0128 0l48.8 97.5 103.4 -34.5a18 18 0 0119.8 19.8l-34.5 103.4l97.5 48.8a18 18 0 010 28l-97.5 48.8 34.5 103.4a18 18 0 01-19.8 19.8l-103.4-34.5-48.8 97.5a18 18 0 01-28 0l-48.8-97.5l-103.4 34.5a18 18 0 01-19.8-19.8l34.5-103.4-97.5-48.8a18 18 0 010-28l97.5-48.8-34.5-103.4a18 18 0 0119.8-19.8zM256 128a128 128 0 10.01 0M256 160a96 96 0 10.01 0"/></svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon theme-icon-dark"><path d="M27 412a256 256 0 10154-407a11.5 11.5 0 00-5 20a201.5 201.5 0 01-134 374a11.5 11.5 0 00-15 13"/></svg></a>
+                        </li>
+                    
+                
+            
+        
+            
+                
+            
+        
+            
+                <li class="menu-item search-item">
+                        <form id="search" class="search" role="search">
+    <label for="search-input"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon search-icon"><path d="M505 442.7L405.3 343c-4.5-4.5-10.6-7-17-7H372c27.6-35.3 44-79.7 44-128C416 93.1 322.9 0 208 0S0 93.1 0 208s93.1 208 208 208c48.3 0 92.7-16.4 128-44v16.3c0 6.4 2.5 12.5 7 17l99.7 99.7c9.4 9.4 24.6 9.4 33.9 0l28.3-28.3c9.4-9.4 9.4-24.6.1-34zM208 336c-70.7 0-128-57.2-128-128 0-70.7 57.2-128 128-128 70.7 0 128 57.2 128 128 0 70.7-57.2 128-128 128z"/></svg></label>
+    <input type="search" id="search-input" class="search-input">
+</form>
+
+<template id="search-result" hidden>
+    <article class="content post">
+        <h2 class="post-title"><a class="summary-title-link"></a></h2>
+        <summary class="summary"></summary>
+        <div class="read-more-container">
+            <a class="read-more-link">Read More »</a>
+        </div>
+    </article>
+</template>
+
+                    </li>
+                
+            
+        
+    </ul>
+</nav>
+
+                    
+                </div>
+            </div>
+            
+    <input type="checkbox" id="nav-toggle" aria-hidden="true" />
+    <label for="nav-toggle" class="nav-toggle"></label>
+    <label for="nav-toggle" class="nav-curtain"></label>
+
+
+        
+    </header>
+
+
+
+
+            
+            
+    <main class="main single" id="main">
+    <div class="main-inner">
+
+        
+
+        <article class="content post h-entry" data-small-caps="true" data-align="default" data-type="posts" data-toc-num="true">
+
+            <h1 class="post-title p-name">通过安装 CoreOS 系统了解 Linux 的启动流程</h1>
+
+            
+
+            
+                
+            
+
+            
+                
+
+<div class="post-meta">
+    
+        
+        <time datetime="2021-10-20T00:25:25&#43;08:00" class="post-meta-item published dt-published"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" class="icon post-meta-icon"><path d="M148 288h-40c-6.6 0-12-5.4-12-12v-40c0-6.6 5.4-12 12-12h40c6.6 0 12 5.4 12 12v40c0 6.6-5.4 12-12 12zm108-12v-40c0-6.6-5.4-12-12-12h-40c-6.6 0-12 5.4-12 12v40c0 6.6 5.4 12 12 12h40c6.6 0 12-5.4 12-12zm96 0v-40c0-6.6-5.4-12-12-12h-40c-6.6 0-12 5.4-12 12v40c0 6.6 5.4 12 12 12h40c6.6 0 12-5.4 12-12zm-96 96v-40c0-6.6-5.4-12-12-12h-40c-6.6 0-12 5.4-12 12v40c0 6.6 5.4 12 12 12h40c6.6 0 12-5.4 12-12zm-96 0v-40c0-6.6-5.4-12-12-12h-40c-6.6 0-12 5.4-12 12v40c0 6.6 5.4 12 12 12h40c6.6 0 12-5.4 12-12zm192 0v-40c0-6.6-5.4-12-12-12h-40c-6.6 0-12 5.4-12 12v40c0 6.6 5.4 12 12 12h40c6.6 0 12-5.4 12-12zm96-260v352c0 26.5-21.5 48-48 48H48c-26.5 0-48-21.5-48-48V112c0-26.5 21.5-48 48-48h48V12c0-6.6 5.4-12 12-12h40c6.6 0 12 5.4 12 12v52h128V12c0-6.6 5.4-12 12-12h40c6.6 0 12 5.4 12 12v52h48c26.5 0 48 21.5 48 48zm-48 346V160H48v298c0 3.3 2.7 6 6 6h340c3.3 0 6-2.7 6-6z"/></svg>&nbsp;2021.10.20</time>
+    
+    
+        
+        <time datetime="2021-10-22T00:19:43&#43;08:00" class="post-meta-item modified dt-updated"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" class="icon post-meta-icon"><path d="M400 64h-48V12c0-6.627-5.373-12-12-12h-40c-6.627 0-12 5.373-12 12v52H160V12c0-6.627-5.373-12-12-12h-40c-6.627 0-12 5.373-12 12v52H48C21.49 64 0 85.49 0 112v352c0 26.51 21.49 48 48 48h352c26.51 0 48-21.49 48-48V112c0-26.51-21.49-48-48-48zm-6 400H54a6 6 0 0 1-6-6V160h352v298a6 6 0 0 1-6 6zm-52.849-200.65L198.842 404.519c-4.705 4.667-12.303 4.637-16.971-.068l-75.091-75.699c-4.667-4.705-4.637-12.303.068-16.971l22.719-22.536c4.705-4.667 12.303-4.637 16.97.069l44.104 44.461 111.072-110.181c4.705-4.667 12.303-4.637 16.971.068l22.536 22.718c4.667 4.705 4.636 12.303-.069 16.97z"/></svg>&nbsp;2021.10.22</time>
+    
+    
+    
+        
+        
+        
+            
+        
+    
+    
+        
+        <span class="post-meta-item wordcount"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon post-meta-icon"><path d="M497.9 142.1l-46.1 46.1c-4.7 4.7-12.3 4.7-17 0l-111-111c-4.7-4.7-4.7-12.3 0-17l46.1-46.1c18.7-18.7 49.1-18.7 67.9 0l60.1 60.1c18.8 18.7 18.8 49.1 0 67.9zM284.2 99.8L21.6 362.4.4 483.9c-2.9 16.4 11.4 30.6 27.8 27.8l121.5-21.3 262.6-262.6c4.7-4.7 4.7-12.3 0-17l-111-111c-4.8-4.7-12.4-4.7-17.1 0zM124.1 339.9c-5.5-5.5-5.5-14.3 0-19.8l154-154c5.5-5.5 14.3-5.5 19.8 0s5.5 14.3 0 19.8l-154 154c-5.5 5.5-14.3 5.5-19.8 0zM88 424h48v36.3l-64.5 11.3-31.1-31.1L51.7 376H88v48z"/></svg>&nbsp;1015</span>
+    
+    
+        
+        <span class="post-meta-item reading-time"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon post-meta-icon"><path d="M256 8C119 8 8 119 8 256s111 248 248 248 248-111 248-248S393 8 256 8zm0 448c-110.5 0-200-89.5-200-200S145.5 56 256 56s200 89.5 200 200-89.5 200-200 200zm61.8-104.4l-84.9-61.7c-3.1-2.3-4.9-5.9-4.9-9.7V116c0-6.6 5.4-12 12-12h32c6.6 0 12 5.4 12 12v141.7l66.8 48.6c5.4 3.9 6.5 11.4 2.6 16.8L334.6 349c-3.9 5.3-11.4 6.5-16.8 2.6z"/></svg>&nbsp;5&nbsp;mins</span>
+    
+    
+    
+</div>
+
+            
+
+            <div class="post-body e-content">
+                <h2 id="前言"><a href="#前言" class="anchor-link"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon anchor-icon"><path d="M326.612 185.391c59.747 59.809 58.927 155.698.36 214.59-.11.12-.24.25-.36.37l-67.2 67.2c-59.27 59.27-155.699 59.262-214.96 0-59.27-59.26-59.27-155.7 0-214.96l37.106-37.106c9.84-9.84 26.786-3.3 27.294 10.606.648 17.722 3.826 35.527 9.69 52.721 1.986 5.822.567 12.262-3.783 16.612l-13.087 13.087c-28.026 28.026-28.905 73.66-1.155 101.96 28.024 28.579 74.086 28.749 102.325.51l67.2-67.19c28.191-28.191 28.073-73.757 0-101.83-3.701-3.694-7.429-6.564-10.341-8.569a16.037 16.037 0 0 1-6.947-12.606c-.396-10.567 3.348-21.456 11.698-29.806l21.054-21.055c5.521-5.521 14.182-6.199 20.584-1.731a152.482 152.482 0 0 1 20.522 17.197zM467.547 44.449c-59.261-59.262-155.69-59.27-214.96 0l-67.2 67.2c-.12.12-.25.25-.36.37-58.566 58.892-59.387 154.781.36 214.59a152.454 152.454 0 0 0 20.521 17.196c6.402 4.468 15.064 3.789 20.584-1.731l21.054-21.055c8.35-8.35 12.094-19.239 11.698-29.806a16.037 16.037 0 0 0-6.947-12.606c-2.912-2.005-6.64-4.875-10.341-8.569-28.073-28.073-28.191-73.639 0-101.83l67.2-67.19c28.239-28.239 74.3-28.069 102.325.51 27.75 28.3 26.872 73.934-1.155 101.96l-13.087 13.087c-4.35 4.35-5.769 10.79-3.783 16.612 5.864 17.194 9.042 34.999 9.69 52.721.509 13.906 17.454 20.446 27.294 10.606l37.106-37.106c59.271-59.259 59.271-155.699.001-214.959z"/></svg></a>前言</h2>
+<p style="text-indent:0"><span class="drop-cap">O</span>penShift 4.X 版本要求安装在操作系统为 CoreOS 的机器上，因此 <a href="https://docs.openshift.com/container-platform/4.6/installing/installing_bare_metal/installing-restricted-networks-bare-metal.html#installation-user-infra-machines-pxe_installing-restricted-networks-bare-metal" target="_blank" rel="noopener">官方文档</a> 给出了使用 PXE 或 IPXE 引导 CoreOS 系统的方法。我们可以参考其操作流程，将一台 CentOS 7.X 的机器改写为 CoreOS 系统，步骤如下：</p>
+<ol>
+<li>
+<p>从 <a href="https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/4.6/?extIdCarryOver=true&amp;sc_cid=701f2000001Css5AAC" target="_blank" rel="noopener">镜像下载页</a> 下载安装所需版本的 kernel、initramfs 和 rootfs 文件，并将 rootfs 和点火文件（*.ign）上传到自建的 HTTP 服务器上；</p>
+</li>
+<li>
+<p>将 kernel 和 initramfs 文件拷贝到 CentOS 7.X 机器的 /boot 目录下；</p>
+</li>
+<li>
+<p>根据需求修改 /boot/grub2 目录下的 grub.cfg 文件；</p>
+</li>
+<li>
+<p>重启机器。</p>
+</li>
+</ol>
+<p>对于操作系统初学者（比如我）来说，很难想象仅依靠添加和修改文件就能改变一台计算机的操作系统。为了解其实现原理，我们将对 Linux 的启动流程进行讨论，并从中说明上述操作是如何影响操作系统的。</p>
+<h2 id="linux-启动流程"><a href="#linux-启动流程" class="anchor-link"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon anchor-icon"><path d="M326.612 185.391c59.747 59.809 58.927 155.698.36 214.59-.11.12-.24.25-.36.37l-67.2 67.2c-59.27 59.27-155.699 59.262-214.96 0-59.27-59.26-59.27-155.7 0-214.96l37.106-37.106c9.84-9.84 26.786-3.3 27.294 10.606.648 17.722 3.826 35.527 9.69 52.721 1.986 5.822.567 12.262-3.783 16.612l-13.087 13.087c-28.026 28.026-28.905 73.66-1.155 101.96 28.024 28.579 74.086 28.749 102.325.51l67.2-67.19c28.191-28.191 28.073-73.757 0-101.83-3.701-3.694-7.429-6.564-10.341-8.569a16.037 16.037 0 0 1-6.947-12.606c-.396-10.567 3.348-21.456 11.698-29.806l21.054-21.055c5.521-5.521 14.182-6.199 20.584-1.731a152.482 152.482 0 0 1 20.522 17.197zM467.547 44.449c-59.261-59.262-155.69-59.27-214.96 0l-67.2 67.2c-.12.12-.25.25-.36.37-58.566 58.892-59.387 154.781.36 214.59a152.454 152.454 0 0 0 20.521 17.196c6.402 4.468 15.064 3.789 20.584-1.731l21.054-21.055c8.35-8.35 12.094-19.239 11.698-29.806a16.037 16.037 0 0 0-6.947-12.606c-2.912-2.005-6.64-4.875-10.341-8.569-28.073-28.073-28.191-73.639 0-101.83l67.2-67.19c28.239-28.239 74.3-28.069 102.325.51 27.75 28.3 26.872 73.934-1.155 101.96l-13.087 13.087c-4.35 4.35-5.769 10.79-3.783 16.612 5.864 17.194 9.042 34.999 9.69 52.721.509 13.906 17.454 20.446 27.294 10.606l37.106-37.106c59.271-59.259 59.271-155.699.001-214.959z"/></svg></a>Linux 启动流程</h2>
+<p>启动一台 Linux 机器的过程可以分为两个部分：Boot 和 Startup。其中，Boot 起始于计算机启动，在内核初始化完成且 systemd 进程开始加载后结束。紧接着， Startup 接管任务，使计算机达到一个用户可操作的状态。</p>
+<p><img src="https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/202110171642.jpeg" alt="202110171642"></p>
+<h2 id="boot-阶段"><a href="#boot-阶段" class="anchor-link"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon anchor-icon"><path d="M326.612 185.391c59.747 59.809 58.927 155.698.36 214.59-.11.12-.24.25-.36.37l-67.2 67.2c-59.27 59.27-155.699 59.262-214.96 0-59.27-59.26-59.27-155.7 0-214.96l37.106-37.106c9.84-9.84 26.786-3.3 27.294 10.606.648 17.722 3.826 35.527 9.69 52.721 1.986 5.822.567 12.262-3.783 16.612l-13.087 13.087c-28.026 28.026-28.905 73.66-1.155 101.96 28.024 28.579 74.086 28.749 102.325.51l67.2-67.19c28.191-28.191 28.073-73.757 0-101.83-3.701-3.694-7.429-6.564-10.341-8.569a16.037 16.037 0 0 1-6.947-12.606c-.396-10.567 3.348-21.456 11.698-29.806l21.054-21.055c5.521-5.521 14.182-6.199 20.584-1.731a152.482 152.482 0 0 1 20.522 17.197zM467.547 44.449c-59.261-59.262-155.69-59.27-214.96 0l-67.2 67.2c-.12.12-.25.25-.36.37-58.566 58.892-59.387 154.781.36 214.59a152.454 152.454 0 0 0 20.521 17.196c6.402 4.468 15.064 3.789 20.584-1.731l21.054-21.055c8.35-8.35 12.094-19.239 11.698-29.806a16.037 16.037 0 0 0-6.947-12.606c-2.912-2.005-6.64-4.875-10.341-8.569-28.073-28.073-28.191-73.639 0-101.83l67.2-67.19c28.239-28.239 74.3-28.069 102.325.51 27.75 28.3 26.872 73.934-1.155 101.96l-13.087 13.087c-4.35 4.35-5.769 10.79-3.783 16.612 5.864 17.194 9.042 34.999 9.69 52.721.509 13.906 17.454 20.446 27.294 10.606l37.106-37.106c59.271-59.259 59.271-155.699.001-214.959z"/></svg></a>Boot 阶段</h2>
+<p>如上图所示，Boot 阶段又可以细分为三个部分：</p>
+<ul>
+<li>BIOS POST</li>
+<li>Boot Loader</li>
+<li>内核初始化</li>
+</ul>
+<h3 id="bios-post"><a href="#bios-post" class="anchor-link"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon anchor-icon"><path d="M326.612 185.391c59.747 59.809 58.927 155.698.36 214.59-.11.12-.24.25-.36.37l-67.2 67.2c-59.27 59.27-155.699 59.262-214.96 0-59.27-59.26-59.27-155.7 0-214.96l37.106-37.106c9.84-9.84 26.786-3.3 27.294 10.606.648 17.722 3.826 35.527 9.69 52.721 1.986 5.822.567 12.262-3.783 16.612l-13.087 13.087c-28.026 28.026-28.905 73.66-1.155 101.96 28.024 28.579 74.086 28.749 102.325.51l67.2-67.19c28.191-28.191 28.073-73.757 0-101.83-3.701-3.694-7.429-6.564-10.341-8.569a16.037 16.037 0 0 1-6.947-12.606c-.396-10.567 3.348-21.456 11.698-29.806l21.054-21.055c5.521-5.521 14.182-6.199 20.584-1.731a152.482 152.482 0 0 1 20.522 17.197zM467.547 44.449c-59.261-59.262-155.69-59.27-214.96 0l-67.2 67.2c-.12.12-.25.25-.36.37-58.566 58.892-59.387 154.781.36 214.59a152.454 152.454 0 0 0 20.521 17.196c6.402 4.468 15.064 3.789 20.584-1.731l21.054-21.055c8.35-8.35 12.094-19.239 11.698-29.806a16.037 16.037 0 0 0-6.947-12.606c-2.912-2.005-6.64-4.875-10.341-8.569-28.073-28.073-28.191-73.639 0-101.83l67.2-67.19c28.239-28.239 74.3-28.069 102.325.51 27.75 28.3 26.872 73.934-1.155 101.96l-13.087 13.087c-4.35 4.35-5.769 10.79-3.783 16.612 5.864 17.194 9.042 34.999 9.69 52.721.509 13.906 17.454 20.446 27.294 10.606l37.106-37.106c59.271-59.259 59.271-155.699.001-214.959z"/></svg></a>BIOS POST</h3>
+<p>开机自检（Power On Self Test，POST）是 <a href="https://zh.wikipedia.org/wiki/BIOS" target="_blank" rel="noopener">基本输入输出系统</a>（Basic I/O System，BIOS）的一部分，也是启动 Linux 机器的第一个步骤。其工作对象是计算机硬件，因此对于任何操作系统都是相同的。<strong>POST 检查硬件的基本可操作性</strong>，若失败则 Boot 过程将会被终止。</p>
+<p>POST 检查完毕后会发出一个 BIOS 中断调用 <a href="https://en.wikipedia.org/wiki/INT_13H" target="_blank" rel="noopener">INT 13H</a>，它将在任何可连接且可引导的磁盘上搜索含有有效引导记录的引导扇区（Boot Sector），通常是 <a href="https://zh.wikipedia.org/wiki/%E4%B8%BB%E5%BC%95%E5%AF%BC%E8%AE%B0%E5%BD%95" target="_blank" rel="noopener">主引导扇区</a>。引导扇区中的主引导记录（Master Boot Record，MBR）将被加载到 RAM 中，然后控制权就会转移到其手中。</p>
+<h3 id="boot-loader"><a href="#boot-loader" class="anchor-link"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon anchor-icon"><path d="M326.612 185.391c59.747 59.809 58.927 155.698.36 214.59-.11.12-.24.25-.36.37l-67.2 67.2c-59.27 59.27-155.699 59.262-214.96 0-59.27-59.26-59.27-155.7 0-214.96l37.106-37.106c9.84-9.84 26.786-3.3 27.294 10.606.648 17.722 3.826 35.527 9.69 52.721 1.986 5.822.567 12.262-3.783 16.612l-13.087 13.087c-28.026 28.026-28.905 73.66-1.155 101.96 28.024 28.579 74.086 28.749 102.325.51l67.2-67.19c28.191-28.191 28.073-73.757 0-101.83-3.701-3.694-7.429-6.564-10.341-8.569a16.037 16.037 0 0 1-6.947-12.606c-.396-10.567 3.348-21.456 11.698-29.806l21.054-21.055c5.521-5.521 14.182-6.199 20.584-1.731a152.482 152.482 0 0 1 20.522 17.197zM467.547 44.449c-59.261-59.262-155.69-59.27-214.96 0l-67.2 67.2c-.12.12-.25.25-.36.37-58.566 58.892-59.387 154.781.36 214.59a152.454 152.454 0 0 0 20.521 17.196c6.402 4.468 15.064 3.789 20.584-1.731l21.054-21.055c8.35-8.35 12.094-19.239 11.698-29.806a16.037 16.037 0 0 0-6.947-12.606c-2.912-2.005-6.64-4.875-10.341-8.569-28.073-28.073-28.191-73.639 0-101.83l67.2-67.19c28.239-28.239 74.3-28.069 102.325.51 27.75 28.3 26.872 73.934-1.155 101.96l-13.087 13.087c-4.35 4.35-5.769 10.79-3.783 16.612 5.864 17.194 9.042 34.999 9.69 52.721.509 13.906 17.454 20.446 27.294 10.606l37.106-37.106c59.271-59.259 59.271-155.699.001-214.959z"/></svg></a>Boot Loader</h3>
+<p>大多数 Linux 发行版使用三种 Boot Loader 程序：GRUB1、GRUB2 和 LILO，其中 GRUB2 是最新且使用最为广泛的。GRUB2 代表“GRand Unified Bootloader, version 2”，<strong>它能够定位操作系统内核并将其加载到内存中</strong>。GRUB2 还允许用户选择从几种不同的内核中引导计算机，如果更新的内核版本出现兼容性问题，我们就可以恢复到先前内核版本。</p>
+<p>GRUB1 的引导过程可以分为三个阶段：stage 1、stage 1.5 和 stage 2。虽然 GRUB2 中并没有 stage 的概念，但两者的工作方式基本相同。为了方便说明，我们在讨论 GRUB2 时将沿用 GRUB1 中 stage 的说法。</p>
+<h4 id="stage-1"><a href="#stage-1" class="anchor-link"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon anchor-icon"><path d="M326.612 185.391c59.747 59.809 58.927 155.698.36 214.59-.11.12-.24.25-.36.37l-67.2 67.2c-59.27 59.27-155.699 59.262-214.96 0-59.27-59.26-59.27-155.7 0-214.96l37.106-37.106c9.84-9.84 26.786-3.3 27.294 10.606.648 17.722 3.826 35.527 9.69 52.721 1.986 5.822.567 12.262-3.783 16.612l-13.087 13.087c-28.026 28.026-28.905 73.66-1.155 101.96 28.024 28.579 74.086 28.749 102.325.51l67.2-67.19c28.191-28.191 28.073-73.757 0-101.83-3.701-3.694-7.429-6.564-10.341-8.569a16.037 16.037 0 0 1-6.947-12.606c-.396-10.567 3.348-21.456 11.698-29.806l21.054-21.055c5.521-5.521 14.182-6.199 20.584-1.731a152.482 152.482 0 0 1 20.522 17.197zM467.547 44.449c-59.261-59.262-155.69-59.27-214.96 0l-67.2 67.2c-.12.12-.25.25-.36.37-58.566 58.892-59.387 154.781.36 214.59a152.454 152.454 0 0 0 20.521 17.196c6.402 4.468 15.064 3.789 20.584-1.731l21.054-21.055c8.35-8.35 12.094-19.239 11.698-29.806a16.037 16.037 0 0 0-6.947-12.606c-2.912-2.005-6.64-4.875-10.341-8.569-28.073-28.073-28.191-73.639 0-101.83l67.2-67.19c28.239-28.239 74.3-28.069 102.325.51 27.75 28.3 26.872 73.934-1.155 101.96l-13.087 13.087c-4.35 4.35-5.769 10.79-3.783 16.612 5.864 17.194 9.042 34.999 9.69 52.721.509 13.906 17.454 20.446 27.294 10.606l37.106-37.106c59.271-59.259 59.271-155.699.001-214.959z"/></svg></a>stage 1</h4>
+<p>上文提到，BIOS 中断调用会定位主引导扇区，其结构如下图所示：</p>
+<p><img src="https://cdn.jsdelivr.net/gh/koktlzz/NoteImg@main/20211015161614.png" alt="20211015161614"></p>
+<p>主引导记录首部的引导代码便是 stage 1 文件 boot.img，它和 stage 1.5 文件 core.img 均位于 /boot/grub2/i386-pc 目录下：</p>
+<div class="highlight"><div class="chroma">
+<div class="table-container"><table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-shell" data-lang="shell"><span class="o">[</span>root@bastion ~<span class="o">]</span><span class="c1"># du -b /boot/grub2/i386-pc/*.img </span>
+<span class="m">512</span>     /boot/grub2/i386-pc/boot.img
+<span class="m">26664</span>   /boot/grub2/i386-pc/core.img
+</code></pre></td></tr></table></div>
+</div>
+</div><p>它的作用是检查分区表是否正确，然后<strong>定位和加载 stage 1.5</strong> 文件。446 字节的 boot.img 放不下能够识别文件系统的代码，只能通过计算扇区的偏移量来寻找，因此 core.img 必须位于主引导记录和驱动器的第一个分区（partition）之间。第一个分区从扇区 63 开始，与位于扇区 0 的主引导记录之间有 62 个扇区（每个 512 字节），有足够的空间存储大小不足 30000 字节的 core.img 文件。当 core.img 文件加载到 RAM 后，控制权也随之转移。</p>
+<h4 id="stage-15"><a href="#stage-15" class="anchor-link"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon anchor-icon"><path d="M326.612 185.391c59.747 59.809 58.927 155.698.36 214.59-.11.12-.24.25-.36.37l-67.2 67.2c-59.27 59.27-155.699 59.262-214.96 0-59.27-59.26-59.27-155.7 0-214.96l37.106-37.106c9.84-9.84 26.786-3.3 27.294 10.606.648 17.722 3.826 35.527 9.69 52.721 1.986 5.822.567 12.262-3.783 16.612l-13.087 13.087c-28.026 28.026-28.905 73.66-1.155 101.96 28.024 28.579 74.086 28.749 102.325.51l67.2-67.19c28.191-28.191 28.073-73.757 0-101.83-3.701-3.694-7.429-6.564-10.341-8.569a16.037 16.037 0 0 1-6.947-12.606c-.396-10.567 3.348-21.456 11.698-29.806l21.054-21.055c5.521-5.521 14.182-6.199 20.584-1.731a152.482 152.482 0 0 1 20.522 17.197zM467.547 44.449c-59.261-59.262-155.69-59.27-214.96 0l-67.2 67.2c-.12.12-.25.25-.36.37-58.566 58.892-59.387 154.781.36 214.59a152.454 152.454 0 0 0 20.521 17.196c6.402 4.468 15.064 3.789 20.584-1.731l21.054-21.055c8.35-8.35 12.094-19.239 11.698-29.806a16.037 16.037 0 0 0-6.947-12.606c-2.912-2.005-6.64-4.875-10.341-8.569-28.073-28.073-28.191-73.639 0-101.83l67.2-67.19c28.239-28.239 74.3-28.069 102.325.51 27.75 28.3 26.872 73.934-1.155 101.96l-13.087 13.087c-4.35 4.35-5.769 10.79-3.783 16.612 5.864 17.194 9.042 34.999 9.69 52.721.509 13.906 17.454 20.446 27.294 10.606l37.106-37.106c59.271-59.259 59.271-155.699.001-214.959z"/></svg></a>stage 1.5</h4>
+<p>相比于只能读取原始扇区的 LILO，GRUB1 和 GRUB2 均可识别文件系统，这依赖于 stage 1.5 文件中内置的文件系统驱动程序。如果你拥有一台仍然使用 GRUB1 引导的 CentOS 6.X 机器，那么便可以在 /boot/grub/ 目录下找到这些适配不同文件系统的 stage 1.5 文件：</p>
+<div class="highlight"><div class="chroma">
+<div class="table-container"><table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-shell" data-lang="shell"><span class="o">[</span>root@centos6.5 ~<span class="o">]</span><span class="c1"># du -b /boot/grub/* | grep stage1_5</span>
+<span class="m">13380</span>    /boot/grub/e2fs_stage1_5
+<span class="m">12620</span>    /boot/grub/fat_stage1_5
+<span class="m">11748</span>    /boot/grub/ffs_stage1_5
+<span class="m">11756</span>    /boot/grub/iso9660_stage1_5
+<span class="m">13268</span>    /boot/grub/jfs_stage1_5
+<span class="m">11956</span>    /boot/grub/minix_stage1_5
+<span class="m">14412</span>    /boot/grub/reiserfs_stage1_5
+<span class="m">12024</span>    /boot/grub/ufs2_stage1_5
+<span class="m">11364</span>    /boot/grub/vstafs_stage1_5
+<span class="m">13964</span>    /boot/grub/xfs_stage1_5
+</code></pre></td></tr></table></div>
+</div>
+</div><p>GRUB2 中的 core.img 不仅整合了上述文件系统驱动，还新增了菜单处理等模块，这也是其优于 GRUB1 的地方。我们可以在 <a href="https://www.gnu.org/software/grub/manual/grub/html_node/Images.html#Images" target="_blank" rel="noopener">GNU GRUB Manual 2.06: Images</a> 中找到对各种 GRUB 镜像文件的详细介绍。</p>
+<p>既然 core.img 文件可以识别文件系统，那么它就能够根据安装时确定的系统路径<strong>定位和加载 stage 2</strong> 文件。同样，当 stage 2 文件加载到 RAM 后，控制权也随之转移。</p>
+<h4 id="stage-2"><a href="#stage-2" class="anchor-link"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon anchor-icon"><path d="M326.612 185.391c59.747 59.809 58.927 155.698.36 214.59-.11.12-.24.25-.36.37l-67.2 67.2c-59.27 59.27-155.699 59.262-214.96 0-59.27-59.26-59.27-155.7 0-214.96l37.106-37.106c9.84-9.84 26.786-3.3 27.294 10.606.648 17.722 3.826 35.527 9.69 52.721 1.986 5.822.567 12.262-3.783 16.612l-13.087 13.087c-28.026 28.026-28.905 73.66-1.155 101.96 28.024 28.579 74.086 28.749 102.325.51l67.2-67.19c28.191-28.191 28.073-73.757 0-101.83-3.701-3.694-7.429-6.564-10.341-8.569a16.037 16.037 0 0 1-6.947-12.606c-.396-10.567 3.348-21.456 11.698-29.806l21.054-21.055c5.521-5.521 14.182-6.199 20.584-1.731a152.482 152.482 0 0 1 20.522 17.197zM467.547 44.449c-59.261-59.262-155.69-59.27-214.96 0l-67.2 67.2c-.12.12-.25.25-.36.37-58.566 58.892-59.387 154.781.36 214.59a152.454 152.454 0 0 0 20.521 17.196c6.402 4.468 15.064 3.789 20.584-1.731l21.054-21.055c8.35-8.35 12.094-19.239 11.698-29.806a16.037 16.037 0 0 0-6.947-12.606c-2.912-2.005-6.64-4.875-10.341-8.569-28.073-28.073-28.191-73.639 0-101.83l67.2-67.19c28.239-28.239 74.3-28.069 102.325.51 27.75 28.3 26.872 73.934-1.155 101.96l-13.087 13.087c-4.35 4.35-5.769 10.79-3.783 16.612 5.864 17.194 9.042 34.999 9.69 52.721.509 13.906 17.454 20.446 27.294 10.606l37.106-37.106c59.271-59.259 59.271-155.699.001-214.959z"/></svg></a>stage 2</h4>
+<p>stage 2 文件并非是一个 .img 的镜像，而是一些运行时内核模块：</p>
+<div class="highlight"><div class="chroma">
+<div class="table-container"><table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-shell" data-lang="shell"><span class="o">[</span>root@bastion ~<span class="o">]</span><span class="c1"># ls /boot/grub2/i386-pc/ | grep .mod | head</span>
 acpi.mod
 adler32.mod
 affs.mod
@@ -55,149 +360,494 @@ aout.mod
 appendedsig.mod
 appended_signature_test.mod
 archelp.mod
-</code></pre></td></tr></table></div></div></div><p>它们的任务是根据 grub.cfg 文件的配置<strong>定位和加载内核文件</strong>，然后将控制权转交给 Linux 内核。grub.cfg 文件存放在 /boot/grub2 目录下：</p><div class=highlight><div class=chroma><div class=table-container><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
-</span><span class=lnt>2
-</span><span class=lnt>3
-</span><span class=lnt>4
-</span><span class=lnt>5
-</span><span class=lnt>6
-</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-shell data-lang=shell><span class=o>[</span>root@bastion ~<span class=o>]</span><span class=c1># head /boot/grub2/grub.cfg -n 5</span>
-<span class=c1>#</span>
-<span class=c1># DO NOT EDIT THIS FILE</span>
-<span class=c1>#</span>
-<span class=c1># It is automatically generated by grub2-mkconfig using templates</span>
-<span class=c1># from /etc/grub.d and settings from /etc/default/grub</span>
-</code></pre></td></tr></table></div></div></div><p>通过该文件的注释我们可以知道，它实际上是由 grub2-mkconfig 命令使用 /etc/grub.d 目录下的一些模板文件并根据 /etc/default/grub 文件中的设置生成的：</p><div class=highlight><div class=chroma><div class=table-container><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
-</span><span class=lnt>2
-</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-shell data-lang=shell><span class=o>[</span>root@bastion ~<span class=o>]</span><span class=c1># ls /etc/grub.d/</span>
+</code></pre></td></tr></table></div>
+</div>
+</div><p>它们的任务是根据 grub.cfg 文件的配置<strong>定位和加载内核文件</strong>，然后将控制权转交给 Linux 内核。grub.cfg 文件存放在 /boot/grub2 目录下：</p>
+<div class="highlight"><div class="chroma">
+<div class="table-container"><table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-shell" data-lang="shell"><span class="o">[</span>root@bastion ~<span class="o">]</span><span class="c1"># head /boot/grub2/grub.cfg -n 5</span>
+<span class="c1">#</span>
+<span class="c1"># DO NOT EDIT THIS FILE</span>
+<span class="c1">#</span>
+<span class="c1"># It is automatically generated by grub2-mkconfig using templates</span>
+<span class="c1"># from /etc/grub.d and settings from /etc/default/grub</span>
+</code></pre></td></tr></table></div>
+</div>
+</div><p>通过该文件的注释我们可以知道，它实际上是由 grub2-mkconfig 命令使用 /etc/grub.d 目录下的一些模板文件并根据 /etc/default/grub 文件中的设置生成的：</p>
+<div class="highlight"><div class="chroma">
+<div class="table-container"><table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-shell" data-lang="shell"><span class="o">[</span>root@bastion ~<span class="o">]</span><span class="c1"># ls /etc/grub.d/</span>
 00_header  00_tuned  01_users  10_linux  20_linux_xen  20_ppc_terminfo  30_os-prober  40_custom  41_custom  README
-</code></pre></td></tr></table></div></div></div><p>40_custom 和 41_custom 文件常用于用户对 GRUB2 配置的修改，实际上我们对机器的操作也是从这里开始的。为了让 GRUB2 在机器启动时选择 CoreOS 系统内核而非默认的 CentOS，需要在原始 40_custom 文件末尾添加如下内容：</p><div class=highlight><div class=chroma><div class=table-container><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
-</span><span class=lnt>2
-</span><span class=lnt>3
-</span><span class=lnt>4
-</span><span class=lnt>5
-</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-shell data-lang=shell>menuentry <span class=s1>&#39;coreos&#39;</span> <span class=o>{</span>
-        <span class=nb>set</span> <span class=nv>root</span><span class=o>=</span><span class=s1>&#39;hd0,msdos1&#39;</span>
-        linux16 /rhcos-live-kernel-x86_64 coreos.inst<span class=o>=</span>yes coreos.inst.install_dev<span class=o>=</span>vda rd.neednet<span class=o>=</span><span class=m>1</span> <span class=nv>console</span><span class=o>=</span>tty0 <span class=nv>console</span><span class=o>=</span>ttyS0 coreos.live.rootfs_url<span class=o>=</span>http://<span class=o>{{</span>HTTP-Server-Path<span class=o>}}</span>/rhcos-live-rootfs.x86_64.img coreos.inst.ignition_url<span class=o>=</span>http://<span class=o>{{</span>HTTP-Server-Path<span class=o>}}</span>/master.ign <span class=nv>ip</span><span class=o>=</span>dhcp
+</code></pre></td></tr></table></div>
+</div>
+</div><p>40_custom 和 41_custom 文件常用于用户对 GRUB2 配置的修改，实际上我们对机器的操作也是从这里开始的。为了让 GRUB2 在机器启动时选择 CoreOS 系统内核而非默认的 CentOS，需要在原始 40_custom 文件末尾添加如下内容：</p>
+<div class="highlight"><div class="chroma">
+<div class="table-container"><table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-shell" data-lang="shell">menuentry <span class="s1">&#39;coreos&#39;</span> <span class="o">{</span>
+        <span class="nb">set</span> <span class="nv">root</span><span class="o">=</span><span class="s1">&#39;hd0,msdos1&#39;</span>
+        linux16 /rhcos-live-kernel-x86_64 coreos.inst<span class="o">=</span>yes coreos.inst.install_dev<span class="o">=</span>vda rd.neednet<span class="o">=</span><span class="m">1</span> <span class="nv">console</span><span class="o">=</span>tty0 <span class="nv">console</span><span class="o">=</span>ttyS0 coreos.live.rootfs_url<span class="o">=</span>http://<span class="o">{{</span>HTTP-Server-Path<span class="o">}}</span>/rhcos-live-rootfs.x86_64.img coreos.inst.ignition_url<span class="o">=</span>http://<span class="o">{{</span>HTTP-Server-Path<span class="o">}}</span>/master.ign <span class="nv">ip</span><span class="o">=</span>dhcp
         initrd16 /rhcos-live-initramfs.x86_64.img
-<span class=o>}</span>
-</code></pre></td></tr></table></div></div></div><p>所示的 Menuentry 由三条 Shell 命令组成：</p><ul><li><code>set root='hd0,msdos1'</code></li><li><code>linux16 /rhcos-live-kernel-x86_64 ...</code></li><li><code>initrd16 /rhcos-live-initramfs.x86_64.img</code></li></ul><p>第一条命令指定了 GRUB2 的根目录，也就是 /boot 所在分区在计算机硬件上的位置。既然我们已经将内核文件拷贝到了 /boot 目录下，那么能够识别文件系统的 GRUB2 便可以定位和加载它。本例中<code>hd</code>代表硬盘（hard drive），<code>0</code>代表第一块硬盘，<code>mosdos</code>代表分区格式，<code>1</code> 代表第一个分区。详细的硬件命名规范见 <a href=https://www.gnu.org/software/grub/manual/grub/grub.html#Naming-convention target=_blank rel=noopener>Naming Convention</a>。</p><p>第二条命令将从<code>rhcos-live-kernel-x86_64</code>（CoreOS 系统的内核文件）中以 16 位模式加载 Linux 内核映像，并通过<code>coreos.live.rootfs_url</code>和<code>coreos.inst.ignition_url</code>参数指定根文件系统（rootfs）的镜像文件和点火文件的下载链接。<code>ip=dhcp</code>代表该计算机网络将由 DHCP 服务器动态配置，也可以按<code>ip={{HostIP}}::{{Gateway}}:{{Genmask}}:{{Hostname}}::none nameserver={{DNSServer}}</code>的格式写入静态配置。</p><p>第三条命令将从<code>rhcos-live-initramfs.x86_64.img</code>中加载 RAM Filesystem。GRUB2 读取的内核文件实际上只包含了内核的核心模块，缺少硬件驱动模块的它无法完成 rootfs 的挂载。然而这些硬件驱动模块位于 /lib/modules/$(uname -r)/kernel/ 目录下，必须在 rootfs 挂载完毕后才能被识别和加载。为了解决这一问题，initramfs（前身为 initrd）应运而生。它是一个包含了必要驱动模块的临时 rootfs，内核可以从中加载所需的驱动程序。待真正的 rootfs 挂载完毕后，它便会从内存中移除。</p><p>除此之外我们还需要将 /etc/default/grub 文件中的 <a href=https://www.gnu.org/software/grub/manual/grub/grub.html#Simple-configuration target=_blank rel=noopener>GRUB_DEFAULT=saved</a> 修改为 GRUB_DEFAULT=&ldquo;coreos&rdquo;，使其与 40_custom 文件中的<code>menuentry 'coreos'</code>对应。最后使用命令<code>grub2-mkconfig -o /boot/grub2/grub.cfg</code>来重新生成一份 grub.cfg 文件，这样计算机重启后 GRUB2 就会根据我们的配置去加载 CoreOS 系统的内核了。</p><p>至此我们已经明白了为什么“仅依靠添加和修改文件就能改变一台计算机的操作系统”，但计算机想要达到用户可操作状态还远不止于此。让我们再来看看内核被加载到内存后发生了什么。</p><h3 id=内核初始化><a href=#内核初始化 class=anchor-link><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon anchor-icon"><path d="M326.612 185.391c59.747 59.809 58.927 155.698.36 214.59-.11.12-.24.25-.36.37l-67.2 67.2c-59.27 59.27-155.699 59.262-214.96.0-59.27-59.26-59.27-155.7.0-214.96l37.106-37.106c9.84-9.84 26.786-3.3 27.294 10.606.648 17.722 3.826 35.527 9.69 52.721 1.986 5.822.567 12.262-3.783 16.612l-13.087 13.087c-28.026 28.026-28.905 73.66-1.155 101.96 28.024 28.579 74.086 28.749 102.325.51l67.2-67.19c28.191-28.191 28.073-73.757.0-101.83-3.701-3.694-7.429-6.564-10.341-8.569a16.037 16.037.0 01-6.947-12.606c-.396-10.567 3.348-21.456 11.698-29.806l21.054-21.055c5.521-5.521 14.182-6.199 20.584-1.731a152.482 152.482.0 0120.522 17.197zM467.547 44.449c-59.261-59.262-155.69-59.27-214.96.0l-67.2 67.2c-.12.12-.25.25-.36.37-58.566 58.892-59.387 154.781.36 214.59a152.454 152.454.0 0020.521 17.196c6.402 4.468 15.064 3.789 20.584-1.731l21.054-21.055c8.35-8.35 12.094-19.239 11.698-29.806a16.037 16.037.0 00-6.947-12.606c-2.912-2.005-6.64-4.875-10.341-8.569-28.073-28.073-28.191-73.639.0-101.83l67.2-67.19c28.239-28.239 74.3-28.069 102.325.51 27.75 28.3 26.872 73.934-1.155 101.96l-13.087 13.087c-4.35 4.35-5.769 10.79-3.783 16.612 5.864 17.194 9.042 34.999 9.69 52.721.509 13.906 17.454 20.446 27.294 10.606l37.106-37.106c59.271-59.259 59.271-155.699.001-214.959z"/></svg></a><a href=#contents:内核初始化 class=headings>内核初始化</a></h3><p>不同内核及其相关文件位于 /boot 目录中，均以 vmlinuz 开头：</p><div class=highlight><div class=chroma><div class=table-container><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
-</span><span class=lnt>2
-</span><span class=lnt>3
-</span><span class=lnt>4
-</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-shell data-lang=shell><span class=o>[</span>root@bastion ~<span class=o>]</span><span class=c1># ls /boot/ | grep vmlinuz</span>
+<span class="o">}</span>
+</code></pre></td></tr></table></div>
+</div>
+</div><p>所示的 Menuentry 由三条 Shell 命令组成：</p>
+<ul>
+<li><code>set root='hd0,msdos1'</code></li>
+<li><code>linux16 /rhcos-live-kernel-x86_64 ...</code></li>
+<li><code>initrd16 /rhcos-live-initramfs.x86_64.img</code></li>
+</ul>
+<p>第一条命令指定了 GRUB2 的根目录，也就是 /boot 所在分区在计算机硬件上的位置。既然我们已经将内核文件拷贝到了 /boot 目录下，那么能够识别文件系统的 GRUB2 便可以定位和加载它。本例中<code>hd</code>代表硬盘（hard drive），<code>0</code>代表第一块硬盘，<code>mosdos</code>代表分区格式，<code>1</code> 代表第一个分区。详细的硬件命名规范见 <a href="https://www.gnu.org/software/grub/manual/grub/grub.html#Naming-convention" target="_blank" rel="noopener">Naming Convention</a>。</p>
+<p>第二条命令将从<code>rhcos-live-kernel-x86_64</code>（CoreOS 系统的内核文件）中以 16 位模式加载 Linux 内核映像，并通过<code>coreos.live.rootfs_url</code>和<code>coreos.inst.ignition_url</code>参数指定根文件系统（rootfs）的镜像文件和点火文件的下载链接。<code>ip=dhcp</code>代表该计算机网络将由 DHCP 服务器动态配置，也可以按<code>ip={{HostIP}}::{{Gateway}}:{{Genmask}}:{{Hostname}}::none nameserver={{DNSServer}}</code>的格式写入静态配置。</p>
+<p>第三条命令将从<code>rhcos-live-initramfs.x86_64.img</code>中加载 RAM Filesystem。GRUB2 读取的内核文件实际上只包含了内核的核心模块，缺少硬件驱动模块的它无法完成 rootfs 的挂载。然而这些硬件驱动模块位于 /lib/modules/$(uname -r)/kernel/ 目录下，必须在 rootfs 挂载完毕后才能被识别和加载。为了解决这一问题，initramfs（前身为 initrd）应运而生。它是一个包含了必要驱动模块的临时 rootfs，内核可以从中加载所需的驱动程序。待真正的 rootfs 挂载完毕后，它便会从内存中移除。</p>
+<p>除此之外我们还需要将 /etc/default/grub 文件中的 <a href="https://www.gnu.org/software/grub/manual/grub/grub.html#Simple-configuration" target="_blank" rel="noopener">GRUB_DEFAULT=saved</a> 修改为 GRUB_DEFAULT=&ldquo;coreos&rdquo;，使其与 40_custom 文件中的<code>menuentry 'coreos'</code>对应。最后使用命令<code>grub2-mkconfig -o /boot/grub2/grub.cfg</code>来重新生成一份 grub.cfg 文件，这样计算机重启后 GRUB2 就会根据我们的配置去加载 CoreOS 系统的内核了。</p>
+<p>至此我们已经明白了为什么“仅依靠添加和修改文件就能改变一台计算机的操作系统”，但计算机想要达到用户可操作状态还远不止于此。让我们再来看看内核被加载到内存后发生了什么。</p>
+<h3 id="内核初始化"><a href="#内核初始化" class="anchor-link"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon anchor-icon"><path d="M326.612 185.391c59.747 59.809 58.927 155.698.36 214.59-.11.12-.24.25-.36.37l-67.2 67.2c-59.27 59.27-155.699 59.262-214.96 0-59.27-59.26-59.27-155.7 0-214.96l37.106-37.106c9.84-9.84 26.786-3.3 27.294 10.606.648 17.722 3.826 35.527 9.69 52.721 1.986 5.822.567 12.262-3.783 16.612l-13.087 13.087c-28.026 28.026-28.905 73.66-1.155 101.96 28.024 28.579 74.086 28.749 102.325.51l67.2-67.19c28.191-28.191 28.073-73.757 0-101.83-3.701-3.694-7.429-6.564-10.341-8.569a16.037 16.037 0 0 1-6.947-12.606c-.396-10.567 3.348-21.456 11.698-29.806l21.054-21.055c5.521-5.521 14.182-6.199 20.584-1.731a152.482 152.482 0 0 1 20.522 17.197zM467.547 44.449c-59.261-59.262-155.69-59.27-214.96 0l-67.2 67.2c-.12.12-.25.25-.36.37-58.566 58.892-59.387 154.781.36 214.59a152.454 152.454 0 0 0 20.521 17.196c6.402 4.468 15.064 3.789 20.584-1.731l21.054-21.055c8.35-8.35 12.094-19.239 11.698-29.806a16.037 16.037 0 0 0-6.947-12.606c-2.912-2.005-6.64-4.875-10.341-8.569-28.073-28.073-28.191-73.639 0-101.83l67.2-67.19c28.239-28.239 74.3-28.069 102.325.51 27.75 28.3 26.872 73.934-1.155 101.96l-13.087 13.087c-4.35 4.35-5.769 10.79-3.783 16.612 5.864 17.194 9.042 34.999 9.69 52.721.509 13.906 17.454 20.446 27.294 10.606l37.106-37.106c59.271-59.259 59.271-155.699.001-214.959z"/></svg></a>内核初始化</h3>
+<p>不同内核及其相关文件位于 /boot 目录中，均以 vmlinuz 开头：</p>
+<div class="highlight"><div class="chroma">
+<div class="table-container"><table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-shell" data-lang="shell"><span class="o">[</span>root@bastion ~<span class="o">]</span><span class="c1"># ls /boot/ | grep vmlinuz</span>
 vmlinuz-0-rescue-20210623110808105647395700239158
 vmlinuz-4.18.0-305.12.1.el8_4.x86_64
 vmlinuz-4.18.0-305.3.1.el8.x86_64
-</code></pre></td></tr></table></div></div></div><p>内核通过压缩自身来节省存储空间，所以当选定的内核被加载到内存中后，它首先需要进行解压缩（extracting）。一旦解压完成，内核便会开始<strong>加载 systemd 并将控制权移交给它</strong>。</p><h2 id=startup-阶段><a href=#startup-阶段 class=anchor-link><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon anchor-icon"><path d="M326.612 185.391c59.747 59.809 58.927 155.698.36 214.59-.11.12-.24.25-.36.37l-67.2 67.2c-59.27 59.27-155.699 59.262-214.96.0-59.27-59.26-59.27-155.7.0-214.96l37.106-37.106c9.84-9.84 26.786-3.3 27.294 10.606.648 17.722 3.826 35.527 9.69 52.721 1.986 5.822.567 12.262-3.783 16.612l-13.087 13.087c-28.026 28.026-28.905 73.66-1.155 101.96 28.024 28.579 74.086 28.749 102.325.51l67.2-67.19c28.191-28.191 28.073-73.757.0-101.83-3.701-3.694-7.429-6.564-10.341-8.569a16.037 16.037.0 01-6.947-12.606c-.396-10.567 3.348-21.456 11.698-29.806l21.054-21.055c5.521-5.521 14.182-6.199 20.584-1.731a152.482 152.482.0 0120.522 17.197zM467.547 44.449c-59.261-59.262-155.69-59.27-214.96.0l-67.2 67.2c-.12.12-.25.25-.36.37-58.566 58.892-59.387 154.781.36 214.59a152.454 152.454.0 0020.521 17.196c6.402 4.468 15.064 3.789 20.584-1.731l21.054-21.055c8.35-8.35 12.094-19.239 11.698-29.806a16.037 16.037.0 00-6.947-12.606c-2.912-2.005-6.64-4.875-10.341-8.569-28.073-28.073-28.191-73.639.0-101.83l67.2-67.19c28.239-28.239 74.3-28.069 102.325.51 27.75 28.3 26.872 73.934-1.155 101.96l-13.087 13.087c-4.35 4.35-5.769 10.79-3.783 16.612 5.864 17.194 9.042 34.999 9.69 52.721.509 13.906 17.454 20.446 27.294 10.606l37.106-37.106c59.271-59.259 59.271-155.699.001-214.959z"/></svg></a><a href=#contents:startup-阶段 class=headings>Startup 阶段</a></h2><p>systemd 是所有进程之父，它负责<strong>使计算机达到可以完成生产工作的状态</strong>。其功能比过去的 init 程序要丰富得多，包括挂载文件系统、启动和管理计算机所需的系统服务。当然你也可以将一些应用（如 Docker）以 systemd 的方式启动，但它们与 Linux 的启动无关，因此不在本文的讨论范围之内。</p><p>首先，systemd 根据 /etc/fstab 文件中的配置挂载文件系统。然后读取 /etc 目录下的配置文件，包括其自身的配置文件 /etc/systemd/system/default.target。该文件指定了 systemd 需要引导计算机到达的最终目标和状态，实际上是一个软链接：</p><div class=highlight><div class=chroma><div class=table-container><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
-</span><span class=lnt>2
-</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-shell data-lang=shell><span class=o>[</span>root@bastion ~<span class=o>]</span><span class=c1># ls /etc/systemd/system/default.target -l</span>
-lrwxrwxrwx. <span class=m>1</span> root root <span class=m>37</span> Oct <span class=m>17</span>  <span class=m>2019</span> /etc/systemd/system/default.target -&gt; /lib/systemd/system/multi-user.target
-</code></pre></td></tr></table></div></div></div><p>在我使用的 bastion 服务器上，它指向的是 multi-user.target；对于带有图形化界面的桌面工作站，它通常指向 graphics.target；而对于单用户模式的机器，它将指向 emergency.target。target 等效于过去 SystemV 中的 <a href=https://zh.wikipedia.org/wiki/%E8%BF%90%E8%A1%8C%E7%BA%A7%E5%88%AB target=_blank rel=noopener>运行级别</a>（Runlevel），它提供了别名以实现向后兼容性：</p><div class=table-container><table><thead><tr><th>SystemV Runlevel</th><th>systemd target</th><th>systemd target alias</th><th>Description</th></tr></thead><tbody><tr><td></td><td>halt.target</td><td></td><td>在不关闭电源的情况下中止系统。</td></tr><tr><td>0</td><td>poweroff.target</td><td>runlevel0.target</td><td>中止系统并关闭电源。</td></tr><tr><td>s</td><td>emergency.target</td><td></td><td>单用户模式。 没有服务正在运行，也未挂载文件系统。仅在主控制台上运行一个紧急 Shell，供用户与系统交互。</td></tr><tr><td>1</td><td>rescue.target</td><td>runlevel1.target</td><td>一个基本系统。文件系统已挂载，只运行最基本的服务和主控制台上的紧急 Shell。</td></tr><tr><td>2</td><td></td><td>runlevel2.target</td><td>多用户模式。虽然还没有网络连接，但不依赖网络的所有非 GUI 服务都已运行。</td></tr><tr><td>3</td><td>multi-user.target</td><td>runlevel3.target</td><td>所有服务都在运行，但只能使用命令行界面（CLI）。</td></tr><tr><td>4</td><td></td><td>runlevel4.target</td><td>用户自定义</td></tr><tr><td>5</td><td>graphical.target</td><td>runlevel5.target</td><td>所有服务都在运行，并且可以使用图形化界面（GUI）。</td></tr><tr><td>6</td><td>reboot.target</td><td>runlevel6.target</td><td>重启系统</td></tr></tbody></table></div><p>每个 target 都在其配置文件中指定了一组依赖，由 systemd 负责启动。这些依赖是 Linux 达到某个运行级别所必须的服务（service）。换句话说，当一个 target 配置文件中的所有 service 都已成功加载，那么系统就达到了该 target 对应的运行级别。</p><p>下图展示了 systemd 启动过程中各 target 和 service 实现的一般顺序：</p><div class=highlight><div class=chroma><div class=table-container><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
-</span><span class=lnt> 2
-</span><span class=lnt> 3
-</span><span class=lnt> 4
-</span><span class=lnt> 5
-</span><span class=lnt> 6
-</span><span class=lnt> 7
-</span><span class=lnt> 8
-</span><span class=lnt> 9
-</span><span class=lnt>10
-</span><span class=lnt>11
-</span><span class=lnt>12
-</span><span class=lnt>13
-</span><span class=lnt>14
-</span><span class=lnt>15
-</span><span class=lnt>16
-</span><span class=lnt>17
-</span><span class=lnt>18
-</span><span class=lnt>19
-</span><span class=lnt>20
-</span><span class=lnt>21
-</span><span class=lnt>22
-</span><span class=lnt>23
-</span><span class=lnt>24
-</span><span class=lnt>25
-</span><span class=lnt>26
-</span><span class=lnt>27
-</span><span class=lnt>28
-</span><span class=lnt>29
-</span><span class=lnt>30
-</span><span class=lnt>31
-</span><span class=lnt>32
-</span><span class=lnt>33
-</span><span class=lnt>34
-</span><span class=lnt>35
-</span><span class=lnt>36
-</span><span class=lnt>37
-</span><span class=lnt>38
-</span><span class=lnt>39
-</span><span class=lnt>40
-</span><span class=lnt>41
-</span><span class=lnt>42
-</span><span class=lnt>43
-</span><span class=lnt>44
-</span><span class=lnt>45
-</span><span class=lnt>46
-</span><span class=lnt>47
-</span><span class=lnt>48
-</span><span class=lnt>49
-</span><span class=lnt>50
-</span><span class=lnt>51
-</span><span class=lnt>52
-</span><span class=lnt>53
-</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-shell data-lang=shell>                   cryptsetup-pre.target veritysetup-pre.target
-                                                  <span class=p>|</span>
-<span class=o>(</span>various low-level                                v
- API VFS mounts:             <span class=o>(</span>various cryptsetup/veritysetup devices...<span class=o>)</span>
- mqueue, configfs,                                <span class=p>|</span>    <span class=p>|</span>
- debugfs, ...<span class=o>)</span>                                    v    <span class=p>|</span>
- <span class=p>|</span>                                  cryptsetup.target  <span class=p>|</span>
- <span class=p>|</span>  <span class=o>(</span>various swap                                 <span class=p>|</span>    <span class=p>|</span>    remote-fs-pre.target
- <span class=p>|</span>   devices...<span class=o>)</span>                                  <span class=p>|</span>    <span class=p>|</span>     <span class=p>|</span>        <span class=p>|</span>
- <span class=p>|</span>    <span class=p>|</span>                                           <span class=p>|</span>    <span class=p>|</span>     <span class=p>|</span>        v
- <span class=p>|</span>    v                       local-fs-pre.target <span class=p>|</span>    <span class=p>|</span>     <span class=p>|</span>  <span class=o>(</span>network file systems<span class=o>)</span>
- <span class=p>|</span>  swap.target                       <span class=p>|</span>           <span class=p>|</span>    v     v                 <span class=p>|</span>
- <span class=p>|</span>    <span class=p>|</span>                               v           <span class=p>|</span>  remote-cryptsetup.target  <span class=p>|</span>
- <span class=p>|</span>    <span class=p>|</span>  <span class=o>(</span>various low-level  <span class=o>(</span>various mounts and  <span class=p>|</span>  remote-veritysetup.target <span class=p>|</span>
- <span class=p>|</span>    <span class=p>|</span>   services: udevd,    fsck services...<span class=o>)</span>   <span class=p>|</span>             <span class=p>|</span>    remote-fs.target
- <span class=p>|</span>    <span class=p>|</span>   tmpfiles, random            <span class=p>|</span>           <span class=p>|</span>             <span class=p>|</span>             /
- <span class=p>|</span>    <span class=p>|</span>   seed, sysctl, ...<span class=o>)</span>          v           <span class=p>|</span>             <span class=p>|</span>            /
- <span class=p>|</span>    <span class=p>|</span>      <span class=p>|</span>                 local-fs.target    <span class=p>|</span>             <span class=p>|</span>           /
- <span class=p>|</span>    <span class=p>|</span>      <span class=p>|</span>                        <span class=p>|</span>           <span class=p>|</span>             <span class=p>|</span>          /
- <span class=se>\_</span>___<span class=p>|</span>______<span class=p>|</span>_______________   ______<span class=p>|</span>___________/             <span class=p>|</span>         /
-                             <span class=se>\ </span>/                                <span class=p>|</span>        /
-                              v                                 <span class=p>|</span>       /
-                       sysinit.target                           <span class=p>|</span>      /
-                              <span class=p>|</span>                                 <span class=p>|</span>     /
-       ______________________/<span class=p>|</span><span class=se>\_</span>____________________           <span class=p>|</span>    /
-      /              <span class=p>|</span>        <span class=p>|</span>      <span class=p>|</span>               <span class=se>\ </span>         <span class=p>|</span>   /
-      <span class=p>|</span>              <span class=p>|</span>        <span class=p>|</span>      <span class=p>|</span>               <span class=p>|</span>          <span class=p>|</span>  /
-      v              v        <span class=p>|</span>      v               <span class=p>|</span>          <span class=p>|</span> /
- <span class=o>(</span>various       <span class=o>(</span>various      <span class=p>|</span>  <span class=o>(</span>various            <span class=p>|</span>          <span class=p>|</span>/
-  timers...<span class=o>)</span>      paths...<span class=o>)</span>   <span class=p>|</span>   sockets...<span class=o>)</span>        <span class=p>|</span>          <span class=p>|</span>
-      <span class=p>|</span>              <span class=p>|</span>        <span class=p>|</span>      <span class=p>|</span>               <span class=p>|</span>          <span class=p>|</span>
-      v              v        <span class=p>|</span>      v               <span class=p>|</span>          <span class=p>|</span>
-timers.target  paths.target   <span class=p>|</span>  sockets.target      <span class=p>|</span>          <span class=p>|</span>
-      <span class=p>|</span>              <span class=p>|</span>        <span class=p>|</span>      <span class=p>|</span>               v          <span class=p>|</span>
-      v              <span class=se>\_</span>______ <span class=p>|</span> _____/         rescue.service   <span class=p>|</span>
-                             <span class=se>\|</span>/                     <span class=p>|</span>          <span class=p>|</span>
-                              v                      v          <span class=p>|</span>
-                          basic.target         rescue.target    <span class=p>|</span>
-                              <span class=p>|</span>                                 <span class=p>|</span>
-                      ________v____________________             <span class=p>|</span>
-                     /              <span class=p>|</span>              <span class=se>\ </span>           <span class=p>|</span>
-                     <span class=p>|</span>              <span class=p>|</span>              <span class=p>|</span>            <span class=p>|</span>
-                     v              v              v            <span class=p>|</span>
-                 display-    <span class=o>(</span>various system   <span class=o>(</span>various system  <span class=p>|</span>
-             manager.service     services        services<span class=o>)</span>      <span class=p>|</span>
-                     <span class=p>|</span>         required <span class=k>for</span>        <span class=p>|</span>            <span class=p>|</span>
-                     <span class=p>|</span>        graphical UIs<span class=o>)</span>       v            v
-                     <span class=p>|</span>              <span class=p>|</span>            multi-user.target
-emergency.service    <span class=p>|</span>              <span class=p>|</span>              <span class=p>|</span>
-        <span class=p>|</span>            <span class=se>\_</span>____________ <span class=p>|</span> _____________/
-        v                          <span class=se>\|</span>/
+</code></pre></td></tr></table></div>
+</div>
+</div><p>内核通过压缩自身来节省存储空间，所以当选定的内核被加载到内存中后，它首先需要进行解压缩（extracting）。一旦解压完成，内核便会开始<strong>加载 systemd 并将控制权移交给它</strong>。</p>
+<h2 id="startup-阶段"><a href="#startup-阶段" class="anchor-link"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon anchor-icon"><path d="M326.612 185.391c59.747 59.809 58.927 155.698.36 214.59-.11.12-.24.25-.36.37l-67.2 67.2c-59.27 59.27-155.699 59.262-214.96 0-59.27-59.26-59.27-155.7 0-214.96l37.106-37.106c9.84-9.84 26.786-3.3 27.294 10.606.648 17.722 3.826 35.527 9.69 52.721 1.986 5.822.567 12.262-3.783 16.612l-13.087 13.087c-28.026 28.026-28.905 73.66-1.155 101.96 28.024 28.579 74.086 28.749 102.325.51l67.2-67.19c28.191-28.191 28.073-73.757 0-101.83-3.701-3.694-7.429-6.564-10.341-8.569a16.037 16.037 0 0 1-6.947-12.606c-.396-10.567 3.348-21.456 11.698-29.806l21.054-21.055c5.521-5.521 14.182-6.199 20.584-1.731a152.482 152.482 0 0 1 20.522 17.197zM467.547 44.449c-59.261-59.262-155.69-59.27-214.96 0l-67.2 67.2c-.12.12-.25.25-.36.37-58.566 58.892-59.387 154.781.36 214.59a152.454 152.454 0 0 0 20.521 17.196c6.402 4.468 15.064 3.789 20.584-1.731l21.054-21.055c8.35-8.35 12.094-19.239 11.698-29.806a16.037 16.037 0 0 0-6.947-12.606c-2.912-2.005-6.64-4.875-10.341-8.569-28.073-28.073-28.191-73.639 0-101.83l67.2-67.19c28.239-28.239 74.3-28.069 102.325.51 27.75 28.3 26.872 73.934-1.155 101.96l-13.087 13.087c-4.35 4.35-5.769 10.79-3.783 16.612 5.864 17.194 9.042 34.999 9.69 52.721.509 13.906 17.454 20.446 27.294 10.606l37.106-37.106c59.271-59.259 59.271-155.699.001-214.959z"/></svg></a>Startup 阶段</h2>
+<p>systemd 是所有进程之父，它负责<strong>使计算机达到可以完成生产工作的状态</strong>。其功能比过去的 init 程序要丰富得多，包括挂载文件系统、启动和管理计算机所需的系统服务。当然你也可以将一些应用（如 Docker）以 systemd 的方式启动，但它们与 Linux 的启动无关，因此不在本文的讨论范围之内。</p>
+<p>首先，systemd 根据 /etc/fstab 文件中的配置挂载文件系统。然后读取 /etc 目录下的配置文件，包括其自身的配置文件 /etc/systemd/system/default.target。该文件指定了 systemd 需要引导计算机到达的最终目标和状态，实际上是一个软链接：</p>
+<div class="highlight"><div class="chroma">
+<div class="table-container"><table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-shell" data-lang="shell"><span class="o">[</span>root@bastion ~<span class="o">]</span><span class="c1"># ls /etc/systemd/system/default.target -l</span>
+lrwxrwxrwx. <span class="m">1</span> root root <span class="m">37</span> Oct <span class="m">17</span>  <span class="m">2019</span> /etc/systemd/system/default.target -&gt; /lib/systemd/system/multi-user.target
+</code></pre></td></tr></table></div>
+</div>
+</div><p>在我使用的 bastion 服务器上，它指向的是 multi-user.target；对于带有图形化界面的桌面工作站，它通常指向 graphics.target；而对于单用户模式的机器，它将指向 emergency.target。target 等效于过去 SystemV 中的 <a href="https://zh.wikipedia.org/wiki/%E8%BF%90%E8%A1%8C%E7%BA%A7%E5%88%AB" target="_blank" rel="noopener">运行级别</a>（Runlevel），它提供了别名以实现向后兼容性：</p>
+<div class="table-container"><table>
+<thead>
+<tr>
+<th>SystemV Runlevel</th>
+<th>systemd target</th>
+<th>systemd target alias</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td>halt.target</td>
+<td></td>
+<td>在不关闭电源的情况下中止系统。</td>
+</tr>
+<tr>
+<td>0</td>
+<td>poweroff.target</td>
+<td>runlevel0.target</td>
+<td>中止系统并关闭电源。</td>
+</tr>
+<tr>
+<td>s</td>
+<td>emergency.target</td>
+<td></td>
+<td>单用户模式。 没有服务正在运行，也未挂载文件系统。仅在主控制台上运行一个紧急 Shell，供用户与系统交互。</td>
+</tr>
+<tr>
+<td>1</td>
+<td>rescue.target</td>
+<td>runlevel1.target</td>
+<td>一个基本系统。文件系统已挂载，只运行最基本的服务和主控制台上的紧急 Shell。</td>
+</tr>
+<tr>
+<td>2</td>
+<td></td>
+<td>runlevel2.target</td>
+<td>多用户模式。虽然还没有网络连接，但不依赖网络的所有非 GUI 服务都已运行。</td>
+</tr>
+<tr>
+<td>3</td>
+<td>multi-user.target</td>
+<td>runlevel3.target</td>
+<td>所有服务都在运行，但只能使用命令行界面（CLI）。</td>
+</tr>
+<tr>
+<td>4</td>
+<td></td>
+<td>runlevel4.target</td>
+<td>用户自定义</td>
+</tr>
+<tr>
+<td>5</td>
+<td>graphical.target</td>
+<td>runlevel5.target</td>
+<td>所有服务都在运行，并且可以使用图形化界面（GUI）。</td>
+</tr>
+<tr>
+<td>6</td>
+<td>reboot.target</td>
+<td>runlevel6.target</td>
+<td>重启系统</td>
+</tr>
+</tbody>
+</table></div>
+<p>每个 target 都在其配置文件中指定了一组依赖，由 systemd 负责启动。这些依赖是 Linux 达到某个运行级别所必须的服务（service）。换句话说，当一个 target 配置文件中的所有 service 都已成功加载，那么系统就达到了该 target 对应的运行级别。</p>
+<p>下图展示了 systemd 启动过程中各 target 和 service 实现的一般顺序：</p>
+<div class="highlight"><div class="chroma">
+<div class="table-container"><table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-shell" data-lang="shell">                   cryptsetup-pre.target veritysetup-pre.target
+                                                  <span class="p">|</span>
+<span class="o">(</span>various low-level                                v
+ API VFS mounts:             <span class="o">(</span>various cryptsetup/veritysetup devices...<span class="o">)</span>
+ mqueue, configfs,                                <span class="p">|</span>    <span class="p">|</span>
+ debugfs, ...<span class="o">)</span>                                    v    <span class="p">|</span>
+ <span class="p">|</span>                                  cryptsetup.target  <span class="p">|</span>
+ <span class="p">|</span>  <span class="o">(</span>various swap                                 <span class="p">|</span>    <span class="p">|</span>    remote-fs-pre.target
+ <span class="p">|</span>   devices...<span class="o">)</span>                                  <span class="p">|</span>    <span class="p">|</span>     <span class="p">|</span>        <span class="p">|</span>
+ <span class="p">|</span>    <span class="p">|</span>                                           <span class="p">|</span>    <span class="p">|</span>     <span class="p">|</span>        v
+ <span class="p">|</span>    v                       local-fs-pre.target <span class="p">|</span>    <span class="p">|</span>     <span class="p">|</span>  <span class="o">(</span>network file systems<span class="o">)</span>
+ <span class="p">|</span>  swap.target                       <span class="p">|</span>           <span class="p">|</span>    v     v                 <span class="p">|</span>
+ <span class="p">|</span>    <span class="p">|</span>                               v           <span class="p">|</span>  remote-cryptsetup.target  <span class="p">|</span>
+ <span class="p">|</span>    <span class="p">|</span>  <span class="o">(</span>various low-level  <span class="o">(</span>various mounts and  <span class="p">|</span>  remote-veritysetup.target <span class="p">|</span>
+ <span class="p">|</span>    <span class="p">|</span>   services: udevd,    fsck services...<span class="o">)</span>   <span class="p">|</span>             <span class="p">|</span>    remote-fs.target
+ <span class="p">|</span>    <span class="p">|</span>   tmpfiles, random            <span class="p">|</span>           <span class="p">|</span>             <span class="p">|</span>             /
+ <span class="p">|</span>    <span class="p">|</span>   seed, sysctl, ...<span class="o">)</span>          v           <span class="p">|</span>             <span class="p">|</span>            /
+ <span class="p">|</span>    <span class="p">|</span>      <span class="p">|</span>                 local-fs.target    <span class="p">|</span>             <span class="p">|</span>           /
+ <span class="p">|</span>    <span class="p">|</span>      <span class="p">|</span>                        <span class="p">|</span>           <span class="p">|</span>             <span class="p">|</span>          /
+ <span class="se">\_</span>___<span class="p">|</span>______<span class="p">|</span>_______________   ______<span class="p">|</span>___________/             <span class="p">|</span>         /
+                             <span class="se">\ </span>/                                <span class="p">|</span>        /
+                              v                                 <span class="p">|</span>       /
+                       sysinit.target                           <span class="p">|</span>      /
+                              <span class="p">|</span>                                 <span class="p">|</span>     /
+       ______________________/<span class="p">|</span><span class="se">\_</span>____________________           <span class="p">|</span>    /
+      /              <span class="p">|</span>        <span class="p">|</span>      <span class="p">|</span>               <span class="se">\ </span>         <span class="p">|</span>   /
+      <span class="p">|</span>              <span class="p">|</span>        <span class="p">|</span>      <span class="p">|</span>               <span class="p">|</span>          <span class="p">|</span>  /
+      v              v        <span class="p">|</span>      v               <span class="p">|</span>          <span class="p">|</span> /
+ <span class="o">(</span>various       <span class="o">(</span>various      <span class="p">|</span>  <span class="o">(</span>various            <span class="p">|</span>          <span class="p">|</span>/
+  timers...<span class="o">)</span>      paths...<span class="o">)</span>   <span class="p">|</span>   sockets...<span class="o">)</span>        <span class="p">|</span>          <span class="p">|</span>
+      <span class="p">|</span>              <span class="p">|</span>        <span class="p">|</span>      <span class="p">|</span>               <span class="p">|</span>          <span class="p">|</span>
+      v              v        <span class="p">|</span>      v               <span class="p">|</span>          <span class="p">|</span>
+timers.target  paths.target   <span class="p">|</span>  sockets.target      <span class="p">|</span>          <span class="p">|</span>
+      <span class="p">|</span>              <span class="p">|</span>        <span class="p">|</span>      <span class="p">|</span>               v          <span class="p">|</span>
+      v              <span class="se">\_</span>______ <span class="p">|</span> _____/         rescue.service   <span class="p">|</span>
+                             <span class="se">\|</span>/                     <span class="p">|</span>          <span class="p">|</span>
+                              v                      v          <span class="p">|</span>
+                          basic.target         rescue.target    <span class="p">|</span>
+                              <span class="p">|</span>                                 <span class="p">|</span>
+                      ________v____________________             <span class="p">|</span>
+                     /              <span class="p">|</span>              <span class="se">\ </span>           <span class="p">|</span>
+                     <span class="p">|</span>              <span class="p">|</span>              <span class="p">|</span>            <span class="p">|</span>
+                     v              v              v            <span class="p">|</span>
+                 display-    <span class="o">(</span>various system   <span class="o">(</span>various system  <span class="p">|</span>
+             manager.service     services        services<span class="o">)</span>      <span class="p">|</span>
+                     <span class="p">|</span>         required <span class="k">for</span>        <span class="p">|</span>            <span class="p">|</span>
+                     <span class="p">|</span>        graphical UIs<span class="o">)</span>       v            v
+                     <span class="p">|</span>              <span class="p">|</span>            multi-user.target
+emergency.service    <span class="p">|</span>              <span class="p">|</span>              <span class="p">|</span>
+        <span class="p">|</span>            <span class="se">\_</span>____________ <span class="p">|</span> _____________/
+        v                          <span class="se">\|</span>/
 emergency.target                    v
                               graphical.target
-</code></pre></td></tr></table></div></div></div><p>如上图所示，想要到达到某个 target，其依赖的所有 target 和 service 就必须已完成加载。如实现 sysinit.target，需要先挂载文件系统（local-fs.target）、设置交换文件（swap.target）、初始化 udev （various low-level services）和设置加密服务（cryptsetup.target）等。不过，同一个 target 的不同依赖项可以并行执行。</p><p>当计算机达到 multi-user.target 或 graphical.target 时，它的漫漫启动之路就走到了尽头。但为了满足用户多样的需求，它所面临的挑战其实才刚刚开始。</p><h2 id=future-work><a href=#future-work class=anchor-link><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon anchor-icon"><path d="M326.612 185.391c59.747 59.809 58.927 155.698.36 214.59-.11.12-.24.25-.36.37l-67.2 67.2c-59.27 59.27-155.699 59.262-214.96.0-59.27-59.26-59.27-155.7.0-214.96l37.106-37.106c9.84-9.84 26.786-3.3 27.294 10.606.648 17.722 3.826 35.527 9.69 52.721 1.986 5.822.567 12.262-3.783 16.612l-13.087 13.087c-28.026 28.026-28.905 73.66-1.155 101.96 28.024 28.579 74.086 28.749 102.325.51l67.2-67.19c28.191-28.191 28.073-73.757.0-101.83-3.701-3.694-7.429-6.564-10.341-8.569a16.037 16.037.0 01-6.947-12.606c-.396-10.567 3.348-21.456 11.698-29.806l21.054-21.055c5.521-5.521 14.182-6.199 20.584-1.731a152.482 152.482.0 0120.522 17.197zM467.547 44.449c-59.261-59.262-155.69-59.27-214.96.0l-67.2 67.2c-.12.12-.25.25-.36.37-58.566 58.892-59.387 154.781.36 214.59a152.454 152.454.0 0020.521 17.196c6.402 4.468 15.064 3.789 20.584-1.731l21.054-21.055c8.35-8.35 12.094-19.239 11.698-29.806a16.037 16.037.0 00-6.947-12.606c-2.912-2.005-6.64-4.875-10.341-8.569-28.073-28.073-28.191-73.639.0-101.83l67.2-67.19c28.239-28.239 74.3-28.069 102.325.51 27.75 28.3 26.872 73.934-1.155 101.96l-13.087 13.087c-4.35 4.35-5.769 10.79-3.783 16.612 5.864 17.194 9.042 34.999 9.69 52.721.509 13.906 17.454 20.446 27.294 10.606l37.106-37.106c59.271-59.259 59.271-155.699.001-214.959z"/></svg></a><a href=#contents:future-work class=headings>Future Work</a></h2><ul><li>前言提到 RedHat 官方给出了 IPXE/PXE 引导 CoreOS 系统的方法，那么这项技术又是如何实现的呢？</li><li>MBR 只有 446 个字节，可为什么 boot.img 文件却有 512 个字节？</li><li>目前已经有越来越多的计算机使用 UEFI 和 GPT 来代替 BIOS 和 MBR，其优势体现在哪？</li><li>我们该如何理解 systemd 的配置文件？如何使用 systemd 部署我们的应用？</li></ul><h2 id=参考文献><a href=#参考文献 class=anchor-link><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon anchor-icon"><path d="M326.612 185.391c59.747 59.809 58.927 155.698.36 214.59-.11.12-.24.25-.36.37l-67.2 67.2c-59.27 59.27-155.699 59.262-214.96.0-59.27-59.26-59.27-155.7.0-214.96l37.106-37.106c9.84-9.84 26.786-3.3 27.294 10.606.648 17.722 3.826 35.527 9.69 52.721 1.986 5.822.567 12.262-3.783 16.612l-13.087 13.087c-28.026 28.026-28.905 73.66-1.155 101.96 28.024 28.579 74.086 28.749 102.325.51l67.2-67.19c28.191-28.191 28.073-73.757.0-101.83-3.701-3.694-7.429-6.564-10.341-8.569a16.037 16.037.0 01-6.947-12.606c-.396-10.567 3.348-21.456 11.698-29.806l21.054-21.055c5.521-5.521 14.182-6.199 20.584-1.731a152.482 152.482.0 0120.522 17.197zM467.547 44.449c-59.261-59.262-155.69-59.27-214.96.0l-67.2 67.2c-.12.12-.25.25-.36.37-58.566 58.892-59.387 154.781.36 214.59a152.454 152.454.0 0020.521 17.196c6.402 4.468 15.064 3.789 20.584-1.731l21.054-21.055c8.35-8.35 12.094-19.239 11.698-29.806a16.037 16.037.0 00-6.947-12.606c-2.912-2.005-6.64-4.875-10.341-8.569-28.073-28.073-28.191-73.639.0-101.83l67.2-67.19c28.239-28.239 74.3-28.069 102.325.51 27.75 28.3 26.872 73.934-1.155 101.96l-13.087 13.087c-4.35 4.35-5.769 10.79-3.783 16.612 5.864 17.194 9.042 34.999 9.69 52.721.509 13.906 17.454 20.446 27.294 10.606l37.106-37.106c59.271-59.259 59.271-155.699.001-214.959z"/></svg></a><a href=#contents:参考文献 class=headings>参考文献</a></h2><p><a href=https://docs.openshift.com/container-platform/4.6/installing/installing_bare_metal/installing-restricted-networks-bare-metal.html#installation-user-infra-machines-pxe_installing-restricted-networks-bare-metal target=_blank rel=noopener>Creating Red Hat Enterprise Linux CoreOS (RHCOS) machines by PXE or iPXE Booting</a></p><p><a href=https://zh.wikipedia.org/wiki/BIOS target=_blank rel=noopener>BIOS - Wikipedia</a></p><p><a href=https://en.wikipedia.org/wiki/INT_13H target=_blank rel=noopener>INT 13H - Wikipedia</a></p><p><a href=https://zh.wikipedia.org/wiki/%E4%B8%BB%E5%BC%95%E5%AF%BC%E8%AE%B0%E5%BD%95 target=_blank rel=noopener>主引导记录 - Wikipedia</a></p><p><a href=https://opensource.com/article/17/2/linux-boot-and-startup target=_blank rel=noopener>An Introduction To the Linux Boot and Startup Processes</a></p><p><a href=https://www.gnu.org/software/grub/manual/grub/grub.html target=_blank rel=noopener>GNU GRUB Manual 2.06</a></p><p><a href=https://man7.org/linux/man-pages/man7/bootup.7.html target=_blank rel=noopener>Bootup(7) - Linux manual page</a></p></div><p class=edit-page><a href=https://github.com/koktlzz/koktlzz.github.io/blob/main/content/posts/Linux-Boot-Intro.md><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-edit-2"><path d="M17 3a2.828 2.828.0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>Edit this page on GitHub</a></p></article><div id=utterances></div></div></main><div id=back-to-top class=back-to-top><a href=#><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" class="icon arrow-up"><path d="M34.9 289.5l-22.2-22.2c-9.4-9.4-9.4-24.6.0-33.9L207 39c9.4-9.4 24.6-9.4 33.9.0l194.3 194.3c9.4 9.4 9.4 24.6.0 33.9L413 289.4c-9.5 9.5-25 9.3-34.3-.4L264 168.6V456c0 13.3-10.7 24-24 24h-32c-13.3.0-24-10.7-24-24V168.6L69.2 289.1c-9.3 9.8-24.8 10-34.3.4z"/></svg></a></div><footer id=footer class=footer><div class=footer-inner><div class=site-info>©&nbsp;2020–2021&nbsp;<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon footer-icon"><path d="M462.3 62.6C407.5 15.9 326 24.3 275.7 76.2L256 96.5l-19.7-20.3C186.1 24.3 104.5 15.9 49.7 62.6c-62.8 53.6-66.1 149.8-9.9 207.9l193.5 199.8c12.5 12.9 32.8 12.9 45.3.0l193.5-199.8c56.3-58.1 53-154.3-9.8-207.9z"/></svg>&nbsp;koktlzz</div><div class=powered-by>Powered by <a href=https://github.com/gohugoio/hugo target=_blank rel=noopener>Hugo</a> | Theme is <a href=https://github.com/reuixiy/hugo-theme-meme target=_blank rel=noopener>MemE</a></div><div class=site-copyright><a href=https://creativecommons.org/licenses/by-nc-sa/4.0/deed.en target=_blank rel=noopener>CC BY-NC-SA 4.0</a></div><ul class=socials><li class=socials-item><a href=/rss.xml target=_blank rel="external noopener" title=RSS><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="icon social-icon"><path d="M19.199 24C19.199 13.467 10.533 4.8.0 4.8V0c13.165.0 24 10.835 24 24h-4.801zM3.291 17.415c1.814.0 3.293 1.479 3.293 3.295.0 1.813-1.485 3.29-3.301 3.29C1.47 24 0 22.526.0 20.71s1.475-3.294 3.291-3.295zM15.909 24h-4.665c0-6.169-5.075-11.245-11.244-11.245V8.09c8.727.0 15.909 7.184 15.909 15.91z"/></svg></a></li><li class=socials-item><a href=mailto:gwrhnu@163.com target=_blank rel="external noopener" title=Email><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon social-icon"><path d="M464 64H48C21.49 64 0 85.49.0 112v288c0 26.51 21.49 48 48 48h416c26.51.0 48-21.49 48-48V112c0-26.51-21.49-48-48-48zm0 48v40.805c-22.422 18.259-58.168 46.651-134.587 106.49-16.841 13.247-50.201 45.072-73.413 44.701-23.208.375-56.579-31.459-73.413-44.701C106.18 199.465 70.425 171.067 48 152.805V112h416zM48 4e2V214.398c22.914 18.251 55.409 43.862 104.938 82.646 21.857 17.205 60.134 55.186 103.062 54.955 42.717.231 80.509-37.199 103.053-54.947 49.528-38.783 82.032-64.401 104.947-82.653V4e2H48z"/></svg></a></li><li class=socials-item><a href=https://github.com/koktlzz target=_blank rel="external noopener" title=GitHub><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="icon social-icon"><path d="M12 .297c-6.63.0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577.0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93.0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176.0.0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22.0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22.0 1.606-.015 2.896-.015 3.286.0.315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg></a></li></ul></div></footer></div><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/katex@0.13.0/dist/katex.min.css integrity="sha256-gPJfuwTULrEAAcI3X4bALVU/2qBU+QY/TpoD3GO+Exw=" crossorigin=anonymous><script>if(typeof renderMathInElement=='undefined'){var getScript=b=>{var a=document.createElement('script');a.defer=!0,a.crossOrigin='anonymous',Object.keys(b).forEach(c=>{a[c]=b[c]}),document.body.appendChild(a)};getScript({src:'https://cdn.jsdelivr.net/npm/katex@0.13.0/dist/katex.min.js',integrity:'sha256-YTW9cMncW/ZQMhY69KaUxIa2cPTxV87Uh627Gf5ODUw=',onload:()=>{getScript({src:'https://cdn.jsdelivr.net/npm/katex@0.13.0/dist/contrib/mhchem.min.js',integrity:'sha256-yzSfYeVsWJ1x+2g8CYHsB/Mn7PcSp8122k5BM4T3Vxw=',onload:()=>{getScript({src:'https://cdn.jsdelivr.net/npm/katex@0.13.0/dist/contrib/auto-render.min.js',integrity:'sha256-fxJzNV6hpc8tgW8tF0zVobKa71eTCRGTgxFXt1ZpJNM=',onload:()=>{renderKaTex()}})}})}})}else renderKaTex();function renderKaTex(){renderMathInElement(document.body,{delimiters:[{left:"$$",right:"$$",display:!0},{left:"\\[",right:"\\]",display:!0},{left:"$",right:"$",display:!1},{left:"\\(",right:"\\)",display:!1}]})}</script><script>function loadComments(){(function(){var b=document.getElementById("utterances"),a=document.createElement('script');a.src='https://utteranc.es/client.js',a.async=!0,a.crossOrigin='anonymous',a.setAttribute('repo','koktlzz/koktlzz.github.io'),a.setAttribute('issue-term','pathname'),a.setAttribute('theme','github-light'),a.setAttribute('label','comment'),b.appendChild(a)})()}</script><script src=https://cdn.jsdelivr.net/npm/medium-zoom@latest/dist/medium-zoom.min.js></script>
-<script>let imgNodes=document.querySelectorAll('div.post-body img');imgNodes=Array.from(imgNodes).filter(a=>a.parentNode.tagName!=="A"),mediumZoom(imgNodes,{background:'hsla(var(--color-bg-h), var(--color-bg-s), var(--color-bg-l), 0.95)'})</script><script src=https://cdn.jsdelivr.net/npm/instant.page@5.1.0/instantpage.min.js type=module defer></script></body></html>
+</code></pre></td></tr></table></div>
+</div>
+</div><p>如上图所示，想要到达到某个 target，其依赖的所有 target 和 service 就必须已完成加载。如实现 sysinit.target，需要先挂载文件系统（local-fs.target）、设置交换文件（swap.target）、初始化 udev （various low-level services）和设置加密服务（cryptsetup.target）等。不过，同一个 target 的不同依赖项可以并行执行。</p>
+<p>当计算机达到 multi-user.target 或 graphical.target 时，它的漫漫启动之路就走到了尽头。但为了满足用户多样的需求，它所面临的挑战其实才刚刚开始。</p>
+<h2 id="future-work"><a href="#future-work" class="anchor-link"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon anchor-icon"><path d="M326.612 185.391c59.747 59.809 58.927 155.698.36 214.59-.11.12-.24.25-.36.37l-67.2 67.2c-59.27 59.27-155.699 59.262-214.96 0-59.27-59.26-59.27-155.7 0-214.96l37.106-37.106c9.84-9.84 26.786-3.3 27.294 10.606.648 17.722 3.826 35.527 9.69 52.721 1.986 5.822.567 12.262-3.783 16.612l-13.087 13.087c-28.026 28.026-28.905 73.66-1.155 101.96 28.024 28.579 74.086 28.749 102.325.51l67.2-67.19c28.191-28.191 28.073-73.757 0-101.83-3.701-3.694-7.429-6.564-10.341-8.569a16.037 16.037 0 0 1-6.947-12.606c-.396-10.567 3.348-21.456 11.698-29.806l21.054-21.055c5.521-5.521 14.182-6.199 20.584-1.731a152.482 152.482 0 0 1 20.522 17.197zM467.547 44.449c-59.261-59.262-155.69-59.27-214.96 0l-67.2 67.2c-.12.12-.25.25-.36.37-58.566 58.892-59.387 154.781.36 214.59a152.454 152.454 0 0 0 20.521 17.196c6.402 4.468 15.064 3.789 20.584-1.731l21.054-21.055c8.35-8.35 12.094-19.239 11.698-29.806a16.037 16.037 0 0 0-6.947-12.606c-2.912-2.005-6.64-4.875-10.341-8.569-28.073-28.073-28.191-73.639 0-101.83l67.2-67.19c28.239-28.239 74.3-28.069 102.325.51 27.75 28.3 26.872 73.934-1.155 101.96l-13.087 13.087c-4.35 4.35-5.769 10.79-3.783 16.612 5.864 17.194 9.042 34.999 9.69 52.721.509 13.906 17.454 20.446 27.294 10.606l37.106-37.106c59.271-59.259 59.271-155.699.001-214.959z"/></svg></a>Future Work</h2>
+<p>虽然本文已对 Linux 的启动流程进行了较为深入地讨论，但仍有一些 Topic 值得我们继续探索：</p>
+<ul>
+<li>前言提到 RedHat 官方给出了 IPXE/PXE 引导 CoreOS 系统的方法，那么这项技术又是怎样工作的呢？</li>
+<li>MBR 只有 446 个字节，可为什么 boot.img 文件却有 512 个字节？</li>
+<li>目前已经有越来越多的计算机使用 UEFI 和 GPT 来代替 BIOS 和 MBR，其优势体现在哪？</li>
+<li>我们该如何理解 systemd 的配置文件？如何使用 systemd 部署我们的应用？</li>
+</ul>
+<h2 id="参考文献"><a href="#参考文献" class="anchor-link"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon anchor-icon"><path d="M326.612 185.391c59.747 59.809 58.927 155.698.36 214.59-.11.12-.24.25-.36.37l-67.2 67.2c-59.27 59.27-155.699 59.262-214.96 0-59.27-59.26-59.27-155.7 0-214.96l37.106-37.106c9.84-9.84 26.786-3.3 27.294 10.606.648 17.722 3.826 35.527 9.69 52.721 1.986 5.822.567 12.262-3.783 16.612l-13.087 13.087c-28.026 28.026-28.905 73.66-1.155 101.96 28.024 28.579 74.086 28.749 102.325.51l67.2-67.19c28.191-28.191 28.073-73.757 0-101.83-3.701-3.694-7.429-6.564-10.341-8.569a16.037 16.037 0 0 1-6.947-12.606c-.396-10.567 3.348-21.456 11.698-29.806l21.054-21.055c5.521-5.521 14.182-6.199 20.584-1.731a152.482 152.482 0 0 1 20.522 17.197zM467.547 44.449c-59.261-59.262-155.69-59.27-214.96 0l-67.2 67.2c-.12.12-.25.25-.36.37-58.566 58.892-59.387 154.781.36 214.59a152.454 152.454 0 0 0 20.521 17.196c6.402 4.468 15.064 3.789 20.584-1.731l21.054-21.055c8.35-8.35 12.094-19.239 11.698-29.806a16.037 16.037 0 0 0-6.947-12.606c-2.912-2.005-6.64-4.875-10.341-8.569-28.073-28.073-28.191-73.639 0-101.83l67.2-67.19c28.239-28.239 74.3-28.069 102.325.51 27.75 28.3 26.872 73.934-1.155 101.96l-13.087 13.087c-4.35 4.35-5.769 10.79-3.783 16.612 5.864 17.194 9.042 34.999 9.69 52.721.509 13.906 17.454 20.446 27.294 10.606l37.106-37.106c59.271-59.259 59.271-155.699.001-214.959z"/></svg></a>参考文献</h2>
+<p><a href="https://docs.openshift.com/container-platform/4.6/installing/installing_bare_metal/installing-restricted-networks-bare-metal.html#installation-user-infra-machines-pxe_installing-restricted-networks-bare-metal" target="_blank" rel="noopener">Creating Red Hat Enterprise Linux CoreOS (RHCOS) machines by PXE or iPXE Booting</a></p>
+<p><a href="https://zh.wikipedia.org/wiki/BIOS" target="_blank" rel="noopener">BIOS - Wikipedia</a></p>
+<p><a href="https://en.wikipedia.org/wiki/INT_13H" target="_blank" rel="noopener">INT 13H - Wikipedia</a></p>
+<p><a href="https://zh.wikipedia.org/wiki/%E4%B8%BB%E5%BC%95%E5%AF%BC%E8%AE%B0%E5%BD%95" target="_blank" rel="noopener">主引导记录 - Wikipedia</a></p>
+<p><a href="https://opensource.com/article/17/2/linux-boot-and-startup" target="_blank" rel="noopener">An Introduction To the Linux Boot and Startup Processes</a></p>
+<p><a href="https://www.gnu.org/software/grub/manual/grub/grub.html" target="_blank" rel="noopener">GNU GRUB Manual 2.06</a></p>
+<p><a href="https://man7.org/linux/man-pages/man7/bootup.7.html" target="_blank" rel="noopener">Bootup(7) - Linux manual page</a></p>
+
+            </div>
+
+            
+
+        </article>
+
+        
+
+        
+
+        
+
+
+        
+
+        
+    
+    
+
+
+
+        
+    
+        <div class="post-tags">
+            
+                
+                
+                
+                
+                    
+                    <a href="/tags/os/" rel="tag" class="post-tags-link"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon tag-icon"><path d="M0 252.118V48C0 21.49 21.49 0 48 0h204.118a48 48 0 0 1 33.941 14.059l211.882 211.882c18.745 18.745 18.745 49.137 0 67.882L293.823 497.941c-18.745 18.745-49.137 18.745-67.882 0L14.059 286.059A48 48 0 0 1 0 252.118zM112 64c-26.51 0-48 21.49-48 48s21.49 48 48 48 48-21.49 48-48-21.49-48-48-48z"/></svg>OS</a>
+                
+            
+                
+                
+                
+                
+                    
+                    <a href="/tags/linux/" rel="tag" class="post-tags-link"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon tag-icon"><path d="M0 252.118V48C0 21.49 21.49 0 48 0h204.118a48 48 0 0 1 33.941 14.059l211.882 211.882c18.745 18.745 18.745 49.137 0 67.882L293.823 497.941c-18.745 18.745-49.137 18.745-67.882 0L14.059 286.059A48 48 0 0 1 0 252.118zM112 64c-26.51 0-48 21.49-48 48s21.49 48 48 48 48-21.49 48-48-21.49-48-48-48z"/></svg>Linux</a>
+                
+            
+                
+                
+                
+                
+                    
+                    <a href="/tags/coreos/" rel="tag" class="post-tags-link"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon tag-icon"><path d="M0 252.118V48C0 21.49 21.49 0 48 0h204.118a48 48 0 0 1 33.941 14.059l211.882 211.882c18.745 18.745 18.745 49.137 0 67.882L293.823 497.941c-18.745 18.745-49.137 18.745-67.882 0L14.059 286.059A48 48 0 0 1 0 252.118zM112 64c-26.51 0-48 21.49-48 48s21.49 48 48 48 48-21.49 48-48-21.49-48-48-48z"/></svg>CoreOs</a>
+                
+            
+        </div>
+    
+
+
+
+        
+
+
+        
+
+
+        
+    
+        
+        
+    
+    
+    
+    
+
+
+
+        
+
+
+        <script src="https://utteranc.es/client.js" repo="koktlzz/koktlzz.github.io" issue-term="pathname" theme="photon-dark"
+crossorigin="anonymous" async>
+</script>
+
+    </div>
+</main>
+
+
+            
+    <div id="back-to-top" class="back-to-top">
+        <a href="#"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" class="icon arrow-up"><path d="M34.9 289.5l-22.2-22.2c-9.4-9.4-9.4-24.6 0-33.9L207 39c9.4-9.4 24.6-9.4 33.9 0l194.3 194.3c9.4 9.4 9.4 24.6 0 33.9L413 289.4c-9.5 9.5-25 9.3-34.3-.4L264 168.6V456c0 13.3-10.7 24-24 24h-32c-13.3 0-24-10.7-24-24V168.6L69.2 289.1c-9.3 9.8-24.8 10-34.3.4z"/></svg></a>
+    </div>
+
+
+            
+    <footer id="footer" class="footer">
+        <div class="footer-inner">
+            <div class="site-info">©&nbsp;2020–2021&nbsp;<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon footer-icon"><path d="M462.3 62.6C407.5 15.9 326 24.3 275.7 76.2L256 96.5l-19.7-20.3C186.1 24.3 104.5 15.9 49.7 62.6c-62.8 53.6-66.1 149.8-9.9 207.9l193.5 199.8c12.5 12.9 32.8 12.9 45.3 0l193.5-199.8c56.3-58.1 53-154.3-9.8-207.9z"/></svg>&nbsp;koktlzz</div><div class="powered-by">Powered by <a href="https://github.com/gohugoio/hugo" target="_blank" rel="noopener">Hugo</a> | Theme is <a href="https://github.com/reuixiy/hugo-theme-meme" target="_blank" rel="noopener">MemE</a></div><div class="site-copyright"><a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.en" target="_blank" rel="noopener">CC BY-NC-SA 4.0</a></div>
+
+            
+    
+        <ul class="socials"><li class="socials-item">
+                    <a href="/rss.xml" target="_blank" rel="external noopener" title="RSS"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="icon social-icon"><path d="M19.199 24C19.199 13.467 10.533 4.8 0 4.8V0c13.165 0 24 10.835 24 24h-4.801zM3.291 17.415c1.814 0 3.293 1.479 3.293 3.295 0 1.813-1.485 3.29-3.301 3.29C1.47 24 0 22.526 0 20.71s1.475-3.294 3.291-3.295zM15.909 24h-4.665c0-6.169-5.075-11.245-11.244-11.245V8.09c8.727 0 15.909 7.184 15.909 15.91z"/></svg></a>
+                </li><li class="socials-item">
+                    <a href="mailto:reuixiy@gmail.com" target="_blank" rel="external noopener" title="Email"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon social-icon"><path d="M464 64H48C21.49 64 0 85.49 0 112v288c0 26.51 21.49 48 48 48h416c26.51 0 48-21.49 48-48V112c0-26.51-21.49-48-48-48zm0 48v40.805c-22.422 18.259-58.168 46.651-134.587 106.49-16.841 13.247-50.201 45.072-73.413 44.701-23.208.375-56.579-31.459-73.413-44.701C106.18 199.465 70.425 171.067 48 152.805V112h416zM48 400V214.398c22.914 18.251 55.409 43.862 104.938 82.646 21.857 17.205 60.134 55.186 103.062 54.955 42.717.231 80.509-37.199 103.053-54.947 49.528-38.783 82.032-64.401 104.947-82.653V400H48z"/></svg></a>
+                </li><li class="socials-item">
+                    <a href="https://github.com/reuixiy" target="_blank" rel="external noopener" title="GitHub"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="icon social-icon"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg></a>
+                </li><li class="socials-item">
+                    <a href="https://twitter.com/reuixiy" target="_blank" rel="external noopener" title="Twitter"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon social-icon"><path d="M459.37 151.716c.325 4.548.325 9.097.325 13.645 0 138.72-105.583 298.558-298.558 298.558-59.452 0-114.68-17.219-161.137-47.106 8.447.974 16.568 1.299 25.34 1.299 49.055 0 94.213-16.568 130.274-44.832-46.132-.975-84.792-31.188-98.112-72.772 6.498.974 12.995 1.624 19.818 1.624 9.421 0 18.843-1.3 27.614-3.573-48.081-9.747-84.143-51.98-84.143-102.985v-1.299c13.969 7.797 30.214 12.67 47.431 13.319-28.264-18.843-46.781-51.005-46.781-87.391 0-19.492 5.197-37.36 14.294-52.954 51.655 63.675 129.3 105.258 216.365 109.807-1.624-7.797-2.599-15.918-2.599-24.04 0-57.828 46.782-104.934 104.934-104.934 30.213 0 57.502 12.67 76.67 33.137 23.715-4.548 46.456-13.32 66.599-25.34-7.798 24.366-24.366 44.833-46.132 57.827 21.117-2.273 41.584-8.122 60.426-16.243-14.292 20.791-32.161 39.308-52.628 54.253z"/></svg></a>
+                </li><li class="socials-item">
+                    <a href="https://t.me/yixiuer" target="_blank" rel="external noopener" title="Telegram"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512" class="icon social-icon"><path d="M248 8C111 8 0 119 0 256s111 248 248 248 248-111 248-248S385 8 248 8zm121.8 169.9l-40.7 191.8c-3 13.6-11.1 16.9-22.4 10.5l-62-45.7-29.9 28.8c-3.3 3.3-6.1 6.1-12.5 6.1l4.4-63.1 114.9-103.8c5-4.4-1.1-6.9-7.7-2.5l-142 89.4-61.2-19.1c-13.3-4.2-13.6-13.3 2.8-19.7l239.1-92.2c11.1-4 20.8 2.7 17.2 19.5z"/></svg></a>
+                </li></ul>
+    
+
+
+
+            
+        </div>
+    </footer>
+
+
+        </div>
+        
+
+        
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.13.0/dist/katex.min.css" integrity="sha256-gPJfuwTULrEAAcI3X4bALVU/2qBU+QY/TpoD3GO+Exw=" crossorigin="anonymous">
+<script>
+    if (typeof renderMathInElement === 'undefined') {
+        var getScript = (options) => {
+            var script = document.createElement('script');
+            script.defer = true;
+            script.crossOrigin = 'anonymous';
+            Object.keys(options).forEach((key) => {
+                script[key] = options[key];
+            });
+            document.body.appendChild(script);
+        };
+        getScript({
+            src: 'https://cdn.jsdelivr.net/npm/katex@0.13.0/dist/katex.min.js',
+            integrity: 'sha256-YTW9cMncW/ZQMhY69KaUxIa2cPTxV87Uh627Gf5ODUw=',
+            onload: () => {
+                getScript({
+                    src: 'https://cdn.jsdelivr.net/npm/katex@0.13.0/dist/contrib/mhchem.min.js',
+                    integrity: 'sha256-yzSfYeVsWJ1x+2g8CYHsB/Mn7PcSp8122k5BM4T3Vxw=',
+                    onload: () => {
+                        getScript({
+                            src: 'https://cdn.jsdelivr.net/npm/katex@0.13.0/dist/contrib/auto-render.min.js',
+                            integrity: 'sha256-fxJzNV6hpc8tgW8tF0zVobKa71eTCRGTgxFXt1ZpJNM=',
+                            onload: () => {
+                                renderKaTex();
+                            }
+                        });
+                    }
+                });
+            }
+        });
+    } else {
+        renderKaTex();
+    }
+    function renderKaTex() {
+        renderMathInElement(
+            document.body,
+            {
+                delimiters: [
+                    {left: "$$", right: "$$", display: true},
+                    {left: "\\[", right: "\\]", display: true},
+                    {left: "$", right: "$", display: false},
+                    {left: "\\(", right: "\\)", display: false}
+                ]
+            }
+        );
+    }
+</script>
+
+
+
+
+
+
+
+
+
+
+    <script src="https://cdn.jsdelivr.net/npm/medium-zoom@latest/dist/medium-zoom.min.js"></script>
+
+<script>
+    let imgNodes = document.querySelectorAll('div.post-body img');
+    imgNodes = Array.from(imgNodes).filter(node => node.parentNode.tagName !== "A");
+
+    mediumZoom(imgNodes, {
+        background: 'hsla(var(--color-bg-h), var(--color-bg-s), var(--color-bg-l), 0.95)'
+    })
+</script>
+
+
+
+
+    <script src="https://cdn.jsdelivr.net/npm/instant.page@5.1.0/instantpage.min.js" type="module" defer></script>
+
+
+
+
+
+
+
+    </body>
+</html>
