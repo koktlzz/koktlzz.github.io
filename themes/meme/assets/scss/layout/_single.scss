@@ -30,6 +30,14 @@
             text-decoration-color: alpha(var(--color-primary), 0.5);
         }
     }
+    ul li a{
+        color: var(--color-primary);
+        text-decoration: none;
+        text-decoration-color: var(--color-contrast-low);
+        &:hover {
+            text-decoration-color: alpha(var(--color-primary), 0.5);
+        }
+    }
 }
 
 .post {
