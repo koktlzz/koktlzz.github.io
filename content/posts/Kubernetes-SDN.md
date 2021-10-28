@@ -66,11 +66,13 @@ Node1 上的 VTEP 收到 Pod1 发来的数据包后，首先会在本地的转�
 
 ## Future Work
 
-- Overlay 网络通过 IP 封包和控制平面可以减少集群中的 MAC 地址表项和 ARP 请求？
+- 除了 VxLAN 以外，还有哪些技术可以实现 Overlay 网络？它们是怎样传输数据的呢？
 - ~~本文在讨论 Underlay 网络时提到了 Terway 和 Calico，那么有哪些使用 Overlay 网络的 CNI 插件呢？~~ **更新**：我在 [对 Openshift SDN 网络模型的一些探索](/posts/openshift-sdn/) 中介绍了基于 Overlay 网络的 Open vSwitch；
 - 近年来发展迅速的 Cilium 是怎样实现 SDN 网络的？它所依赖的 eBPF 技术又是什么？
 
 ## 参考文献
+
+[Software-defined networking - Wikipedia](https://en.wikipedia.org/wiki/Software-defined_networking)
 
 [About Kubernetes Networking](https://docs.projectcalico.org/about/about-kubernetes-networking)
 
