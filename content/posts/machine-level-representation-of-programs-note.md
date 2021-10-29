@@ -341,7 +341,7 @@ comp:
   rep; ret
 ```
 
-上方的汇编代码包含了两个跳转指令，第一个跳转到了更高的地址处，第二个则相反。而下图是对上述代码汇编然后再进行反汇编后的结果：
+该汇编代码包含了两个跳转指令，第一个跳转到了更高的地址处，第二个则相反。而下图是对上述代码汇编然后再进行反汇编后的结果：
 
 ![20211014012100](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20211014012100.png)
 
@@ -351,6 +351,28 @@ comp:
 
 ![20211014012501](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20211014012501.png)
 
-### 使用条件控制实现条件分支
+### 使用条件控制实现条件分支：
+
+若想将 C 中的条件表达式转化为机器代码，通常使用条件跳转和无条件跳转的组合。C 中的 if-else 语句模板为：
+
+```c
+if (test-expr)
+    then-statement
+else
+    else-statement
+```
+
+编译器将使用一种类似于 goto 代码的形式生成汇编代码：
+
+```c
+    t = test-expr;
+    if (!t)
+        goto false;
+    then-statement
+    goto done;
+false:
+else-statement
+done:
+```
 
 ### 使用条件移动实现条件分支
