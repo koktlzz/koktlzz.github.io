@@ -246,7 +246,7 @@ addq $8, %rsp
 
 ![20211008224011](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20211008224011.png)
 
-我们在普通算数操作和特殊算数操作中均发现了`imulq`指令。第一种属于 `IMUL`类，有两个操作数。其计算结果为 64 位（若超过 64 位，则截断高位），等效于第二章介绍的 [无符号乘法](/posts/representing-and-manipulating-information-note/#无符号乘法) 和 [二进制补码乘法](/posts/representing-and-manipulating-information-note/#二进制补码乘法)。第二种即是上表中的特殊算数操作，只有一个操作数，因此编译器可以根据操作数的数量区分它们。
+我们在普通算数操作和特殊算数操作中均发现了`imulq`指令。第一种属于 `IMUL`类，有两个操作数。其计算结果为 64 位（若超过 64 位，则截断高位），等效于第二章介绍的 [无符号乘法](/posts/representing-and-manipulating-information-note/#无符号乘法） 和 [二进制补码乘法](/posts/representing-and-manipulating-information-note/#二进制补码乘法)。第二种即是上表中的特殊算数操作，只有一个操作数，因此编译器可以根据操作数的数量区分它们。
 
 用于有符号乘法的操作称为`imulq`，用于无符号乘法的为`mulq`。两者的第一个参数为寄存器 %rax，第二个参数为源操作数。计算结果中较高 64 位将存储在寄存器 %rdx 中，较低 64 位则存储在寄存器 %rax 中。
 
@@ -351,9 +351,67 @@ comp:
 
 ![20211014012501](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20211014012501.png)
 
-### 使用条件控制实现条件分支：
+### 使用条件控制实现条件分支
 
-若想将 C 中的条件表达式转化为机器代码，通常使用条件跳转和无条件跳转的组合。C 中的 if-else 语句模板为：
+若想将 C 中的条件表达式转化为机器代码，通常使用条件跳转和无条件跳转的组合。一个简单的 C 程序及其编译得到的汇编代码如下：
+
+```c
+long lt_cnt = 0;
+long ge_cnt = 0;
+long absdiff_se(long x, long y)
+{
+    long result;
+    if (x < y)
+    {
+        lt_cnt++;
+        result = y - x;
+    }
+    else
+    {
+        ge_cnt++;
+        result = x - y;
+    }
+}
+```
+
+```x86asm
+; long absdiff_se(long x, long y) 
+; x in %rdi, y in %rsi 
+absdiff_se:
+  cmpq %rsi, %rdi
+  jge .L2
+  addq $1, lt_cnt(%rip) 
+  movq %rsi, %rax
+  subq %rdi, %rax
+  ret
+.L2
+  addq $1, ge_cnt(%rip) 
+  movq %rdi, %rax
+  subq %rsi, %rax
+  ret
+```
+
+实际上该汇编代码的控制流（control flow）更像是使用 goto 语句将示例 C 程序改写后得到的结果，即先比较两数大小，然后根据结果决定是否跳转：
+
+```c
+long lt_cnt = 0;
+long ge_cnt = 0;
+long gotodiff_se(long x, long y)
+{
+    long result;
+    if (x >= y)
+        goto x_ge_y;
+    lt_cnt++;
+    result = y - x;
+    return result;
+x_ge_y:
+    ge_cnt++;
+    result = x - y;
+    return result;
+}
+```
+
+让我们推广到一般情况。假设 C 中的 if-else 语句模板为：
 
 ```c
 if (test-expr)
@@ -362,7 +420,7 @@ else
     else-statement
 ```
 
-编译器将使用一种类似于 goto 代码的形式生成汇编代码：
+那么编译生成的汇编代码的控制流便可以用如下 C 程序描述：
 
 ```c
     t = test-expr;
