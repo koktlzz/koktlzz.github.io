@@ -356,36 +356,26 @@ comp:
 若想将 C 中的条件表达式转化为机器代码，通常使用条件跳转和无条件跳转的组合。一个简单的 C 程序及其编译得到的汇编代码如下：
 
 ```c
-long lt_cnt = 0;
-long ge_cnt = 0;
-long absdiff_se(long x, long y)
+long absdiff(long x, long y)
 {
     long result;
     if (x < y)
-    {
-        lt_cnt++;
         result = y - x;
-    }
     else
-    {
-        ge_cnt++;
         result = x - y;
-    }
 }
 ```
 
 ```x86asm
-; long absdiff_se(long x, long y) 
+; long absdiff(long x, long y) 
 ; x in %rdi, y in %rsi 
-absdiff_se:
+absdiff:
   cmpq %rsi, %rdi
   jge .L2
-  addq $1, lt_cnt(%rip) 
   movq %rsi, %rax
   subq %rdi, %rax
   ret
 .L2
-  addq $1, ge_cnt(%rip) 
   movq %rdi, %rax
   subq %rsi, %rax
   ret
@@ -394,18 +384,14 @@ absdiff_se:
 实际上该汇编代码的控制流（control flow）更像是使用 goto 语句将示例 C 程序改写后得到的结果，即先比较两数大小，然后根据结果决定是否跳转：
 
 ```c
-long lt_cnt = 0;
-long ge_cnt = 0;
-long gotodiff_se(long x, long y)
+long gotodiff(long x, long y)
 {
     long result;
     if (x >= y)
         goto x_ge_y;
-    lt_cnt++;
     result = y - x;
     return result;
 x_ge_y:
-    ge_cnt++;
     result = x - y;
     return result;
 }
@@ -434,3 +420,58 @@ done:
 ```
 
 ### 使用条件移动实现条件分支
+
+使用条件控制实现条件分支虽然简单有效，但在现代处理器上使用可能十分低效，我们更倾向于使用一些简单的条件移动指令。上一节中的 C 程序可以改写为：
+
+```c
+long cmovdiff(long x, long y)
+{
+    long rval = y - x;
+    long eval = x - y;
+    long ntest = x >= y;
+    /* Line below requires
+    single instruction: */
+    if (ntest)
+        rval = eval;
+    return rval;
+}
+```
+
+这段代码首先计算 y-x 和 x-y，分别命名为变量 rval 和变量 eval。然后测试 x 是否大于或等于 y，如果是，则在返回 rval 之前将 eval 赋值给 rval。编译器可以参考这种控制流生成汇编代码：
+
+```x86asm
+; long absdiff(long x, long y)
+; x in %rdi, y in %rsi
+absdiff:
+  movq %rsi, %rax
+  subq %rdi, %rax
+  movq %rdi, %rdx
+  subq %rsi, %rdx
+  cmpq %rsi, %rdi
+  cmovge %rdx, %rax
+  ret
+```
+
+上述代码中的`comovge`就是一个条件移动指令，只有 `cmpq` 指令判断一个值大于或等于（如后缀 ge 所示）另一个值时，它才会将数据从源寄存器传输到目标寄存器。
+
+想要理解为什么基于条件移动的代码效率胜过条件控制，我们必须了解现代处理器的运行方式。一条指令需要处理器通过一系列的步骤进行处理，每个步骤只执行所该指令的一小部分（例如，从内存中获取指令，确定指令类型、从内存读取、执行算术运算、写入内存和更新程序计数器等）。为了实现高性能，这条流水线（pipelining）需要将指令的步骤重叠。例如，在执行前一条指令的算术运算的同时提取下一条指令。想要做到这一点，处理器需要能够提前确定即将执行的指令序列，以保证流水线上充满指令。
+
+当处理器遇到条件跳转（即“分支”）时，它将采用复杂的逻辑来预测跳转指令是否触发。如果预测结果足够可靠（现代微处理器试图达到 90% 的成功率），流水线就可以保持指令充满。但是，错误的预测将导致处理器不得不丢弃它在未来指令上已经完成的大部分工作，使程序性能严重下降。
+
+示例代码中 x >= y 的判断结果显然是难以预测的，这种情况下使用条件控制代码的效率很低。而条件移动代码先计算出所有可能的结果，再根据条件判断决定返回值。这样控制流便不再依赖数据，处理器也就更容易保持其流水线的完整性，从而提升执行效率。全部的条件移动指令如下：
+
+![20211031214307](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20211031214307.png)
+
+编译器可以从目标寄存器的名称推断条件移动指令的操作数长度，因此相同的指令名称可用于不同的操作数长度。 我们同样把条件分支推广到一般情况，使用 C 程序来描述条件移动的控制流：
+
+```c
+v = then - expr;
+ve = else - expr;
+t = test - expr;
+if (!t)
+    v = ve;
+```
+
+当然，使用条件移动来实现条件分支是有一些弊端的。因为无论判断结果如何，我们都会全部执行 then-expr 和 else-expr。一旦某一个分支中的指令发生错误，将影响整个程序的可用性。另外，如果 then-expr 或 else-expr 需要大量计算，而对应的条件又不成立时，处理器所做的工作就完全白费了。不过总体来说，条件移动的性能还是高于条件控制的，这也是 GCC 编译器使用它的原因。
+
+## 循环
