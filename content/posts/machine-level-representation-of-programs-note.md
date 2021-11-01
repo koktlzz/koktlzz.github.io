@@ -246,7 +246,7 @@ addq $8, %rsp
 
 ![20211008224011](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20211008224011.png)
 
-我们在普通算数操作和特殊算数操作中均发现了`imulq`指令。第一种属于 `IMUL`类，有两个操作数。其计算结果为 64 位（若超过 64 位，则截断高位），等效于第二章介绍的 [无符号乘法](/posts/representing-and-manipulating-information-note/#无符号乘法） 和 [二进制补码乘法](/posts/representing-and-manipulating-information-note/#二进制补码乘法)。第二种即是上表中的特殊算数操作，只有一个操作数，因此编译器可以根据操作数的数量区分它们。
+我们在普通算数操作和特殊算数操作中均发现了`imulq`指令。第一种属于 `IMUL`类，有两个操作数。其计算结果为 64 位（若超过 64 位，则截断高位），等效于第二章介绍的 [无符号乘法](/posts/representing-and-manipulating-information-note/#无符号乘法) 和 [二进制补码乘法](/posts/representing-and-manipulating-information-note/#二进制补码乘法)。第二种即是上表中的特殊算数操作，只有一个操作数，因此编译器可以根据操作数的数量区分它们。
 
 用于有符号乘法的操作称为`imulq`，用于无符号乘法的为`mulq`。两者的第一个参数为寄存器 %rax，第二个参数为源操作数。计算结果中较高 64 位将存储在寄存器 %rdx 中，较低 64 位则存储在寄存器 %rax 中。
 
@@ -474,4 +474,192 @@ if (!t)
 
 当然，使用条件移动来实现条件分支是也有一些弊端的。因为无论判断结果如何，我们都会全部执行 then-expr 和 else-expr。一旦某一个分支中的指令发生错误，将影响整个程序的可用性。另外，如果 then-expr 或 else-expr 需要大量计算，而对应的条件又不成立时，处理器所做的工作就完全白费了。不过总体来说，条件移动的性能还是高于条件控制的，这也是 GCC 编译器使用它的原因。
 
-## 循环
+### 循环
+
+#### Do-While
+
+假设 C 中的 Do-While 语句模板为：
+
+```c
+do
+    body-statement
+    while (text-expr);
+```
+
+我们可以将其转化为 goto 语句和 if-else 语句的组合：
+
+```c
+loop:
+    body-statement
+    t = text-expr;
+    if (t)
+        goto loop;
+```
+
+实际上汇编代码正是用这种方式来实现 Do-While 语句的控制流 。示例函数`fact_do`及其编译得到的汇编代码如下：
+
+```c
+long fact_do(long n)
+{
+    long result = 1;
+    do
+    {
+        result *= n;
+        n = n - 1;
+    } while (n > 1);
+    return result;
+}
+```
+
+```x86asm
+; long fact_do(long n)
+; n in %rdi
+fact_do:
+  movl $1, %eax
+.L2:
+  imulq %rdi, %rax
+  subq $1, %rdi
+  cmpq $1, %rdi
+  jq .L2
+  rep; ret
+```
+
+#### While
+
+假设 C 中的 While 语句模板为：
+
+```c
+while (text-expr);
+    body-statement
+```
+
+我们有两种方法将其转化为 goto 语句和 if-else 语句的组合。第一种称为 jump-to-middle，通过一个非条件跳转在循环的结束执行条件判断：
+
+```c
+    goto test;
+loop:
+    body-statement
+test:
+    t = text-expr;
+    if (t)
+        goto loop;
+```
+
+当 GCC 的优化参数指定为 -Og 时，汇编代码就会用这种方法来实现 While 语句的控制流 。示例函数`fact_while`及其编译得到的汇编代码如下：
+
+```c
+long fact_while(long n)
+{
+    long result = 1;
+    while (n > 1)
+    {
+        result *= n;
+        n = n - 1;
+    }
+    return result;
+}
+```
+
+```x86asm
+; long fact_while(long n)
+; n in %rdi
+fact_while:
+  movl $1, %eax 
+  jmp .L5
+.L6:
+  imulq %rdi, %rax 
+  subq $1, %rdi
+.L5: 
+  cmpq $1, %rdi
+  jg .L6
+  rep; ret
+```
+
+第二种方法称为 guarded-do，即首先将代码转化为 Do-While 循环，如果条件判断失败则通过条件移动指令跳过循环：
+
+```c
+    t = test-expr; 
+    if (!t)
+        goto done;
+loop:
+    body-statement 
+    t = test-expr; 
+    if (t)
+        goto loop;
+done:
+```
+
+当 GCC 的优化参数指定为更高级别的 -O1 时，汇编代码就会用这种方法来实现 While 语句的控制流 。上面提到的函数`fact_while`使用 guarded-do 编译得到的汇编代码如下：
+
+```x86asm
+; long fact_while(long n) 
+; n in %rdi
+fact_while
+  cmpq $1, %rdi
+  jle .L7
+  movl $1, %eax
+.L6:
+  imulq %rdi, %rax
+  subq $1, %rdi
+  cmpq $1, %rdi
+  jne .L6
+  rep; ret
+.L7
+  movl $1, %eax
+  ret
+```
+
+#### For
+
+假设 C 中的 For 语句模板为：
+
+```c
+for (init-expr; test-expr; update-expr) 
+    body-statement
+```
+
+显然可以将其转化为等效的 While 语句：
+
+```c
+init-expr;
+while (test-expr) {
+    body-statement
+    update-expr; 
+}
+```
+
+因此，我们依然可以使用两种方法来将其转化为 goto 语句和 if-else 语句的组合。
+
+jump-to-middle：
+
+```c
+    init-expr;
+    goto test;
+loop:
+    body-statement
+    update-expr; 
+test:
+    t = test-expr; 
+    if (t)
+        goto loop;
+```
+
+guarded-do：
+
+```c
+    init-expr;
+    t = test-expr; 
+    if (!t)
+        goto done;
+loop:
+    body-statement 
+    update-expr;
+    t = test-expr; 
+    if (t)
+        goto loop;
+done:
+```
+
+同样地，编译器会根据给定的优化参数使用对应的控制流来生成汇编代码。
+
+### Switch
