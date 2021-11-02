@@ -353,7 +353,7 @@ comp:
 
 ### 使用条件控制实现条件分支
 
-若想将 C 中的条件表达式转化为机器代码，通常使用条件跳转和无条件跳转的组合。一个简单的 C 程序及其编译得到的汇编代码如下：
+若想将 C 中的条件表达式转化为机器代码，通常使用条件跳转和无条件跳转的组合。一个简单的 C 程序及其编译得到的汇编代码分别如下：
 
 ```c
 long absdiff(long x, long y)
@@ -496,7 +496,7 @@ loop:
         goto loop;
 ```
 
-实际上汇编代码正是用这种方式来实现 Do-While 语句的控制流 。示例函数`fact_do`及其编译得到的汇编代码如下：
+实际上汇编代码正是用这种方式来实现 Do-While 语句的控制流 。示例函数`fact_do`及其编译得到的汇编代码分别如下：
 
 ```c
 long fact_do(long n)
@@ -545,7 +545,7 @@ test:
         goto loop;
 ```
 
-当 GCC 的优化参数指定为 -Og 时，汇编代码就会用这种方法来实现 While 语句的控制流 。示例函数`fact_while`及其编译得到的汇编代码如下：
+当 GCC 的优化参数指定为 -Og 时，汇编代码就会用这种方法来实现 While 语句的控制流 。示例函数`fact_while`及其编译得到的汇编代码分别如下：
 
 ```c
 long fact_while(long n)
@@ -663,3 +663,103 @@ done:
 同样地，编译器会根据给定的优化参数使用对应的控制流来生成汇编代码。
 
 ### Switch
+
+GCC 会根据 Switch 语句中 Case 的数量和 Case 值的稀疏性（sparsity）决定编译方法。当存在多种 Case（例如四个或更多），且它们跨越的值范围较小时会使用一种名为跳转表（jump table）的数据结构来实现。跳转表是一个数组，数组元素分别是 Switch 语句中每个 Case 对应的代码块地址。
+
+一个简单的 C 程序及其通过 GCC 编译后得到的汇编代码分别如下：
+
+```c
+void switch_eg(long x, long n, long *dest)
+{
+    long val = x;
+    switch (n)
+    {
+    case 100:
+        val *= 13;
+        break;
+    case 102:
+        val += 10;
+        /* Fall through */
+    case 103:
+        val += 11;
+        break;
+    case 104:
+    case 106:
+        val *= val;
+        break;
+    default:
+        val = 0;
+        break;
+    }
+    *dest = val;
+}
+```
+
+```x86asm
+; void switch_eg(long x, long n, long *dest) 
+; x in %rdi, n in %rsi, dest in %rdx 
+switch_eg:
+  subq $100, %rsi
+  cmpq $6, %rsi
+  ja .L8
+  jmp *.L4(,%rsi,8)
+.L3:
+  leaq (%rdi,%rdi,2), %rax
+  leaq  (%rdi,%rax,4), %rdi
+  jmp .L2
+.L5:
+  addq $10, %rdi
+.L6:
+  addq $11, %rdi
+  jmp .L2
+.L7:
+  imulq %rdi, %rdi
+  jmp .L2
+.L8:
+  movl $0, %edi
+.L2:
+  movq %rdi, (%rdx)
+  ret
+```
+
+为了便于理解，我们用 C 来描述其实现（运算符`&&`为代码块的位置创建指针）：
+
+```c
+void switch_eg_impl(long x, long n, long *dest)
+{
+    /* Table of code pointers */
+    static void *jt[7] = {
+        &&loc_A, &&loc_def, &&loc_B,
+        &&loc_C, &&loc_D, &&loc_def,
+        &&loc_D};
+    unsigned long index = n - 100;
+    long val;
+    if (index > 6)
+        goto loc_def;
+    /* Multiway branch */
+    goto *jt[index];
+loc_A: /* Case 100 */
+    val = x * 13;
+    goto done;
+loc_B: /* Case 102 */
+    val = x + 10;
+loc_C: /* Case 103 */
+    val = x + 11;
+    goto done;
+loc_D: /* Case 104, 106 */
+    val = x * x;
+    goto done;
+loc_def: /* Default case */
+    val = 0;
+done:
+    *dest = val;
+}
+```
+
+其中的`goto *jt[index]`就相当于汇编代码中第五行的`jmp *.L4(,%rsi,8)`。它是一个间接跳转指令，其操作数`.L4(,%rsi,8)`指定了由寄存器 %rsi 索引的内存地址（我们将在后续章节讨论数组是如何转化为机器代码的）。在汇编代码中，跳转表将被表示为：
+
+![20211103000139](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20211103000139.png)
+
+在名为`.rodata`的只读目标代码段中，包含了由七个`quad`（八字节）组成的序列。其中，每个`quad`的值为汇编代码标签（如`.L3`）所对应的指令地址。
+
+## 程序
