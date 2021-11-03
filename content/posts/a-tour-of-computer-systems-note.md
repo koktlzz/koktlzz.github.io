@@ -69,7 +69,7 @@ L1 级别的 Caches 位于 CPU 芯片之上，容量为上万字节并且拥有�
 
 计算机系统中的存储器层级结构如下图所示，低层次的存储器作为相邻高层次存储器的 Cache：
 
-![20210524014408](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20210524014408.png)
+![20211103235027](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20211103235027.png)
 
 ## 操作系统对硬件的管理
 
@@ -101,7 +101,7 @@ L1 级别的 Caches 位于 CPU 芯片之上，容量为上万字节并且拥有�
 
 虚拟内存让每个进程都看起来独占了主存储器的使用权。每个进程看到的内存空间都是相同的，称为虚拟地址空间（VIrtual Address Space），其组成如下：
 
-![20210525015459](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20210525015459.png)
+![20211103235153](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20211103235153.png)
 
 - 程序代码和数据：所有进程的代码都始于相同的固定地址，随后则是与全局变量相关的数据区。它们的大小在进程开始运行时固定；
 - 堆（Heap）：运行时堆是调用`malloc`或`free`这样的 C 标准库生成的结果，其大小可以在进程运行时动态扩缩容；
