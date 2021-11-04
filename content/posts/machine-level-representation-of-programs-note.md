@@ -786,4 +786,18 @@ done:
 
 在汇编代码中，过程间调用是通过指令`call`和`ret`来实现的。其中，指令`call Q`会将程序计数器设置为过程 Q 的代码起始地址，并将返回地址 A 压入栈中。指令`ret`则会将地址 A 从栈中弹出，然后将程序计数器设置为 A。实际上，地址 A 就是紧跟在`call`指令之后的指令地址。
 
+下图说明了 [代码示例](/posts/machine-level-representation-of-programs-note/#代码示例) 中主函数调用 multstore 后返回的过程中运行时栈的变化情况：
+
+![20211104221557](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20211104221557.png)
+
+其对应的反汇编代码如下：
+
+![20211104222239](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20211104222239.png)
+
+当主函数调用函数 multstore 时，程序计数器 %rip 中的值为`call`指令的地址 0x400563。该指令将返回地址 0x400568 压入栈中并跳转到函数 multstore 中的第一条指令，其地址为 0x0400540。 随后函数 multstore 继续执行，直到遇到地址 0x40054d 处的`ret`指令。 该指令将返回地址  0x400568 从栈中弹出并跳转到该地址对应的指令，主函数得以继续执行。
+
 ### 传递参数
+
+在 x86-64 机器上，最多可以通过寄存器传递六个参数：
+
+![20211104224830](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20211104224830.png)
