@@ -801,3 +801,25 @@ done:
 在 x86-64 机器上，最多可以通过寄存器传递六个参数：
 
 ![20211104224830](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20211104224830.png)
+
+从第七个参数开始将存储在运行时栈中。一个简单的 C 程序及其通过 GCC 编译后得到的汇编代码分别如下：
+
+```c
+
+void proc(long a1, long *a1p,
+          int a2, int *a2p,
+          short a3, short *a3p,
+          char a4, char *a4p)
+{
+    *a1p += a1;
+    *a2p += a2;
+    *a3p += a3;
+    *a4p += a4;
+}
+```
+
+![20211109231344](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20211109231344.png)
+
+The first six arguments are passed in registers. The last two are passed on the stack, as documented by the diagram of Figure 3.30. This diagram shows the state of the stack during the execution of proc. We can see that the return address was pushed onto the stack as part of the procedure call. The two arguments, therefore, are at positions 8 and 16 relative to the stack pointer. Within the code, we can see that different versions of the add instruction are used according to the sizes of the operands: addq for a1 (long), addl for a2 (int), addw for a3 (short), and addb for a4 (char). Observe that the movl instruction of line 6 reads 4 bytes from memory; the following addb instruction only makes use of the low-order byte.
+
+![20211109231455](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20211109231455.png)
