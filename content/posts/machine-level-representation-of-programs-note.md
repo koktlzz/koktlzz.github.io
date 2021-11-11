@@ -864,8 +864,85 @@ long call_proc()
 
 当一个过程（调用者）在调用另一个过程（被调用者）时，我们必须保证被调用者的执行不会影响到调用者后续计划使用的寄存器值。因此，x86-64 规定寄存器 %rbx、%rbp 和 %r12–%r15 为被调用者保存（callee-saved）寄存器。被调用者通过将上述寄存器中的值压入栈中，然后在返回时将原始值弹出以实现调用前后寄存器的值不变。除栈指针 %rsp 以外的其他寄存器则为调用者保存（caller-saved）寄存器，由于被调用者可以随意修改其中的值，因此调用者有责任保存调用之前的数据。
 
-### 递归
+### 递归（Recursive）
 
 x86-64 允许过程以递归的方式调用自身，这是因为每个过程在运行时栈上的空间是私有的，因此多个未完成调用的局部变量不会互相干扰。递归调用实质上和调用一个其他过程没有区别。
 
 ## 数组
+
+对于长度为 L 的数据类型 T 和整型常量 N，声明`T A[N]`代表：
+
+- 内存中将为其分配 L * N 大小的空间；
+- 数组名称 A 为指向数组头部（设为$x_A$）的指针，任意数组元素 i 的地址为 $x_A$ + L * i。
+
+在 x86-64 中，内存引用指令的设计旨在简化对数组元素的访问。例如 int 类型的数组 E[i]，E 的地址存储在寄存器 %rdx 中，i 则存储在寄存器 %rcx 中。那么我们就可以通过指令`movl(%rdx, %rcx, 4), %eax`来将目标数组元素拷贝到寄存器 %eax 中。
+
+C 允许我们对指针进行计算。例如 p 是一个指向长度为 L 的数据类型为 T 的指针且 p 的值为 $x_p$，则表达式 p
+\+ i 的值为 $x_p$ + L \* i。进一步地，任意数组元素 A[i] 就等效于表达式 \*(A + i)。
+
+还是以数组 E[i] 为例，一些指针算数表达式的结果和对应的汇编指令如下：
+
+![20211111224620](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20211111224620.png)
+
+最后一个例子表明，我们可以计算同一数据结构中两个指针的差值。其结果的数据类型为 long， 值为两个地址的差值除以数据类型的长度。
+
+### 多维数组
+
+多维数组可以转化为一般数组的形式，例如声明`int A[5][3]`就等效为：
+
+```c
+typedef int row3_t[3];
+row3_t A[5];
+```
+
+数据类型 row3_t 是一个包含三个整型的数组，而数组 A 则包含五个这样的元素。我们将其推广到一般情况，若一个数组声明为`T D[R][C]`，则数组元素`D[i][j]`在内存中的地址为：
+
+$ \And D[i][j]= x_D + L(C * i + j)$
+
+其中，$x_D$ 为数组地址，L 为数组元素的长度。
+
+### 定长数组
+
+编译器可以对一些操作定长多维数组的代码进行优化。例如一个进行矩阵运算的 C 程序：
+
+```c
+#define N 16
+typedef int fix_matrix[N][N];
+/* Compute i,k of fixed matrix product */
+int fix_prod_ele(fix_matrix A, fix_matrix B, long i, long k)
+{
+    long j;
+    int result = 0;
+    for (j = 0; j < N; j++)
+        result += A[i][j] * B[j][k];
+    return result;
+}
+```
+
+它可以被优化为下列代码：
+
+```c
+#define N 16
+typedef int fix_matrix[N][N];
+/* Compute i,k of fixed matrix product */
+fix_prod_ele_opt(fix_matrix A, fix_matrix B, long i, long k)
+{
+    int *Aptr = &A[i][0];   /* Points to elements in row i of A    */
+    int *Bptr = &B[0][k];   /* Points to elements in column k of B */
+    int *Bend = &B[N][k];   /* Marks stopping point for Bptr */
+    int result = 0;
+    do
+    {                              /* No need for initial test */
+        result += *Aptr * *Bptr;   /* Add next product to sum */
+        Aptr++;                    /* Move Aptr to next column */
+        Bptr += N;                 /* Move Bptr to next row */
+    } while (Bptr != Bend);        /* Test for stopping point */
+    return result;
+}
+```
+
+比较两者我们可以发现，优化代码没有使用索引 j，并将所有的数组引用都转换为了指针引用。其中，`Aptr`指向矩阵 A 中第 i 行中的连续元素，`Bptr`指向矩阵 B 中第 k 列 中的连续元素。`Bend`则指向矩阵 B 中第 k 列中的第 N + 1 个元素，它就等于循环结束时`Bptr`的值。
+
+### 变长数组
+
+## 异构数据结构
