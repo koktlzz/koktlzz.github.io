@@ -705,7 +705,7 @@ switch_eg:
   jmp *.L4(,%rsi,8)
 .L3:
   leaq (%rdi,%rdi,2), %rax
-  leaq  (%rdi,%rax,4), %rdi
+  leaq (%rdi,%rax,4), %rdi
   jmp .L2
 .L5:
   addq $10, %rdi
@@ -901,6 +901,18 @@ $$\tag{3.1} \And D[i][j] = x_D + L(C * i + j)$$
 
 其中，$x_D$ 为数组地址，L 为数组元素的长度。
 
+一个 5 X 3 的整型数组 A，其任意数组元素 A[i][j] 的地址用汇编代码的表示结果为：
+
+```x86asm
+; A in %rdi, i in % rsi and j in %rdx
+; Compute 3i
+leaq (%rsi, %rsi, 2), %rax
+; Compute A + 12i
+leaq (%rdi, %rax, 4), %rax
+; Read from M[A + 12i + 4j]
+movl (%rax, %rdx, 4), %rax
+```
+
 ### 定长数组
 
 编译器可以对一些操作定长多维数组的代码进行优化。例如一个进行矩阵运算的 C 程序：
@@ -956,6 +968,26 @@ int var_ele(long n, int A[n][n], long i, long j)
 }
 ```
 
+参数`n`必须在参数`A[n][n]`之前，这样函数在处理数组时才能够明确其维度。该程序经 GCC 编译得到的汇编代码如下：
 
+```x86asm
+; int var_ele(long n, int A[n][n], long i, long j)
+; n in %rdi, A in %rsi, i in %rdx, j in %rcx 
+var_ele:
+  ； Compute n * i
+  imulq %rdx, %rdi
+  ; Compute A + 4(n * i)
+  leaq (%rsi,%rdi,4), %rax
+  ; Read from M[A + 4(n * i) + j]
+  movl (%rax,%rcx,4), %eax
+  ret
+```
+
+数组元素 A[i][j] 地址的计算方式与定长多维数组类似，即 $x_A + 4(n * i) + 4j = x_A + 4(n * i + j)$。区别之处在于：
+
+- 由于添加了变量`n`，寄存器的使用方式不同；
+- 使用了乘法指令`imulq`而不是`leaq`来计算 n * i，因此将导致程序性能的损失。
+
+无论多维数组的长度是否为常量，编译器都会对其进行一定优化。虽然两者实现的细节有所差异，但其宗旨是一致的：避免直接使用 [公式 3.1](/posts/machine-level-representation-of-programs-note/#多维数组) 而导致的乘法运算。
 
 ## 异构数据结构
