@@ -897,7 +897,7 @@ row3_t A[5];
 
 数据类型 row3_t 是一个包含三个整型的数组，而数组 A 则包含五个这样的元素。我们将其推广到一般情况，若一个数组声明为`T D[R][C]`，则数组元素`D[i][j]`在内存中的地址为：
 
-$ \And D[i][j]= x_D + L(C * i + j)$
+$\tag{3.1} \And D[i][j] = x_D + L(C * i + j)$
 
 其中，$x_D$ 为数组地址，L 为数组元素的长度。
 
@@ -944,5 +944,7 @@ fix_prod_ele_opt(fix_matrix A, fix_matrix B, long i, long k)
 比较两者我们可以发现，优化代码没有使用索引 j，并将所有的数组引用都转换为了指针引用。其中，`Aptr`指向矩阵 A 中第 i 行中的连续元素，`Bptr`指向矩阵 B 中第 k 列 中的连续元素。`Bend`则指向矩阵 B 中第 k 列中的第 N + 1 个元素，它就等于循环结束时`Bptr`的值。
 
 ### 变长数组
+
+C 只支持可以在编译时确定长度的多维数组(一维可能除外），声明可变大小的数组时必须使用 malloc 或 calloc 等函数来分配数组的存储空间，并且需要通过行主索引（row-major indexing）将多维数组的映射显式编码为一维数组（就像[公式 3.1](/posts/machine-level-representation-of-programs-note/#多维数组)做的那样）。
 
 ## 异构数据结构
