@@ -897,7 +897,7 @@ row3_t A[5];
 
 数据类型 row3_t 是一个包含三个整型的数组，而数组 A 则包含五个这样的元素。我们将其推广到一般情况，若一个数组声明为`T D[R][C]`，则数组元素`D[i][j]`在内存中的地址为：
 
-$\tag{3.1} \And D[i][j] = x_D + L(C * i + j)$
+$$\tag{3.1} \And D[i][j] = x_D + L(C * i + j)$$
 
 其中，$x_D$ 为数组地址，L 为数组元素的长度。
 
@@ -945,6 +945,17 @@ fix_prod_ele_opt(fix_matrix A, fix_matrix B, long i, long k)
 
 ### 变长数组
 
-C 只支持可以在编译时确定长度的多维数组(一维可能除外），声明可变大小的数组时必须使用 malloc 或 calloc 等函数来分配数组的存储空间，并且需要通过行主索引（row-major indexing）将多维数组的映射显式编码为一维数组（就像[公式 3.1](/posts/machine-level-representation-of-programs-note/#多维数组)做的那样）。
+C 只支持可以在编译时确定长度的多维数组(一维可能除外），声明可变大小的数组时必须使用 malloc 或 calloc 等函数来分配数组的存储空间，并且需要通过行主索引（row-major indexing）将多维数组的映射显式编码为一维数组（就像 [公式 3.1](/posts/machine-level-representation-of-programs-note/#多维数组) 做的那样）。
+
+我们可以编写一个函数来访问 n × n 数组的元素 i, j，如下所示：
+
+```c
+int var_ele(long n, int A[n][n], long i, long j)
+{
+    return A[i][j];
+}
+```
+
+
 
 ## 异构数据结构
