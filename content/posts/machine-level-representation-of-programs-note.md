@@ -1052,6 +1052,52 @@ union U3
 |S3|0|4|16|24|
 |U3|0|0|0|8|
 
-我们将在下一节 [数据对齐](/posts/machine-level-representation-of-programs-note/#数据对齐) 中介绍为什么`i`在`S3`中的偏移量是 4 而不是 1，以及`v`的偏移量是 16，而不是 9 或 12。对于类型 union U3 * 的指针 p，引用 p->c, p->i[ 0]，并且 p->v 都将引用数据结构的开头。 另请注意，联合的整体大小等于其任何字段的最大大小。
+对于类型为`union U3 *`的指针`p`，表达式`p -> c`，`p -> i[0]`和`p -> v`都将引用联合体的起始地址。联合体的长度等于其所有字段中最大的数据长度，而结构体则等于其所有字段长度的和。我们将在下一节 [数据对齐](/posts/machine-level-representation-of-programs-note/#数据对齐) 中介绍为什么`i`在`S3`中的偏移量是 4 而不是 1，以及`v`的偏移量是 16，而不是 9 或 12。
+
+如果一个数据结构中的两个字段是互斥（mutually exclusive）的，我们就可以使用联合体来减少空间浪费。假如存在一个二叉树，其每个叶节点（leaf node）都有两个双精度浮点值，每个内部节点（internal node）都有两个指向子节点的指针。那么使用结构体实现该数据结构的代码为：
+
+```c
+struct node_s
+{
+    // for internal node
+    struct node_s *left;
+    struct node_s *right;
+    // for leaf node
+    double data[2];
+};
+```
+
+这样每个节点都需要占用 32 字节的空间，其中只有一半会被节点真正使用。而如果我们使用联合体来实现：
+
+```c
+union node_u
+{
+    struct
+    {
+        union node_u *left;
+        union node_u *right;
+    } internal;
+    double data[2];
+};
+```
+
+则每个节点就只需占用 16 个字节的空间。对于类型为`union node_u *`的指针`n`，叶节点可以用`n -> data[0]`和`n -> data[1]`来表示，而内部节点指向的子节点可以用`n -> internal.left`和`n -> internal.right`来表示。
+
+联合体还可用于访问不同数据类型的位模式（bit pattern）。假设我们需要将一个 double 类型的变量强制转换为 unsigned long，则可以用如下方法实现：
+
+```c
+unsigned long double2bits(double d)
+{
+    union
+    {
+        double d;
+        unsigned long u;
+    } temp;
+    temp.d = d;
+    return temp.u;
+};
+```
+
+该代码将两种数据类型均存储在联合体`temp`中，使其有着相同的位级表达，从而实现类型转换。
 
 ### 数据对齐
