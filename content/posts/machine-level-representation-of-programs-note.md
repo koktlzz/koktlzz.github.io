@@ -1164,3 +1164,30 @@ int result = fp(3, &y);
 ```
 
 ### 内存引用越界和缓冲区溢出
+
+C 不会对数组引用做任何的边界检查，这可能导致存储在栈中的数据因写入越界（out-of-bounds）的数组元素而损坏。如果程序随后以这种状态重新加载寄存器或执行`ret`指令，事情可能会变得十分严重。
+
+一种常见的状态损坏原因称为缓存区溢出（buffer overflow），比较典型的例子是字符串的长度超过了栈中为其分配的字符数组空间：
+
+```c
+/* Implementation of library function gets() */
+char *gets(char *s)
+{
+    int c;
+    char *dest = s;
+    while ((c = getchar()) != '\n' && c != EOF)
+        *dest++ = c;
+    if (c == EOF && dest == s)
+        /* No characters read */
+        return NULL;
+    *dest++ = '\0'; /* Terminate string */
+    return s;
+}
+/* Read input line and write it back */
+void echo()
+{
+    char buf[8]; /* Way too small! */
+    gets(buf);
+    puts(buf);
+}
+```
