@@ -85,7 +85,7 @@ series
 
 将收集到的数据写入磁盘的理想模式和能够显著提升查询效率的设计之间显然存在着强烈的矛盾，这是我们的时间序列数据库必须解决的根本问题。
 
-> 译者注：原文为：“There’s obviously a strong **tension** between the ideal pattern for writing collected data to disk and the layout that would be significantly more efficient for serving queries. It is the fundamental problem our TSDB has to solve.” 译者不确定此处的 tension 该如何翻译，猜测可能是想表达一种类似于 trade-off 的概念。因为上文提到，在理想的写入模式中，数据点是垂直分布的。而通常查询得到数据点却是水平，甚至是矩形的。
+> 译者注：原文为：“There’s obviously a strong **tension** between the ideal pattern for writing collected data to disk and the layout that would be significantly more efficient for serving queries. It is the fundamental problem our TSDB has to solve.” 译者不确定此处的 tension 该如何翻译，猜测可能是想表达一种类似 trade-off 的概念。因为上文提到，在理想的写入模式中，数据点是垂直分布的。而通常查询得到数据点却是水平，甚至是矩形的。
 
 #### 当前解决方案
 
