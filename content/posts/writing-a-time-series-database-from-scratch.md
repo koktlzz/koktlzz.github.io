@@ -1,7 +1,7 @@
 ---
 title: "【译】从零开始写一个时序数据库"
 date: 2021-11-21T00:25:25+08:00
-draft: false
+draft: true
 tags: ["Prometheus", "TSDB"]
 summary: "Prometheus 是一个包含了自定义时间序列数据库的监控系统，其查询语言、操作模型以及一些概念性决策使得它易于与 Kubernetes 集成。然而，Kubernetes 集群中的工作负载是动态变化的，有可能给它带来一定的压力。"
 ---
