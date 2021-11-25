@@ -6,7 +6,7 @@ tags: ["Prometheus", "TSDB"]
 summary: "Prometheus 是一个包含了自定义时间序列数据库的监控系统，其查询语言、操作模型以及一些概念性决策使得它易于与 Kubernetes 集成。然而，Kubernetes 集群中的工作负载是动态变化的，有可能给它带来一定的压力..."
 ---
 
-> 原文链接：[Writing a Time Series Database from Scratch | Fabian Reinartz (fabxc.org)](https://fabxc.org/tsdb/)
+> 原文链接：[Fabian Reinartz. Writing a Time Series Database from Scratch. fabxc.org, 2017.](https://fabxc.org/tsdb/)
 
 [Prometheus](https://prometheus.io/) 是一个包含了自定义时间序列数据库的监控系统，其查询语言、操作模型以及一些概念性决策使得它易于与 [Kubernetes](https://kubernetes.io/) 集成。然而，Kubernetes 集群中的工作负载是动态变化的，有可能给它带来一定的压力。因此，我们致力于提高 Prometheus 在这些运行着高度动态或瞬态服务的环境中的性能。
 
@@ -14,7 +14,7 @@ summary: "Prometheus 是一个包含了自定义时间序列数据库的监控�
 
 ## 问题，问题和问题空间
 
-首先，我们简要介绍 Prometheus 需要实现的目标及其引发的关键问题。对于每个方面，我们都会讨论当前方案做得好的地方，以及做得不好亟待新方案解决的地方。
+首先，我们简要介绍 Prometheus 需要完成的任务及其引发的关键问题。对于每个方面，我们都会讨论当前方案做得好的地方，以及做得不好亟待新方案解决的地方。
 
 ### 时间序列数据
 
@@ -32,7 +32,7 @@ requests_total{path="/status", method="POST", instance=”10.0.0.3:80”}
 requests_total{path="/", method="GET", instance=”10.0.0.2:80”}
 ```
 
-指标名称也可以被视为一个标签，如`_name_`，因此我们可以对这种表达方式进行简化。在查询数据时它可能会被特殊处理，但这与 Prometheus 的存储系统无关。
+指标名称也可以被视为一个标签，如`_name_`，因此我们可以对这种表达方式进行简化。在查询时它可能会被特殊处理，但存储时则与其他标签无异。
 
 ```
 {__name__="requests_total", path="/status", method="GET", instance=”10.0.0.1:80”}
@@ -40,9 +40,9 @@ requests_total{path="/", method="GET", instance=”10.0.0.2:80”}
 {__name__="requests_total", path="/", method="GET", instance=”10.0.0.2:80”}
 ```
 
-在查询时间序列数据时，我们通常根据标签选择所需的 Series。一个最简单的例子，`{__name__="requests_total"}`会查询属于`requests_total`指标的所有 Series，Prometheus 将拉取指定时间窗口内的数据点。
+当查询时间序列数据时，我们通常会根据标签选择所需的 Series。一个最简单的例子，`{__name__="requests_total"}`会查询属于`requests_total`指标的所有 Series，Prometheus 将拉取指定时间窗口内的数据点。
 
-有时我们希望一次查询就能选取匹配多个标签的 Series，这需要使用比等式更加复杂的条件。例如，否定 `(method!="GET")` 或正则表达式匹配`(method="PUT|POST")`。
+有时我们还希望一次查询能够通过几个标签选择器选取多个 Series，或者在标签匹配中使用比等式更加复杂的条件。例如，否定 `(method!="GET")` 或正则表达式匹配`(method="PUT|POST")`。
 
 本节介绍的数据结构在很大程度上定义了 Prometheus 存储和调用数据的方式。
 
@@ -67,15 +67,15 @@ series
     <-------------------- time --------------------->
 ```
 
-这些数据点是由 Prometheus 周期性地拉取一组时间序列的当前值而得到的。由于该操作对每个数据源实体（称为 Target）均独立完成，因此 Prometheus 的写入模式是完全垂直且高并发的。
+这些数据点是由 Prometheus 周期性地拉取一组时间序列的当前值而得到的。由于该操作对每个数据源实体（称为 Target）均独立完成，因此 Prometheus 的写入模式是完全垂直且高度并发的。
 
 假设我们的数据规模为：单个 Prometheus 实例从数万个 Target 中采集数据点，而每个 Target 又暴露成百上千个不同的时间序列。在这种数据量达到百万级别的情况下，批量写入是必需的。
 
-对于旋转磁盘来说，随机写入数据是非常缓慢的，因为它需要不断移动磁头来寻址。而对于 SSD，尽管其随机写操作很快，但是它只能以 4KiB 或更大的 Page 为单位写入，意味着写入一个 16 字节的样本相当于写入一个完整的 4KiB Page。这种现象属于写放大（[write amplification](https://en.wikipedia.org/wiki/Write_amplification)）的一部分，将会导致 SSD 的磨损和性能下降，甚至在几天或几周内摧毁您的磁盘。有关该问题的详细信息，可以参考系列文章 [Coding for SSDs](http://codecapsule.com/2014/02/12/coding-for-ssds-part-1-introduction-and-table-of-contents/)。综上所述，无论对于旋转磁盘还是 SSD，顺序写入和批量写入均是最理想的模式，这是我们必须坚持的原则。
+对于旋转磁盘来说，随机写入数据非常缓慢，因为它需要不断移动磁头来寻址。而对于 SSD，尽管其随机写操作很快，但是它只能以 4KiB 或更大的 Page 为单位写入，意味着写入一个 16 字节的样本相当于写入一个完整的 4KiB Page。这种现象属于写放大（[write amplification](https://en.wikipedia.org/wiki/Write_amplification)）的一部分，将会导致 SSD 的磨损和性能下降，甚至在几天或几周内摧毁您的磁盘。有关该问题的详细信息，可以参考系列文章 [Coding for SSDs](http://codecapsule.com/2014/02/12/coding-for-ssds-part-1-introduction-and-table-of-contents/)。综上所述，无论对于旋转磁盘还是 SSD，顺序写入和批量写入均是最理想的模式，这是我们必须坚持的原则。
 
 查询模式则与写入模式完全不同。我们可以查询一个 Series 中的单个数据点，一万个 Series 中的单个数据点，一个 Series 中一周内的数据点以及一万个 Series 中一周内的数据点等等。在二维数据平面中，查询的数据点既不是完全垂直或完全水平的，而是两者的矩形组合。
 
-我们可以使用 [Recording rules](https://prometheus.io/docs/practices/rules/) 来缓解一些执行常用查询语句时遇到的性能问题，但它对临时性的查询语句并不起作用。
+我们可以使用 [Recording rules](https://prometheus.io/docs/practices/rules/) 来缓解执行常用查询语句时遇到的性能问题，但它对临时性的查询并不起作用。
 
 > 译者注：关于 Recording rules，除了原文给出的文档链接外，还可以参阅 [Today I Learned: Prometheus Recording Rules](https://deploy.live/blog/today-i-learned-prometheus-recording-rules/) 一文。
 
@@ -106,8 +106,8 @@ series
 
 - 实际上我们所需的文件数量远比当前收集到的时间序列多得多，原因参见 [Series Churn](/posts/writing-a-time-series-database-from-scratch/#series-churn) 章节。上百万个文件迟早会耗尽我们文件系统上所有的 [inodes](https://en.wikipedia.org/wiki/Inode)，只能通过重新格式化磁盘来恢复。
 - 即使我们引入了 Chunk，每秒也会有数千个 Chunk 被写满并准备持久化，这意味着每秒数千次独立的磁盘写入。虽然可以通过将一个 Series  中几个已完成的 Chunk 批量落盘来缓解这一问题，但这样做反而会增加等待持久化的 Chunk 数量，从而占用更多的内存。
-- 为了读写而保持所有文件均处于打开状态是不可行的。虽然约 99%的数据在 24 小时后就不再被查询，但只要查询到已持久化的样本，就必须打开数千个文件然后将结果读入内存中，最后再关闭它们。为了解决查询的延时问题，Chunk 会被更加积极地缓存，这将导致 [资源消耗](/posts/writing-a-time-series-database-from-scratch/#资源消耗) 章节中提到的问题。
-- 最后我们必须删除旧数据，它们存储在数百万个文件的头部中，这表明删除实际上是写入密集型操作。此外，遍历数百万个文件并对其进行分析通常需要数个小时，可能刚一完成就得重新开始。没错，删除旧文件还会进一步地导致 SSD 的写放大。
+- 为了读写而保持所有文件均处于打开状态是不可行的。虽然约 99%的数据在 24 小时后就不再被查询，但只要查询到已持久化的样本，就必须打开数千个文件然后将结果读入内存中，最后再关闭它们。由于这样会使查询的延时过高，Chunk 被更加积极地缓存，这将导致 [资源消耗](/posts/writing-a-time-series-database-from-scratch/#资源消耗) 章节中提到的问题。
+- 最后我们必须删除旧数据。它们存储在数百万个文件的头部中，这表明删除实际上是写入密集型操作。此外，遍历数百万个文件并对其进行分析通常需要数个小时，可能刚一完成就不得不重新开始。没错，删除旧文件还会进一步地导致 SSD 的写放大。
 - 当前积累的 Chunk 均存储在内存中，如果 Prometheus 发生崩溃数据就会丢失。为了避免这一情况，内存状态会通过 Checkpoint 周期性地保存在磁盘中，其完成时间可能远比我们能够接受的数据丢失窗口还长。恢复 Checkpoint 也可能需要几分钟，导致漫长而又痛苦的重启周期。
 
 现有设计的关键是 Chunk 的概念，我们当然希望保留它。最新的 Chunk 始终保持在内存中通常很好，毕竟最近的数据查询得最多。不过，我们希望能够有新的方案来替代现有每个 Series 一个文件的方案。
