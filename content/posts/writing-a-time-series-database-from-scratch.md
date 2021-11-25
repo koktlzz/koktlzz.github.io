@@ -1,7 +1,7 @@
 ---
 title: "【译】从零开始写一个时序数据库"
 date: 2021-11-21T00:25:25+08:00
-draft: true
+draft: false
 tags: ["Prometheus", "TSDB"]
 summary: "Prometheus 是一个包含了自定义时间序列数据库的监控系统，其查询语言、操作模型以及一些概念性决策使得它易于与 Kubernetes 集成。然而，Kubernetes 集群中的工作负载是动态变化的，有可能给它带来一定的压力..."
 ---
@@ -83,7 +83,7 @@ series
 
 因此在理想情况下，同一个 Series 中的样本按顺序存储。这样只要我们知道某个 Series 的起始位置，就可以快速访问它所有的数据点，从而减少读取操作的次数。
 
-将收集到的数据写入磁盘的理想模式和能够显著提升查询效率的设计之间显然存在着强烈的矛盾，这是我们的时间序列数据库必须解决的根本问题。
+将数据写入磁盘的理想模式和能够显著提升查询效率的设计之间显然存在着强烈的矛盾，这是我们的时间序列数据库必须解决的根本问题。
 
 > 译者注：原文为：“There’s obviously a strong **tension** between the ideal pattern for writing collected data to disk and the layout that would be significantly more efficient for serving queries. It is the fundamental problem our TSDB has to solve.” 译者不确定此处的 tension 该如何翻译，猜测原文作者可能是想表达一种类似 trade-off 的概念。因为上文提到，在理想的写入模式中，数据点是垂直分布的。而通常查询得到数据点却是水平，甚至是矩形的。
 
@@ -106,11 +106,11 @@ series
 
 - 实际上我们所需的文件数量远比当前收集到的时间序列多得多，原因参见 [Series Churn](/posts/writing-a-time-series-database-from-scratch/#series-churn) 章节。上百万个文件迟早会耗尽我们文件系统上所有的 [inodes](https://en.wikipedia.org/wiki/Inode)，只能通过重新格式化磁盘来恢复。
 - 即使我们引入了 Chunk，每秒也会有数千个 Chunk 被写满并准备持久化，这意味着每秒数千次独立的磁盘写入。虽然可以通过将一个 Series  中几个已完成的 Chunk 批量落盘来缓解这一问题，但这样做反而会增加等待持久化的 Chunk 数量，从而占用更多的内存。
-- 为了读写而保持所有文件均处于打开状态是不可行的。虽然约 99%的数据在 24 小时后就不再被查询，但只要查询到已持久化的样本，就必须打开数千个文件然后将结果读入内存中，最后再关闭它们。由于这样会使查询的延时过高，Chunk 被更加积极地缓存，这将导致 [资源消耗](/posts/writing-a-time-series-database-from-scratch/#资源消耗) 章节中提到的问题。
+- 为了读写而保持所有文件均处于打开状态是不可行的。虽然约 99%的数据在 24 小时后就不再被查询，但只要查询到已持久化的样本，就必须打开数千个文件然后将结果读入内存中，最后再关闭它们。这种操作会极大地提高查询的延时，因此 Chunk 需要被更加积极地缓存，从而导致 [资源消耗](/posts/writing-a-time-series-database-from-scratch/#资源消耗) 章节中提到的问题。
 - 最后我们必须删除旧数据。它们存储在数百万个文件的头部中，这表明删除实际上是写入密集型操作。此外，遍历数百万个文件并对其进行分析通常需要数个小时，可能刚一完成就不得不重新开始。没错，删除旧文件还会进一步地导致 SSD 的写放大。
-- 当前积累的 Chunk 均存储在内存中，如果 Prometheus 发生崩溃数据就会丢失。为了避免这一情况，内存状态会通过 Checkpoint 周期性地保存在磁盘中，其完成时间可能远比我们能够接受的数据丢失窗口还长。恢复 Checkpoint 也可能需要几分钟，导致漫长而又痛苦的重启周期。
+- 当前累积的 Chunk 均存储在内存中，如果 Prometheus 发生崩溃数据就会丢失。为了避免这一情况，内存状态将周期性地保存（Checkpoint）到磁盘中。然而，完成 Checkpoint 的所需时间可能远比我们能够接受的数据丢失时间窗口还长。同时恢复 Checkpoint 也可能需要几分钟，这将导致漫长而又痛苦的重启周期。
 
-现有设计的关键是 Chunk 的概念，我们当然希望保留它。最新的 Chunk 始终保持在内存中通常很好，毕竟最近的数据查询得最多。不过，我们希望能够有新的方案来替代现有每个 Series 一个文件的方案。
+现有设计的关键概念是 Chunk，我们当然希望保留它。将最新的 Chunk 始终保持在内存中也是一个很好的设计，毕竟近期的数据查询频率最高。不过，为每个 Series 都创建一个文件的方案看起来并不合理，我们希望能够找到新的方案来替代它。
 
 ### Series Churn
 
