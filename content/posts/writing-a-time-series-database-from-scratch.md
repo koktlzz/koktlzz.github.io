@@ -1,5 +1,5 @@
 ---
-title: "【译】从零开始写一个时序数据库"
+title: "【译】从零开始编写一个时序数据库"
 date: 2021-11-21T00:25:25+08:00
 draft: false
 tags: ["Prometheus", "TSDB"]
