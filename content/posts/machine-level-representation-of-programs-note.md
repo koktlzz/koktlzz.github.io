@@ -1296,7 +1296,7 @@ popq %rbp
 
 ![20211128173012](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20211128173012.png)
 
-前四个指令涉及到对内存的引用，我们称其为 Scalar 指令。它们操作的对象是单独的数值，只会改变目的寄存器低位的四字节或八字节。而后两个指令则属于 Packed 指令，它们会更新目的寄存器中全部的内容。
+前四个指令涉及到对内存的引用，我们称其为 Scalar 指令。它们操作的对象是单独的数值，只会改变目的寄存器低位的四字节或八字节。而后两个指令则属于 Packed 指令，它们会更新目的寄存器中全部的内容。
 
 浮点数和整型之间进行转换的操作指令为：
 
@@ -1349,9 +1349,28 @@ vcvtpd2psx %xmm0, %xmm0
 
 ### 浮点代码中的位级运算
 
-下图展示了两个用于 XMM 寄存器的位级运算指令，其操作对象均为 Packed 数值：
+下图展示了两个用于 XMM 寄存器的位级运算指令，其操作对象均为 Packed 数值（XMM 寄存器中全部的 128 位）：
 
 ![20211129222149](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20211129222149.png)
 
 ### 浮点数的比较操作
 
+AVX 2 为浮点数值的比较运算提供两种操作指令：
+
+| Instruction          | Based on    | Description              |
+| -------------------- | ----------- | ------------------------ |
+| ucomiss $S_1$, $S_2$ | $S_2 - S_1$ | Compare single precision |
+| ucomisd $S_1$, $S_2$ | $S_2 - S_1$ | Compare double precision |
+
+上述指令与 [条件码](/posts/machine-level-representation-of-programs-note/#条件码) 中介绍的 CMP 指令类相似。参数 $S_2$ 必须是 XMM 寄存器，而参数 $S_1$ 则既可以是 XMM 寄存器，又可以是内存中的位置。
+
+浮点数比较操作会改变以下条件码的值，其中 PF 意为 Parity Flag：
+
+| Ordering $S_2$:$S_1$ | CF   | ZF   | PF   |
+| -------------------- | ---- | ---- | ---- |
+| Unordered            | 1    | 1    | 1    |
+| $S_2$ < $S_1$        | 1    | 0    | 0    |
+| $S_2$ = $S_1$        | 0    | 1    | 0    |
+| $S_2$ > $S_1$        | 0    | 0    | 0    |
+
+当任意操作数为 NaN 时，Unordered 的情况就会出现。PF 的值将被置为 1，对应的跳转指令为`jp`。其余三种情况则和整型的 [跳转指令](/posts/machine-level-representation-of-programs-note/#跳转指令) 相同，分别为`jb`、`je`和`ja`。
