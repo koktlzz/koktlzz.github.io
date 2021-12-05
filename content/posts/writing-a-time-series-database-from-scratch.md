@@ -301,3 +301,19 @@ __name__="requests_total"   ->   [ 9999, 1000, 1001, 2000000, 2000001, 2000002, 
 存储系统自身的代码可以在一个独立的 [项目](https://github.com/prometheus-junkyard/tsdb) 中找到。它其实与 Prometheus 无关，因此可以广泛用于其他需要高效本地存储的时序数据库应用中。
 
 > 译者注：上述项目已于 2019 年合并到 Prometheus 主仓库中，原因详见：[https://github.com/prometheus/prometheus/pull/5805](https://github.com/prometheus/prometheus/pull/5805)
+
+> 译者注：本文从宏观的角度介绍了 Prometheus 需要解决的问题，以及 1.X 版本（V2 存储系统）和 2.X 版本（V3 存储系统）的设计理念。想要了解其实现细节，除了阅读源码外还可以参考以下文章：
+>
+> 关于 Promtheus 中的内存数据库：[Prometheus TSDB (Part 1): The Head Block](https://ganeshvernekar.com/blog/prometheus-tsdb-the-head-block/)；
+>
+> 关于预写日志和 Checkpoint：[Prometheus TSDB (Part 2): WAL and Checkpoint](https://ganeshvernekar.com/blog/prometheus-tsdb-wal-and-checkpoint/)；[Write-Ahead Log](https://martinfowler.com/articles/patterns-of-distributed-systems/wal.html)；
+>
+> 关于 mmap：[Prometheus TSDB (Part 3): Memory Mapping of Head Chunks from Disk](https://ganeshvernekar.com/blog/prometheus-tsdb-mmapping-head-chunks-from-disk/)；[Why mmap is faster than system calls](https://sasha-f.medium.com/why-mmap-is-faster-than-system-calls-24718e75ab37)；
+>
+> 关于索引：[Prometheus TSDB (Part 4): Persistent Block and its Index](https://ganeshvernekar.com/blog/prometheus-tsdb-persistent-block-and-its-index/)；
+>
+> 关于查询：[Prometheus TSDB (Part 5): Queries](https://ganeshvernekar.com/blog/prometheus-tsdb-queries/)；
+>
+> 关于压缩和保留：[Prometheus TSDB (Part 6): Compaction and Retention](https://ganeshvernekar.com/blog/prometheus-tsdb-compaction-and-retention/)；[Time-series compression algorithms, explained](https://blog.timescale.com/blog/time-series-compression-algorithms-explained/)；
+>
+> 一些视频：[PromCon 2017: Storing 16 Bytes at Scale - Fabian Reinartz](https://www.youtube.com/watch?v=b_pEevMAC3I)；[技术分享：Prometheus是怎么存储数据的（陈皓）](https://www.youtube.com/watch?v=qB40kqhTyYM&t=2455s)。
