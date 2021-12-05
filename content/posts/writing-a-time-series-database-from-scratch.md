@@ -292,7 +292,7 @@ __name__="requests_total"   ->   [ 9999, 1000, 1001, 2000000, 2000001, 2000002, 
 
 ## 基准测试
 
-我们使用 [测试工具](https://github.com/prometheus/test-infra) 将 Prometheus 部署在 AWS 上的 Kubernetes 集群中，其中包含两个 1.5.2 版本（V2 存储系统）和两个 2.0 版本（V3 存储系统）的实例。为了模拟 Series Churn，微服务会定期移除旧的 Pod 并创建新的 Pod以生成更多新的 Series。为了确保 V3 存储系统能够应对未来的数据规模，服务扩展频率和查询负载远远超过了如今生产环境中的真实情况。例如，在我们的测试环境中微服务每隔 15 分钟就要更换自身 60% 的实例。而在实际的生产环境中，这种情况每天只会发生一到五次。Prometheus 每秒从 850 个 Target 中采集约 110000 个样本，每次涉及多达 50 万个 Series。基准测试的结果如下：
+我们使用 [测试工具](https://github.com/prometheus/test-infra) 将 Prometheus 部署在 AWS 上的 Kubernetes 集群中，其中包含两个 1.5.2 版本（V2 存储系统）和两个 2.0 版本（V3 存储系统）的实例。为了模拟 Series Churn，微服务会定期移除旧的 Pod 并创建新的 Pod 以生成更多新的 Series。为了确保 V3 存储系统能够应对未来的数据规模，服务扩展频率和查询负载远远超过了如今生产环境中的真实情况。例如，在我们的测试环境中微服务每隔 15 分钟就要更换自身 60% 的实例。而在实际的生产环境中，这种情况每天只会发生一到五次。Prometheus 每秒从 850 个 Target 中采集约 110000 个样本，每次涉及多达 50 万个 Series。基准测试的结果如下：
 
 ![20211205200953](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20211205200953.png)
 
@@ -356,4 +356,4 @@ $$Ingested \space samples/second$$
 >
 > - 关于压缩和保留：[Prometheus TSDB (Part 6): Compaction and Retention](https://ganeshvernekar.com/blog/prometheus-tsdb-compaction-and-retention/)；[Time-series compression algorithms, explained](https://blog.timescale.com/blog/time-series-compression-algorithms-explained/)；
 >
-> - 一些视频：[PromCon 2017: Storing 16 Bytes at Scale - Fabian Reinartz](https://www.youtube.com/watch?v=b_pEevMAC3I)；[技术分享：Prometheus是怎么存储数据的（陈皓）](https://www.youtube.com/watch?v=qB40kqhTyYM&t=2455s)；
+> - 一些视频：[PromCon 2017: Storing 16 Bytes at Scale - Fabian Reinartz](https://www.youtube.com/watch?v=b_pEevMAC3I)；[技术分享：Prometheus 是怎么存储数据的（陈皓）](https://www.youtube.com/watch?v=qB40kqhTyYM&t=2455s)；
