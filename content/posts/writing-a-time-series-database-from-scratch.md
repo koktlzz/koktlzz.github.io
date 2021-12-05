@@ -292,6 +292,24 @@ __name__="requests_total"   ->   [ 9999, 1000, 1001, 2000000, 2000001, 2000002, 
 
 ## 基准测试
 
+我们使用 [测试工具](https://github.com/prometheus/test-infra) 将 Prometheus 部署在 AWS 上的 Kubernetes 集群中，其中包含两个 1.5.2 版本（V2 存储系统）和两个 2.0 版本（V3 存储系统）的实例。为了模拟 Series Churn，微服务会定期移除旧的 Pod 并创建新的 Pod以生成更多新的 Series。为了确保 V3 存储系统能够应对未来的数据规模，服务扩展频率和查询负载远远超过了如今生产环境中的真实情况。例如，在我们的测试环境中微服务每隔 15 分钟就要更换自身 60% 的实例。而在实际的生产环境中，这种情况每天只会发生一到五次。Prometheus 每秒从 850 个 Target 中采集约 110000 个样本，每次涉及多达 50 万个 Series。基准测试的结果如下：
+
+![20211205200953](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20211205200953.png)
+
+$$Heap \space memory \space usage \space in \space GB$$
+
+我们可以发现被查询的 Prometheus 实例显然消耗更多的内存，并且 2.0 版本的堆内存使用量比 1.5 版本减少了三到四倍之多。在测试开始后 6 小时左右，1.5 版本的 Prometheus 实例达到了峰值。这是因为我们将数据的保留期限设置为了 6 小时，而 V2 存储系统中删除数据的巨大开销导致了资源消耗的上升。
+
+![20211205203043](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20211205203043.png)
+
+$$CPU \space usage \space in \space cores/second$$
+
+CPU 使用率的状况与内存类似，只不过查询操作对其的影响更大。总而言之，新的存储系统中 CPU 的使用率比原来减少了三到十倍。
+
+![20211205203453](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20211205203453.png)
+
+$$Disk \space writes \space in \space MB/second$$
+
 ## 总结
 
 对于 Prometheus 来说，处理高基数（High Cardinality）的 Series 和独立样本的吞吐量是一项颇为艰巨的任务。不过，新的存储系统似乎已经准备好应对未来的挑战。
@@ -316,4 +334,4 @@ __name__="requests_total"   ->   [ 9999, 1000, 1001, 2000000, 2000001, 2000002, 
 >
 > - 关于压缩和保留：[Prometheus TSDB (Part 6): Compaction and Retention](https://ganeshvernekar.com/blog/prometheus-tsdb-compaction-and-retention/)；[Time-series compression algorithms, explained](https://blog.timescale.com/blog/time-series-compression-algorithms-explained/)；
 >
-> - 一些视频：[PromCon 2017: Storing 16 Bytes at Scale - Fabian Reinartz](https://www.youtube.com/watch?v=b_pEevMAC3I)；[技术分享：Prometheus是怎么存储数据的（陈皓）](https://www.youtube.com/watch?v=qB40kqhTyYM&t=2455s)。
+> - 一些视频：[PromCon 2017: Storing 16 Bytes at Scale - Fabian Reinartz](https://www.youtube.com/watch?v=b_pEevMAC3I)；[技术分享：Prometheus是怎么存储数据的（陈皓）](https://www.youtube.com/watch?v=qB40kqhTyYM&t=2455s)；
