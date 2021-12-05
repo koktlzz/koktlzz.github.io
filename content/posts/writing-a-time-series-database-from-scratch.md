@@ -294,7 +294,7 @@ __name__="requests_total"   ->   [ 9999, 1000, 1001, 2000000, 2000001, 2000002, 
 
 ## 总结
 
-对于 Prometheus 来说，处理高基数（High Cardinality）的 Series 和独立样本的吞吐量是一项颇为艰巨的任务。不过，新的存储系统似乎足以应对未来的挑战。
+对于 Prometheus 来说，处理高基数（High Cardinality）的 Series 和独立样本的吞吐量是一项颇为艰巨的任务。不过，新的存储系统似乎已经准备好应对未来的挑战。
 
 使用 V3 存储系统的 Prometheus 2.0 的第一个 [Alpha 版本](https://prometheus.io/blog/2017/04/10/promehteus-20-sneak-peak/)已经可供测试，预计会出现一些崩溃、死锁和其他 Bug。
 
