@@ -817,7 +817,7 @@ uglyURLs = false
     displayReadingTime = true
     readingTimeIcon = "clock"
 
-    displayBusuanziPagePV = true
+    displayBusuanziPagePV = false
     busuanziPagePVIcon = "eye"
     # Note: render only in production
     #       environment
