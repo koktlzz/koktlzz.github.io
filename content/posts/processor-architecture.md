@@ -59,3 +59,32 @@ Y86-64 中的状态码 Stat 如下：
 我们没有引入异常处理，只是简单地让处理器在遇到任何异常时停止执行指令。
 
 ### Y86-64 程序
+
+示例 C 程序如下：
+
+```c
+long sum(long *start, long count)
+{
+    long sum = 0;
+    while (count)
+    {
+        sum += *start;
+        start++;
+        count--;
+    }
+    return sum;
+}
+
+int main()
+{
+    long array[4] = {0x000d000d000d, 0x00c000c000c0, 0x0b000b000b00, 0xa000a000a000};
+    sum(array, 4);
+    return 0;
+}
+```
+
+### 一些 Y86-64 指令细节
+
+对于指令`pushq %rsp`，可能会将寄存器 %rsp 的原始值压入栈，也有可能压入减少后的栈指针值。而对于指令`popq %rsp`，同样可能将寄存器 %rsp 置为直接从内存中读取到的值，也可能是栈指针增加后的值。为了避免混淆，我们需要规定上述两个指令均采用前者的方式。
+
+## 逻辑设计和 HCL
