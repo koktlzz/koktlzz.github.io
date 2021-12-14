@@ -128,7 +128,6 @@ int main()
 
 下图展示了一个多路复用器（multiplexor，MUX）的组合电路：
 
-
 ![20211214105159](https://cdn.jsdelivr.net/gh/koktlzz/NoteImg@main/20211214105159.png)
 
 输入的数据信号是位 a 和 b，控制信号是位 s。当 s 为 1 时，输出将等于 a。而当 s 为 0 时，输出则为 b。输出信号的 HCL 表达式为：`bool out = (s && a) || (!s && b);`
