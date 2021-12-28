@@ -13,3 +13,15 @@ summary: "存储系统（Memory System）可以分为多个层级（Hierarchy）
 ### 随机存取存储器
 
 随机存取存储器（Random Access Memory，RAM）有两种，分别是静态（static）的 SRAM 和 动态（dynamic）的 DRAM。其中，SRAM 的访问速度比 DRAM 更快，不过其成本明显更高。SRAM 用于 CPU 芯片内外的缓存，而 DRAM 则用于主存储器和图形系统中的帧缓存（Frame Buffer）。
+
+![20211228223039](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20211228223039.png)
+
+#### SRAM
+
+SRAM 将每个位存储在一个双稳态（bistable）的存储单元中，每个单元是由一个六晶体管电路实现的，其结构类似于下图中的倒转摆锤：
+
+![20211228222800](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20211228222800.png)
+
+该电路将永远处于两种电压配置（称为状态）之一。任何其他的状态都是不稳定的，将会快速地朝向其中一个稳定的状态移动。因此只要 SRAM 通电，就会永久地保存其值而不受干扰（如电噪声）的影响。
+
+#### DRAM
