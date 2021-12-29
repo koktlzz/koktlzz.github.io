@@ -30,4 +30,12 @@ DRAM 将每一位存储为一个电容上的电荷，其存储单元对任何扰
 
 #### 传统的 DRAM
 
-DRAM 芯片上的位可以被划分为 d 个 超级单元（supercell）
+DRAM 芯片上的位可以被划分为 $d$ 个超级单元（supercell），每个超级单元包含 $w$ 位。因此，一个 $d$ X $w$ 的 DRAM 能够存储 $dw$ 位的信息。下图展示了一个 16 X 8 的 DRAM 芯片结构：
+
+![20211229220341](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20211229220341.png)
+
+16 个超级单元被排列成一个 4 X 4 的矩阵，图中标为阴影的超级单元地址为 (2, 1)。信息通过外部连接器（称为 pin）流入或流出芯片，每个 pin 都可以携带一位信号。上图中包含了能够传输一字节信息的八个`data` pin，以及携带两位超级单元地址的`addr` pin。
+
+每个 DRAM 芯片都连接了一个称为存储控制器（Memory Controller）的电路，它可以一次传输 $w$ 位的数据。为了读取超级单元 (i, j) 中的内容，存储控制器会向 DRAM 发送行地址 i 和 列地址 j 的寻址请求，分别称为 RAS（Row Access Strobe）和 CAS（Column Access Strobe）。详细的读取过程如下图所示：
+
+![20211229222645](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20211229222645.png)
