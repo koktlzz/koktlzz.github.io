@@ -30,12 +30,36 @@ DRAM 将每一位存储为一个电容上的电荷，其存储单元对任何扰
 
 #### 传统的 DRAM
 
-DRAM 芯片上的位可以被划分为 $d$ 个超级单元（supercell），每个超级单元包含 $w$ 位。因此，一个 $d$ X $w$ 的 DRAM 能够存储 $dw$ 位的信息。下图展示了一个 16 X 8 的 DRAM 芯片结构：
+DRAM 芯片上的位可以被划分为 $d$ 个超级单元（supercell），每个超级单元包含 $w$ 位。因此，一个 $d \times w$ 的 DRAM 能够存储 $dw$ 位的信息。下图展示了一个 16 $\times$ 8 的 DRAM 芯片结构：
 
 ![20211229220341](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20211229220341.png)
 
-16 个超级单元被排列成一个 4 X 4 的矩阵，图中标为阴影的超级单元地址为 (2, 1)。信息通过外部连接器（称为 pin）流入或流出芯片，每个 pin 都可以携带一位信号。上图中包含了能够传输一字节信息的八个`data` pin，以及携带两位超级单元地址的`addr` pin。
+16 个超级单元被排列成一个 4 $\times$ 4 的矩阵，图中标为阴影的超级单元地址为 (2, 1)。信息通过外部连接器（称为 pin）流入或流出芯片，每个 pin 都可以携带一位信号。上图中包含了能够传输一字节信息的八个`data` pin，以及携带两位超级单元地址的`addr` pin。
 
-每个 DRAM 芯片都连接了一个称为存储控制器（Memory Controller）的电路，它可以一次传输 $w$ 位的数据。为了读取超级单元 (i, j) 中的内容，存储控制器会向 DRAM 发送行地址 i 和 列地址 j 的寻址请求，分别称为 RAS（Row Access Strobe）和 CAS（Column Access Strobe）。详细的读取过程如下图所示：
+每个 DRAM 芯片都连接了一个称为存储控制器（Memory Controller）的电路，它可以一次传输 $w$ 位的数据。为了读取超级单元 (i, j) 中的内容，存储控制器会向 DRAM 发送行地址 i 和 列地址 j 的寻址请求，分别称为 RAS（Row Access Strobe）请求和 CAS（Column Access Strobe）请求。详细的读取过程如下图所示：
 
 ![20211229222645](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20211229222645.png)
+
+存储控制器首先发送行地址请求，DRAM 会将整个第 2 行拷贝到内部的行缓冲区（Internal Row Buffer）中。然后存储控制器再发送列地址请求，DRAM 将从行缓冲区中拷贝超级单元 (2, 1) 的值返回给存储控制器。
+
+只要对存储控制器读取 DRAM 的过程有所了解，我们就能明白超级单元的排列方式为什么是矩阵而非一维线性数组。在我们的例子中，DRAM 包含了 16 个超级单元。如果按一维数组排列，则超级单元的地址范围为 0 到 15，因此就需要四个 pin（四位）来进行寻址。当然，矩阵排列方式也有一定缺点。存储控制器读取超级单元需要分为两个步骤，从而增加了访问时间。
+
+#### 存储模块
+
+DRAM 芯片被封装在存储模块（Memory Modules）中，如下图所示：
+
+![20211230215759](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20211230215759.png)
+
+示例的存储模块包含 8 个 8M $\times$ 8 DRAM 芯片，能够存储 64 MB 的数据。每个超级单元存储主存储器中的一字节（八位）信息，八个超级单元就可以表示一个地址为 A 的 64 位 word。存储控制器首先将地址 A 转换为超级单元地址 (i, j)，然后将其发送到存储模块中。存储模块会向所有的 DRAM 广播地址 i 和 j，从而得到每个 DRAM 中超级单元 (i, j) 的内容。存储模块中的电路会将结果整合成一个 64 位的 word，最终返回给存储控制器。
+
+#### 改进的 DRAM
+
+我们对传统的 DRAM 进行优化，从而设计出访问速度更快的 DRAM：
+
+- FPM（Fast Page Mode）DRAM：传统 DRAM 将整行数据拷贝到缓冲区中，使用其中一个并丢弃剩余的超级单元。FPM DRAM 可以连续访问同一行的超级单元，因此速度更快。例如读取一行中的四个超级单元，传统 DRAM 需要发送四次 RAS 请求和四次 CAS 请求，而 FPM DRAM 则只需要一次 RAS 请求和四次 CAS 请求；
+- EDO（Extended Data Out） DRAM：通过减少发送 CAS 信号的时间间隔来对 FPM DRAM 进行优化；
+- SDRAM（Synchronous DRAM）：上文提及的所有 DRAM 都是异步（Asynchronous）地向存储控制器发送信号的，而同步的 SDRAM 输出超级单元的速率更快；
+- DDDR（Double Data-Rate Synchronous）DRAM：使用时钟边缘（Clock Edge）作为控制信号来将 SDRAM 的速度提升一倍；
+- VRAM（Video RAM）：常用于图形系统的帧缓存，其本质与 FPM DRAM 类似。区别在于 VRAM 通过依次对内部缓冲区的内容移位来输出数据，并且可以向内存 并行读写。
+
+#### 非易失性存储器
