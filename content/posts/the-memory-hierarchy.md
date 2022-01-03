@@ -157,4 +157,6 @@ CPU 会发送三个指令到目标 I/O Port 来初始化读取操作：
 
 ### SSD
 
+固态硬盘（Solid State Disk，SSD）
+
 ## 局部性
