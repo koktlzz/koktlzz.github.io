@@ -14,8 +14,6 @@ summary: "存储系统（Memory System）可以分为多个层级（Hierarchy）
 
 随机存取存储器（Random Access Memory，RAM）有两种，分别是静态（static）的 SRAM 和 动态（dynamic）的 DRAM。其中，SRAM 的访问速度比 DRAM 更快，不过其成本明显更高。SRAM 用于 CPU 芯片内外的缓存，而 DRAM 则用于主存储器和图形系统中的帧缓存（Frame Buffer）。
 
-![20211228223039](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20211228223039.png)
-
 #### SRAM
 
 SRAM 将每个位存储在一个双稳态（bistable）的存储单元中，每个单元是由一个六晶体管电路实现的，其结构类似于下图中的倒转摆锤：
@@ -27,6 +25,8 @@ SRAM 将每个位存储在一个双稳态（bistable）的存储单元中，每�
 #### DRAM
 
 DRAM 将每一位存储为一个电容上的电荷，其存储单元对任何扰动都十分敏感。电流泄露会导致 DRAM 单元在大约 10 到 100 毫秒的时间内失去电荷，因此存储系统必须定期地通过读取并重写来刷新其中的每一位。
+
+![20211228223039](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20211228223039.png)
 
 #### 传统的 DRAM
 
@@ -63,3 +63,19 @@ DRAM 芯片被封装在存储模块（Memory Modules）中，如下图所示：
 - VRAM（Video RAM）：常用于图形系统的帧缓存，其本质与 FPM DRAM 类似。区别在于 VRAM 通过依次对内部缓冲区的内容移位来输出数据，并且可以向内存 并行读写。
 
 #### 非易失性存储器
+
+非易失性存储器（Nonvolatile Memory）在断电后还会继续保留其存储的信息。即使有些非易失性存储器是可读写的，但由于历史原因，它们被统一称为 ROM（Read-only Memory）。不同种类 ROM 的区别在于其能够被重新编程（写入）的最大次数，以及写入的实现机制。
+
+- PROM（Programmable ROM）：只能被编程一次；
+- EPROM（Erasable programmable ROM）：可以被擦除和重新编程约 1000 次；
+- EEPROM（Electrically Erasable PROM）：与 EPROM 相比，不需要单独的物理编程设备，但只可以重新编程 105 次；
+- 闪存（Flash Memory）：基于 EEPROM 的一项重要存储技术，SSD 就是通过闪存实现的。
+
+存储在 ROM 中的程序通常称为固件（Firmware）。一些系统会在固件中提供简单的输入/输出功能，比如 PC 的 BIOS（Basic Input/Output System）。
+
+#### 访问主存储器
+
+数据通过共享的电气管道在 CPU 和 DRAM 主存储器之间流动，这些管道称为总线（Bus）。而数据传输的过程可以分成一系列的总线事务（Bus Transaction），其中读事务将数据从主存加载到 CPU 中，写事务则将数据从 CPU 传输到主存中。
+
+总线是一组可以传输地址、数据和控制信号的并行线的集合，其中控制线负责同步事务并识别当前正在执行事务的类型。下图展示了一个示例计算机系统中的总线结构：
+
