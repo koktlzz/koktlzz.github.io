@@ -209,6 +209,8 @@ $ tree ./data
 
 每个 Block 中还存有一个`meta.json`文件，它只保存一些与 Block 相关的可读信息，因此我们便可以轻松了解存储状态以及 Block 中包含的数据。
 
+> 译者注：从 Prometheus v2.19.0 开始，Mutable Block 便不再全部存储在内存中，详见：[Prometheus TSDB (Part 1): The Head Block](https://ganeshvernekar.com/blog/prometheus-tsdb-the-head-block/)。
+
 #### mmap
 
 既然已持久化的数据从数百万个小文件变成了若干个大文件，那么我们就能够以很低的开销保持所有文件均处于打开状态。在这种情况下，我们可以引入系统调用 [mmap](https://en.wikipedia.org/wiki/Mmap)，将文件内容透明地映射到虚拟内存区域中。mmap 有些类似于交换分区（Swap Space），只不过我们所有的数据都已经在磁盘上了，在数据换出内存时不会发生写入。
