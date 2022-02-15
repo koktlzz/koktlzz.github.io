@@ -52,13 +52,6 @@ Sidecar 通常每隔 2 小时才会把 Prometheus 采集到的指标上传到对
 - 环境：阿里云 ACK
 
 ```shell
-cat <<EOF | kubectl apply -f -
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: thanos
-EOF
-
 git clone https://github.com/koktlzz/thanos-k8s-deployment.git
 cd thanos-k8s-deployment
 kubectl apply -k overlays/aliclound/
@@ -89,11 +82,15 @@ spec:
 # cluster kazusa
 spec:
   remoteWrite:
-    - url: http://nginx-proxy-kazusa.uuid.cn-shanghai.alicontainer.com/api/v1/receive
+    - url: http://thanos-receiver.uuid.cn-shanghai.alicontainer.com/api/v1/receive
+      headers:
+        THANOS-TENANT: kazusa
 # cluster setsuna
 spec:
   remoteWrite:
-    - url: http://nginx-proxy-setsuna.uuid.cn-shanghai.alicontainer.com/api/v1/receive
+    - url: http://thanos-receiver.uuid.cn-shanghai.alicontainer.com/api/v1/receive
+      headers:
+        THANOS-TENANT: setsuna
 ```
 
 一段时间后将在 Query UI（`kubectl get ingresses -n thanos | grep querier`）中看到三个集群（租户）的实例：
@@ -104,34 +101,13 @@ spec:
 
 ## 架构说明
 
-![20220210144930](https://cdn.jsdelivr.net/gh/koktlzz/NoteImg@main/20220210144930.jpg)
+![20220215135945](https://cdn.jsdelivr.net/gh/koktlzz/NoteImg@main/20220215135945.jpg)
 
 ### 指标数据流向
 
-我们将监控集群中的 Prometheus 称为 Local Prometheus，它直接将指标数据写入到软租户（soft-tenant）的 [Receiver](https://github.com/koktlzz/thanos-k8s-demo/blob/main/base/receiver/receiver-default.yaml) 中。两个外部集群（Kazusa 和 Setsuna）中的 Prometheus 则首先将数据写入到 [Nginx](https://github.com/koktlzz/thanos-k8s-demo/blob/main/base/nginx/nginx.yaml)，随后租户 ID 会被添加到数据包的 HTTP 头部：
+如上图所示，监控集群（Local）以及两个外部集群（Kazusa 和 Setsuna）中的 Prometheus 均将指标数据写入到软租户（soft-tenant）的 [Receiver](https://github.com/koktlzz/thanos-k8s-demo/blob/main/base/receiver/receiver-default.yaml) 中。而由于 Kazusa 和 Setsuna 的 Prometheus 还在远程写入中配置了 HTTP 头部，因此软租户 Receiver 会根据其中的租户 ID 将其转发到对应的硬租户 Receiver 中。
 
-```nginx
-  server { # reverse-proxy and tenant header setting
-    listen 80;
-    proxy_set_header THANOS-TENANT kazusa;
-
-    location / {
-      proxy_pass      http://thanos-receiver.thanos.svc.cluster.local:19291$request_uri;
-    }
-  }
-
-  server { # reverse-proxy and tenant header setting
-    listen 81;
-    proxy_set_header THANOS-TENANT setsuna;
-
-    location / {
-      proxy_pass      http://thanos-receiver.thanos.svc.cluster.local:19291$request_uri;
-    }
-  }
-}
-```
-
-软租户 Receiver 接收到数据包后，根据 HTTP 头部中的租户 ID 将其转发到对应的硬租户 Receiver 中。我们可以在 Receiver 容器挂载的 Hashring 配置文件中找到每个租户 Receiver 的 `endpoints`：
+我们可以在 Receiver 容器挂载的 Hashring 配置文件中找到每个租户 Receiver 的 `endpoints`：
 
 ```sh
 [root@master1 thanos]# kubectl exec -n thanos thanos-receiver-default-0 -- cat /etc/prometheus/hashring-config/hashrings.json | jq
@@ -191,7 +167,7 @@ spec:
 
 ![20220214141150](https://cdn.jsdelivr.net/gh/koktlzz/NoteImg@main/20220214141150.png)
 
-我们还需要为软租户 Receiver 创建一个 ClusterIP 类型的 [Service](https://github.com/koktlzz/thanos-k8s-demo/blob/82b720a87aa6a2bf7500c8087822227c646a046d/base/receiver/receiver-default.yaml#L144)，用于处理指标数据的写入请求。
+值得注意的是，用于处理指标数据的写入请求的 [Service](https://github.com/koktlzz/thanos-k8s-demo/blob/82b720a87aa6a2bf7500c8087822227c646a046d/base/receiver/receiver-default.yaml#L144) 是 ClusterIP 类型的。
 
 ## Future Work
 
