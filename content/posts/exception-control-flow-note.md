@@ -204,44 +204,98 @@ pid = Fork();
 
 ### 获取进程 ID
 
+每个进程都有一个唯一且大于 0 的进程 ID（PID）。函数`getpid`返回调用进程的 PID，而函数`getppid则返回创建调用进程的进程（父进程） 的 PID。
+
+```c
+#include <sys/types.h>
+#include <unistd.h>
+pid_t getpid(void);
+pid_t getppid(void);
+```
+
+二者返回值的类型为`pid_t`，它在 Linux 系统的 sys/types.h 中定义为 int。
+
 ### 创建和中止进程
 
+在程序员看来，进程有三种状态：
 
+- 运行（Running）：该进程要么在 CPU 中执行，要么在等待内核调度；
+- 停止（Stopped）：进程执行暂停，并且不会被调度；
+- 终止（Terminated）：进程永久地停止。
+
+函数`exit`会以参数`status`作为退出状态终止进程：
 
 ```c
 #include <stdlib.h>
-#include <unistd.h>
+void exit(int status);
+```
+
+父进程通过调用`fork`函数创建一个新的子进程：
+
+```c
 #include <sys/types.h>
-#include <stdio.h>
-#include <sys/errno.h>
-#include <string.h>
+#include <unistd.h>
+pid_t fork(void);
+```
 
-void unix_error(char *msg)
+子进程将获得一个与父进程相同但独立的用户级虚拟内存空间副本，包括代码、数据、堆、共享库和用户栈等。它还会得到与父进程相同的文件描述符副本，因此可以在调用`fork`时读写任意父进程打开的文件。父进程和子进程之间最显著的区别便是 PID 不同。
+
+函数`fork`执行一次却返回两次：在父进程中返回子进程的 PID，在子进程中返回 0。由于子进程的 PID 始终大于 0 ，因此我们可以通过返回值判断程序在哪个进程中执行。
+
+```c
+#include "csapp.h"
+
+int main() 
 {
-    fprintf(stderr, "%s: %s\n", msg, strerror(errno));
-    exit(0);
-}
-
-pid_t Fork(void){
-    pid_t pid;
-    if ((pid = fork()) < 0)
-        unix_error("Fork error");
-    return pid;
-}
-
-int main()
-{
-
     pid_t pid;
     int x = 1;
-    pid = Fork();
-    if (pid == 0)
-    { /*Child*/
-        printf("child : x=%d\n", ++x);
+
+    pid = Fork(); 
+    if (pid == 0) {  /* Child */
+        printf("child : x=%d\n", ++x); 
         exit(0);
     }
+
     /* Parent */
-    // printf("parent: x=%d\n", --x);
+    printf("parent: x=%d\n", --x); 
     exit(0);
 }
 ```
+
+该程序编译后运行的可能结果为：
+
+```shell
+linux> ./fork
+parent: x=0
+child : x=2
+```
+
+从结果我们可以看出：父进程和子进程并发执行，我们永远无法预测其执行顺序；子进程的地址空间是父进程的副本，因此当第六行的函数`Fork`返回时，两进程中的局部变量`x`均为1；两进程对变量的更改互不影响，所以最终输出的值不同。
+
+绘制进程图（Process Graph）对理解`fork`函数很有帮助，如：
+
+![20220216221102](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220216221102.png)
+
+### 回收子进程
+
+当进程终止时，内核不会立即将其移除。它需要被其父进程回收（Reap），否则将变成僵尸（Zombie）进程。当父进程回收其终止的子进程时，内核会将子进程的退出状态传递给父进程，然后再丢弃它。
+
+如果父进程终止，内核需要安排`init`进程（PID 为 1）“收养”孤儿进程。如果父进程在终止前没有回收僵尸子进程，那么`init`进程会回收它们。
+
+进程通过调用`waitpid`函数等待其子进程终止或停止：
+
+```c
+#include <sys/types.h>
+#include <sys/wait.h>
+pid_t waitpid(pid_t pid, int *statusp, int options);
+```
+
+默认情况下（参数`options`为 0 时），`waitpid`函数会暂停调用进程，直至其等待集合（Wait Set）中的某个子进程终止。该函数始终返回导致其返回的子进程 PID。此时，终止的子进程已被回收，内核从系统中删除了它的所有痕迹。
+
+### 让进程休眠
+
+### 加载并运行程序
+
+### 使用 fork 和 execve 运行程序
+
+## 信号
