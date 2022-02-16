@@ -160,13 +160,53 @@ X86-64 系统通过`syscall`指令使用系统调用，其所有参数均通过�
 
 ![20220215211459](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220215211459.png)
 
-图 8.14 显示了一对进程 A 和 B 之间的上下文切换示例。在此示例中，进程 A 最初在用户模式下运行，直到它通过执行读取系统调用进入内核。内核中的陷阱处理程序向磁盘控制器请求 DMA 传输，并安排磁盘在磁盘控制器完成将数据从磁盘传输到内存后中断处理器。
-磁盘将花费相对较长的时间来获取数据（大约几十毫秒），因此内核不会在此期间等待并且什么都不做，而是执行从进程 A 到 B 的上下文切换。请注意，在切换时，内核代表进程 A 在用户模式下执行指令（即，没有单独的内核进程）。在切换的第一部分，内核代表进程 A 在内核模式下执行指令。然后在某个时刻，它开始代表进程 B 执行指令（仍处于内核模式）。切换之后，内核是代表进程 B 在用户模式下执行指令。
-进程 B 然后在用户模式下运行一段时间，直到磁盘发送中断以表示数据已从磁盘传输到内存。内核确定进程 B 已经运行了足够长的时间，并执行从进程 B 到 A 的上下文切换，将进程 A 中的控制权返回给紧跟 read 系统调用之后的指令。进程 A 继续运行，直到发生下一个异常，依此类推。
-
 ## 系统调用错误处理
 
+当执行 Unix 系统级函数遇到错误时，它们会返回 -1 并设置全局整型变量`errno`的值。因此我们可以在程序中检查调用是否发生错误，如：
+
+```c
+if ((pid = fork()) < 0) {
+  fprintf(stderr, "fork error: %s\n", strerror(errno));
+  exit(0);
+  }
+```
+
+其中，`strerror`函数会根据`errno`的值返回相关的文本字符串。我们可以定义一个错误报告（Error-reporting）函数，从而将上述代码进行简化：
+
+```c
+void unix_error(char *msg) /* Unix-style error */
+  {
+  fprintf(stderr, "%s: %s\n", msg, strerror(errno));
+  exit(0);
+  }
+
+if ((pid = fork()) < 0)
+  unix_error("fork error");
+```
+
+我们再定义一个错误处理（Error-handling）函数，将代码进一步地简化：
+
+```c
+pid_t Fork(void)
+  {
+  pid_t pid;
+  if ((pid = fork()) < 0)
+  unix_error("Fork error");
+  return pid;
+  }
+
+pid = Fork();
+```
+
+这样我们就可以使用包装函数`Fork`代替`fork`及其错误检查代码。本书使用的包装函数均定义在头文件 [<csapp.h.>](http://csapp.cs.cmu.edu/2e/ics2/code/include/csapp.h) 中。
+
 ## 进程控制
+
+### 获取进程 ID
+
+### 创建和中止进程
+
+
 
 ```c
 #include <stdlib.h>
