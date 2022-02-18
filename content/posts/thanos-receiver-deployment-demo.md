@@ -53,7 +53,10 @@ Sidecar 通常每隔 2 小时才会把 Prometheus 采集到的指标上传到对
 
 ```shell
 git clone https://github.com/koktlzz/thanos-k8s-deployment.git
-cd thanos-k8s-deployment
+cd thanos-k8s-deployment/base/cert
+chmod 755 generate-crt.sh
+./generate-crt.sh
+cd ../../
 kubectl apply -k overlays/aliclound/
 ```
 
@@ -68,27 +71,51 @@ kubectl create -f manifests/setup
 kubectl create -f manifests/
 ```
 
-> 在国内环境拉取  k8s.gcr.io 上的镜像可能会失败，需要将镜像名称改为 bitnami/kube-state-metrics:2.3.0 和 willdockerhub/prometheus-adapter:v0.9.0。
+> 在国内环境拉取  k8s.gcr.io 上的镜像可能会失败，需要将镜像名称改为 bitnami/kube-state-metrics 和 willdockerhub/prometheus-adapter。
 
 ### 为 Prometheus 实例配置远程写入
+
+基于上节生成的证书，创建用于 Prometheus 远程写入 TLS 校验的 Secret：
+
+```shell
+kubectl create secret generic --from-file=../base/cert remote-write-tls -n monitoring
+```
 
 使用 `kubectl edit -n monitoring prometheus k8s`命令开启 Prometheus 的远程写入：
 
 ```yaml
 # local cluster
 spec:
+  secrets:
+    - remote-write-tls
   remoteWrite:
-    - url: http://thanos-receiver.thanos.svc.cluster.local:19291/api/v1/receive   
+    - url: https://thanos-receiver.thanos.svc.cluster.local:19291/api/v1/receive
+      tlsConfig:
+        caFile: /etc/prometheus/secrets/remote-write-tls/ca.crt
+        certFile: /etc/prometheus/secrets/remote-write-tls/server.crt
+        keyFile: /etc/prometheus/secrets/remote-write-tls/server.key
 # cluster kazusa
 spec:
+  secrets:
+    - remote-write-tls
   remoteWrite:
-    - url: http://thanos-receiver.uuid.cn-shanghai.alicontainer.com/api/v1/receive
+    - url: https://thanos-receiver.uuid.cn-shanghai.alicontainer.com/api/v1/receive
+      tlsConfig:
+        caFile: /etc/prometheus/secrets/remote-write-tls/ca.crt
+        certFile: /etc/prometheus/secrets/remote-write-tls/server.crt
+        keyFile: /etc/prometheus/secrets/remote-write-tls/server.key
       headers:
         THANOS-TENANT: kazusa
 # cluster setsuna
 spec:
+  secrets:
+    - remote-write-tls
   remoteWrite:
-    - url: http://thanos-receiver.uuid.cn-shanghai.alicontainer.com/api/v1/receive
+    - url: https://thanos-receiver.uuid.cn-shanghai.alicontainer.com/api/v1/receive
+      tlsConfig:
+        caFile: /etc/prometheus/secrets/remote-write-tls/ca.crt
+        certFile: /etc/prometheus/secrets/remote-write-tls/server.crt
+        keyFile: /etc/prometheus/secrets/remote-write-tls/server.key
       headers:
         THANOS-TENANT: setsuna
 ```
@@ -173,7 +200,7 @@ spec:
 
 本文介绍的 Demo 仅供读者参考，若想要将其投入生产使用，还需要考虑以下方面：
 
-- 为软租户的 Receiver 配置 TLS 证书校验；
+- ~~为软租户的 Receiver 配置 TLS 证书校验；~~ **更新**：已添加；
 - 上文提到，开启远程写入将增加 Prometheus 的内存使用，我们应当根据 [文档](https://prometheus.io/docs/practices/remote_write/) 中的建议对其参数进行调优；
 - 持久化 Compactor 和 Storegateway 的数据目录可以减少其重启时间，存储空间的大小可以参考 Slack 中的 [讨论](https://cloud-native.slack.com/archives/CK5RSSC10/p1643129956242100)；
 - 部署前根据指标数据量评估 Receiver 的 Request、Limit 以及副本数，防止其因数据量过大而导致 OOM；
