@@ -413,4 +413,6 @@ void unsetenv(const char *name);
 
 ### 使用 fork 和 execve 运行程序
 
+Unix shell 和 Web 服务器等程序大量使用了`fork`和`execve`函数。本书提供了一个简单的 [shell 程序](http://csapp.cs.cmu.edu/2e/ics2/code/ecf/shellex.c)，其缺陷在于没有回收任何后台运行的子进程。我们需要使用下一节介绍的信号来解决这一问题。
+
 ## 信号
