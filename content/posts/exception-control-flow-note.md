@@ -282,7 +282,7 @@ child : x=2
 
 如果父进程终止，内核需要安排`init`进程（PID 为 1）“收养”孤儿进程。如果父进程在终止前没有回收僵尸子进程，那么`init`进程会回收它们。
 
-进程通过调用`waitpid`函数等待其子进程终止或停止：
+进程通过调用函数`waitpid`等待其子进程终止或停止：
 
 ```c
 #include <sys/types.h>
@@ -290,11 +290,126 @@ child : x=2
 pid_t waitpid(pid_t pid, int *statusp, int options);
 ```
 
-默认情况下（参数`options`为 0 时），`waitpid`函数会暂停调用进程，直至其等待集合（Wait Set）中的某个子进程终止。该函数始终返回导致其返回的子进程 PID。此时，终止的子进程已被回收，内核从系统中删除了它的所有痕迹。
+默认情况下（参数`options`为 0 时），函数`waitpid`会暂停调用进程，直至其等待集（Wait Set）中的某个子进程终止。该函数始终返回导致其返回的子进程 PID。此时，终止的子进程已被回收，内核从系统中删除了它的所有痕迹。
+
+若参数`pid_t`大于 0 ，则等待集中只有一个 PID 等于该参数的子进程。若参数`pid_t`等于 -1，则等待集包含调用进程的所有子进程。
+
+我们可以通过修改参数`options`的值来改变函数`waitpid`的行为：
+
+- WNOHANG：如果等待集中的子进程还未终止，则立即返回 0；
+- WUNTRACED：暂停调用进程执行，直到等待集中的进程终止或停止（默认情况下仅会对终止的子进程返回）；
+- WCONTINUED：暂停调用进程执行，直到等待集中的进程终止或等待集中停止的进程收到 SIGCONT 信号恢复。
+
+若参数`statusp`不为 NULL，那么`waitpid`还会将导致其返回的子进程状态信息编码到`status`中（`*statusp = status`）。wait.h 文件定义了几个用于解释参数`status`的宏：
+
+- WIFEXITED(status)：如果子进程正常终止（比如调用`exit`或返回），则返回 True；
+- WEXITSTATUS(status)：如果 WIFEXITED() 返回 True，则返回终止子进程的退出状态；
+- WIFSIGNALED(status)：如果子进程由于未捕获的信号而终止，则返回 True；
+- WTERMSIG(status)：如果 WIFSIGNALED() 返回 True，则返回导致子进程终止的信号编号；
+- WIFSTOPPED(status)：如果导致返回的子进程当前已停止，则返回 True；
+- WSTOPSIG(status)：如果 WIFSTOPPED() 返回 True，则返回导致子进程停止的信号编号；
+- WIFCONTINUED(status)：如果子进程收到 SIGCONT 信号后恢复，则返回 True。
+
+如果调用进程没有子进程，`waitpid`将返回 -1 并将全局变量`errno`设为 ECHILD。而如果`waitpid`被信号中断，则返回 -1 并将全局变量`errno`设为 EINTR。
+
+函数`wait`是`waitpid`的简化版本， `wait(&status)`等效于`waitpid(-1, &status, 0)`。
+
+```c
+#include "csapp.h"
+#define N 2
+
+int main()
+{
+    int status, i;
+    pid_t pid;
+
+    /* Parent creates N children */
+    for (i = 0; i < N; i++)
+        if ((pid = Fork()) == 0) /* child */
+            exit(100 + i);
+
+    /* Parent reaps N children in no particular order */
+    while ((pid = waitpid(-1, &status, 0)) > 0)
+    {
+        if (WIFEXITED(status))
+            printf("child %d terminated normally with exit status=%d\n", pid, WEXITSTATUS(status));
+        else
+            printf("child %d terminated abnormally\n", pid);
+    }
+
+    /* The only normal termination is if there are no more children */
+    if (errno != ECHILD)
+        unix_error("waitpid error");
+
+    exit(0);
+}
+```
+
+如示例程序所示，父进程首先调用`Fork`创建了 N 个退出状态唯一的子进程（`exit(100+i)`）。 随后在 While 循环的测试条件中通过`waitpid`等待其所有的子进程终止，并打印子进程的退出状态。最终所有的子进程均被回收，`waitpid`返回 -1 且将全局变量`errno`设为 ECHILD，函数执行完毕。
+
+在 Linux 系统上运行该程序时，它会产生以下输出：
+
+```c
+linux> ./waitpid1
+child 22966 terminated normally with exit status=100 
+child 22967 terminated normally with exit status=101
+```
+
+值得注意的是，父进程回收子进程的顺序是随机的。我们可以对上述程序进行一定 [修改](http://csapp.cs.cmu.edu/2e/ics2/code/ecf/waitpid2.c)，从而使其按子进程的 PID 顺序输出。
 
 ### 让进程休眠
 
+函数`sleep`可以让进程暂停执行一段时间：
+
+```c
+#include <unistd.h>
+unsigned int sleep(unsigned int secs);
+```
+
+如果请求的暂停时间已经过去，则函数返回 0，否则将返回剩余的暂停时间。当该进程被信号中断时，后一种情况便会发生。
+
+函数`pause`会使调用进程进入休眠状态，直至收到信号。该函数始终返回 -1:
+
+```c
+#include <unistd.h>
+int pause(void);
+```
+
 ### 加载并运行程序
+
+函数`execve`在当前进程的上下文中加载并运行一个新程序：
+
+```c
+#include <unistd.h>
+int execve(const char *filename, const char *argv[], const char *envp[]);
+```
+
+参数`filename`是加载并运行的可执行文件名称，`argv`和`envp`则分别是参数和环境变量列表。函数`execve`通常没有返回值，仅在出现错误时返回 -1。
+
+变量`argv`指向一个以 Null 结尾的指针数组，其中的每个指针都指向一个参数字符串。一般来说，`argv[0]`是可执行目标文件名称。变量`envp`也指向一个以 Null 结尾的指针数组，其中的每个指针都指向一个环境变量字符串，而每个字符串都是一个 name=value 形式的键值对。两者的数据结构如下：
+
+![20220221214923](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220221214923.png)
+
+`execve`加载文件名后，会调用启动代码。 启动代码设置栈并将控制权传递给新程序的`main`函数，其原型为：
+
+```c
+int main(int argc, char *argv[], char *envp[]);
+```
+
+`main`函数执行时的用户栈结构如下图所示。其三个参数分别保存在不同的寄存器中：参数`argc`给出数组`argv[]`中的非空指针数量，参数`argv`指向数组`argv[]`中第一个元素，而参数`envp`则指向数组`envp[]`中的第一个元素。
+
+![20220221221725](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220221221725.png)
+
+Linux 提供了几个用于操作环境变量数组的函数：
+
+```c
+#include <stdlib.h>
+char *getenv(const char *name);
+int setenv(const char *name, const char *newvalue, int overwrite);
+void unsetenv(const char *name);
+```
+
+如果数组包含格式为 name=value 的字符串，则函数`getenv`会返回其对应的 value， 函数`unsetenv`会将其删除，而函数`setenv`会将 value 替换为参数`newvalue`（`overwrite`非零时）。如果 name 不存在，则函数`setenv`会将 name=`newvalue` 添加到数组中。
 
 ### 使用 fork 和 execve 运行程序
 
