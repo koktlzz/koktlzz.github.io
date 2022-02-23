@@ -416,3 +416,119 @@ void unsetenv(const char *name);
 Unix shell 和 Web 服务器等程序大量使用了`fork`和`execve`函数。本书提供了一个简单的 [shell 程序](http://csapp.cs.cmu.edu/2e/ics2/code/ecf/shellex.c)，其缺陷在于没有回收任何后台运行的子进程。我们需要使用下一节介绍的信号来解决这一问题。
 
 ## 信号
+
+### 	发送信号
+
+#### 使用 kill 函数发送信号
+
+进程可以通过调用`kill`函数向其他进程（包括其自身）发送信号：
+
+```c
+#include <sys/types.h>
+#include <signal.h>
+int kill(pid_t pid, int sig);
+```
+
+如果参数`pid`大于 0，则该函数将编号为`sig`的信号发送给进程`pid`；如果参数`pid`等于 0，则该函数将信号发送给调用进程所在进程组中的所有进程；如果参数`pid`小于 0，则该函数将信号发送给进程`|pid|`所在进程组中的所有进程。
+
+#### 使用 alarm 函数发送信号
+
+进程可以通过调用`alarm`函数向自己发送 SIGALRM 信号：
+
+```c
+#include <unistd.h>
+unsigned int alarm(unsigned int secs);
+```
+
+内核将在`secs`秒内向调用进程发送 SIGALRM 信号。该函数会丢弃任何未处理的警告信号，并返回其本应剩余的秒数。
+
+### 接收信号
+
+当内核将进程 p 从内核态切换到用户态时，它会检查 p 未阻塞且未处理（Pending & ~Blocked）的信号集。通常该集合为空，内核将控制权转移给 p 逻辑控制流中的下一条指令。而如果该集合非空，则内核会选择集合中的某个信号 k 并强制 p 接收它。信号将触发进程完成一些动作（Action），预定义的默认动作有：
+
+- 进程终止；
+- 进程终止并转储核心（Dump Core，即将代码和数据内存段的镜像写入磁盘）；
+- 进程停止（暂停），直到接收 SIGCONT 信号重新启动；
+- 进程忽略该信号。
+
+每种信号的默认动作见图。除 SIGSTOP 和 SIGKILL 信号外，进程可以通过函数`signal`修改信号的默认动作：
+
+```c
+#include <signal.h>
+typedef void (*sighandler_t)(int);
+sighandler_t signal(int signum, sighandler_t handler);
+// Returns: pointer to previous handler if OK, SIG_ERR on error (does not set errno)
+```
+
+如果参数`handler`为 SIG_IGN，则 `signum`类型的信号将会被忽略；如果参数`handler`为 SIG_DFL，则`signum`类型的信号的动作将恢复为默认；如果参数`handler`为用户定义的信号处理程序地址，则进程接收到`signum`类型的信号后会调用该程序，这种方法称为安装处理程序（Installing Handler）。调用处理程序称为捕获信号（Catching Signal），执行处理程序称为处理信号（Handling Signal）。
+
+如果我们在示例程序运行时按下 Ctrl+C，该进程不会直接终止而是输出一段信息后才终止：
+
+```c
+#include "csapp.h"
+
+void handler(int sig) /* SIGINT handler */
+{
+    printf("Caught SIGINT\n");               
+    exit(0);                                 
+}                                            
+
+int main() 
+{
+    /* Install the SIGINT handler */         
+    if (signal(SIGINT, handler) == SIG_ERR)  
+      unix_error("signal error");          
+    
+    pause(); /* Wait for the receipt of a signal */ 
+    exit(0);
+}
+```
+
+信号处理程序还可以被其他处理程序中断（$s \ne t$）：
+
+![20220223154049](https://cdn.jsdelivr.net/gh/koktlzz/NoteImg@main/20220223154049.png)
+
+### 阻塞信号
+
+Linux 为阻塞信号提供了显式和隐式的实现机制：
+
+- 隐式：默认情况下，内核会阻塞任何与处理程序当前正在处理的信号类型相同的未处理信号。比如上图 8.31 中，如果信号 t 的类型与 s 相同，则 t 将在处理程序 S 返回前持续挂起；
+- 显式：应用程序可以通过调用`sigprocmask`等函数阻塞信号或解除信号的阻塞。
+
+```c
+#include <signal.h>
+int sigprocmask(int how, const sigset_t *set, sigset_t *oldset);
+int sigemptyset(sigset_t *set);
+int sigfillset(sigset_t *set);
+int sigaddset(sigset_t *set, int signum);
+int sigdelset(sigset_t *set, int signum);
+// Returns: 0 if OK, −1 on error
+
+int sigismember(const sigset_t *set, int signum);
+// Returns: 1 if member, 0 if not, −1 on error
+```
+
+`sigprocmask`函数可以改变当前阻塞信号的集合（参数`oldset`），具体行为取决于参数`how`的值：
+
+- SIG_BLOCK：将参数`set`中的信号阻塞（`blocked = oldset | set`）；
+- SIG_UNBLOCK：为`set`中的信号解除阻塞（`blocked = oldset & ~set`）；
+- SIG_SETMASK：将阻塞信号集合设为`set`（`blocked = set`）。
+
+函数`sigemptyset`将`set`初始化为空集；`sigfillset`将所有信号加入到`set`中；`sigaddset`将编号为`signum`的信号加入到`set`中；`sigdelset`将编号为`signum`的信号从`set`中删除；如果`signum`信号在`set`中，则函数`sigismember`返回 1，否则返回 0。
+
+示例程序暂时阻塞了 SIGINT 信号的接收：
+
+```c
+sigset_t mask, prev_mask;
+Sigemptyset(&mask);
+Sigaddset(&mask, SIGINT);
+/* Block SIGINT and save previous blocked set */
+Sigprocmask(SIG_BLOCK, &mask, &prev_mask);
+
+// Code region that will not be interrupted by SIGINT
+
+/* Restore previous blocked set, unblocking SIGINT */
+Sigprocmask(SIG_SETMASK, &prev_mask, NULL);
+```
+
+### 编写信号处理程序
