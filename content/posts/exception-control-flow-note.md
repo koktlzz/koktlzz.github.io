@@ -1,7 +1,7 @@
 ---
 title: "CSAPP 读书笔记：异常控制流"
 date: 2022-01-16T16:41:42+01:00
-draft: true
+draft: false
 tags: ["CSAPP","OS"]
 summary: "在计算机运行过程中，程序计数器将依次指向一系列的值：$a_0, a_1, ..., a_n$。其中，$a_k$ 是其对应指令 $I_k$ 的地址。每个从 $a_k$ 到 $a_{k+1}$ 的转换都称为控制转移（Control Transfer），一系列的控制转移则称为处理器的控制流（Control Flow）..."
 ---
@@ -103,9 +103,10 @@ summary: "在计算机运行过程中，程序计数器将依次指向一系列�
 C 标准库为大多数系统调用提供了一组包装函数（Wrapper Function），它们比直接使用系统调用更加方便。系统调用及其相关的包装函数统称为系统级函数。举例来说，我们可以使用系统级函数`write`代替`printf`：
 
 ```c
-int main() {
-write(1, "hello, world\n", 13);
-_exit(0);
+int main()
+{
+    write(1, "hello, world\n", 13);
+    _exit(0);
 }
 ```
 
@@ -165,35 +166,36 @@ X86-64 系统通过`syscall`指令使用系统调用，其所有参数均通过�
 当执行 Unix 系统级函数遇到错误时，它们会返回 -1 并设置全局整型变量`errno`的值。因此我们可以在程序中检查调用是否发生错误，如：
 
 ```c
-if ((pid = fork()) < 0) {
-  fprintf(stderr, "fork error: %s\n", strerror(errno));
-  exit(0);
-  }
+if ((pid = fork()) < 0)
+{
+    fprintf(stderr, "fork error: %s\n", strerror(errno));
+    exit(0);
+}
 ```
 
 其中，`strerror`函数会根据`errno`的值返回相关的文本字符串。我们可以定义一个错误报告（Error-reporting）函数，从而将上述代码进行简化：
 
 ```c
 void unix_error(char *msg) /* Unix-style error */
-  {
-  fprintf(stderr, "%s: %s\n", msg, strerror(errno));
-  exit(0);
-  }
+{
+    fprintf(stderr, "%s: %s\n", msg, strerror(errno));
+    exit(0);
+}
 
 if ((pid = fork()) < 0)
-  unix_error("fork error");
+    unix_error("fork error");
 ```
 
 我们再定义一个错误处理（Error-handling）函数，将代码进一步地简化：
 
 ```c
 pid_t Fork(void)
-  {
-  pid_t pid;
-  if ((pid = fork()) < 0)
-  unix_error("Fork error");
-  return pid;
-  }
+{
+    pid_t pid;
+    if ((pid = fork()) < 0)
+        unix_error("Fork error");
+    return pid;
+}
 
 pid = Fork();
 ```
@@ -245,19 +247,20 @@ pid_t fork(void);
 ```c
 #include "csapp.h"
 
-int main() 
+int main()
 {
     pid_t pid;
     int x = 1;
 
-    pid = Fork(); 
-    if (pid == 0) {  /* Child */
-        printf("child : x=%d\n", ++x); 
+    pid = Fork();
+    if (pid == 0)
+    { /* Child */
+        printf("child : x=%d\n", ++x);
         exit(0);
     }
 
     /* Parent */
-    printf("parent: x=%d\n", --x); 
+    printf("parent: x=%d\n", --x);
     exit(0);
 }
 ```
@@ -288,6 +291,7 @@ child : x=2
 #include <sys/types.h>
 #include <sys/wait.h>
 pid_t waitpid(pid_t pid, int *statusp, int options);
+// Returns: PID of child if OK, 0 (if WNOHANG), or −1 on error
 ```
 
 默认情况下（参数`options`为 0 时），函数`waitpid`会暂停调用进程，直至其等待集（Wait Set）中的某个子进程终止。该函数始终返回导致其返回的子进程 PID。此时，终止的子进程已被回收，内核从系统中删除了它的所有痕迹。
@@ -498,7 +502,7 @@ unsigned int alarm(unsigned int secs);
 - 进程停止（暂停），直到接收 SIGCONT 信号重新启动；
 - 进程忽略该信号。
 
-每种信号的默认动作见图。除 SIGSTOP 和 SIGKILL 信号外，进程可以通过函数`signal`修改信号的默认动作：
+每种信号的默认动作见 [图 8.26](/posts/exception-control-flow-note/#信号)。除 SIGSTOP 和 SIGKILL 信号外，进程可以通过函数`signal`修改信号的默认动作：
 
 ```c
 #include <signal.h>
@@ -516,17 +520,17 @@ sighandler_t signal(int signum, sighandler_t handler);
 
 void handler(int sig) /* SIGINT handler */
 {
-    printf("Caught SIGINT\n");               
-    exit(0);                                 
-}                                            
+    printf("Caught SIGINT\n");
+    exit(0);
+}
 
-int main() 
+int main()
 {
-    /* Install the SIGINT handler */         
-    if (signal(SIGINT, handler) == SIG_ERR)  
-      unix_error("signal error");          
-    
-    pause(); /* Wait for the receipt of a signal */ 
+    /* Install the SIGINT handler */
+    if (signal(SIGINT, handler) == SIG_ERR)
+        unix_error("signal error");
+
+    pause(); /* Wait for the receipt of a signal */
     exit(0);
 }
 ```
@@ -581,3 +585,98 @@ Sigprocmask(SIG_SETMASK, &prev_mask, NULL);
 ```
 
 ### 编写信号处理程序
+
+#### 安全的信号处理
+
+如果处理程序和主程序并发地访问同一个全局数据结构，就会发生不可预知的严重问题。因此我们应当遵循以下守则：
+
+- 使信号处理程序尽可能的简单；
+- 仅调用异步信号安全（Async-Signal-Safe）的函数。这种函数一般只访问局部变量，或者不会被其他信号处理程序中断。值得注意的是，许多常用的函数，如`printf`、`sprintf`、`malloc`和`exit`等并非异步信号安全。而调用`write`函数是信号处理程序生成输出的唯一安全方法；
+- 保存并恢复变量`errno`：许多 Linux 异步信号安全函数返回错误时会设置变量`errno`的值，可能会干扰程序中其他依赖`errno`的部分。因此当处理程序有返回时，我们应当在调用前将`errno`保存到局部变量中，并在返回前恢复其值；
+- 访问全局数据结构时阻塞所有信号；
+- 使用`volatile`声明全局变量，如`volatile int g;`；
+- 使用`sig_atomic_t`类型声明标识（Flag），如`volatile sig_atomic_t flag;`。
+
+#### 正确的信号处理
+
+上文提到，同一时间内相同类型的未处理信号最多只能有一个。关键在于，未处理信号的存在仅表明至少有一个信号已经到达。
+
+```c
+#include "csapp.h"
+
+void handler1(int sig)
+{
+    pid_t pid;
+
+    if ((pid = waitpid(-1, NULL, 0)) < 0)
+        unix_error("waitpid error");
+    printf("Handler reaped child %d\n", (int)pid);
+    Sleep(2);
+    return;
+}
+
+int main()
+{
+    int i, n;
+    char buf[MAXBUF];
+
+    if (signal(SIGCHLD, handler1) == SIG_ERR)
+        unix_error("signal error");
+
+    /* Parent creates children */
+    for (i = 0; i < 3; i++)
+    {
+        if (Fork() == 0)
+        {
+            fprintf("Hello from child %d\n", (int)getpid());
+            Sleep(1);
+            exit(0);
+        }
+    }
+
+    /* Parent waits for terminal input and then processes it */
+    if ((n = read(STDIN_FILENO, buf, sizeof(buf))) < 0)
+        unix_error("read");
+
+    printf("Parent processing input\n");
+    while (1)
+        ;
+
+    exit(0);
+}
+```
+
+在示例程序中，父进程安装了处理程序`handler1`并创建三个子进程。它等待来自终端的输入，然后进入 While 循环。每当一个子进程终止时，内核将发送一个 SIGCHLD 通知父进程。父进程捕获信号后回收子进程，输出一段信息然后返回。
+
+在 Linux 上运行该程序得到的输出结果为：
+
+```c
+linux> ./signal1
+Hello from child 14073 
+Hello from child 14074 
+Hello from child 14075 
+Handler reaped child 
+Handler reaped child
+CR
+Parent processing input
+```
+
+我们发现父进程创建了三个子进程，然而却只回收了两个。这是因为信号处理程序在处理第一个信号时，第二个信号到达并添加到未处理信号集中。此时如果第三个信号到达，由于已有一个 SIGCHLD 信号未处理，因此它被直接丢弃。处理程序返回后，内核发现第二个信号还未处理，于是强制父进程接收该信号。父进程再次捕获信号并第二次执行处理程序。当处理程序第二次返回后，不再有任何未处理的信号，第三个子进程成为了僵尸进程。
+
+适当修改处理程序可以解决这一问题：
+
+```c
+void handler2(int sig)
+{
+    pid_t pid;
+
+    while ((pid = waitpid(-1, NULL, 0)) > 0)
+        printf("Handler reaped child %d\n", (int)pid);
+    if (errno != ECHILD)
+        unix_error("waitpid error");
+    Sleep(2);
+    return;
+}
+```
+
+#### 可移植的信号处理
