@@ -508,11 +508,13 @@ int sigismember(const sigset_t *set, int signum);
 // Returns: 1 if member, 0 if not, −1 on error
 ```
 
-`sigprocmask`函数可以改变当前阻塞信号的集合（参数`oldset`），具体行为取决于参数`how`的值：
+`sigprocmask`函数可以改变当前阻塞信号的集合（设为`blocked`），具体行为取决于参数`how`的值：
 
-- SIG_BLOCK：将参数`set`中的信号阻塞（`blocked = oldset | set`）；
-- SIG_UNBLOCK：为`set`中的信号解除阻塞（`blocked = oldset & ~set`）；
+- SIG_BLOCK：将参数`set`中的信号阻塞（`blocked = blocked | set`）；
+- SIG_UNBLOCK：为`set`中的信号解除阻塞（`blocked = blocked & ~set`）；
 - SIG_SETMASK：将阻塞信号集合设为`set`（`blocked = set`）。
+
+如果参数`oldset`非空，则先前`blocked`的值会存储在`oldset`中。
 
 函数`sigemptyset`将`set`初始化为空集；`sigfillset`将所有信号加入到`set`中；`sigaddset`将编号为`signum`的信号加入到`set`中；`sigdelset`将编号为`signum`的信号从`set`中删除；如果`signum`信号在`set`中，则函数`sigismember`返回 1，否则返回 0。
 
