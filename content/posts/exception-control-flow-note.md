@@ -1,7 +1,7 @@
 ---
 title: "CSAPP 读书笔记：异常控制流"
 date: 2022-01-16T16:41:42+01:00
-draft: false
+draft: true
 tags: ["CSAPP","OS"]
 summary: "在计算机运行过程中，程序计数器将依次指向一系列的值：$a_0, a_1, ..., a_n$。其中，$a_k$ 是其对应指令 $I_k$ 的地址。每个从 $a_k$ 到 $a_{k+1}$ 的转换都称为控制转移（Control Transfer），一系列的控制转移则称为处理器的控制流（Control Flow）..."
 ---
