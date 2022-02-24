@@ -732,5 +732,4 @@ sigprocmask(SIG_SETMASK, &prev, NULL);
 
 原子性保证了对第一行`sigprocmask`和第二行`pause`的调用是同时的，从而消除了如果在调用`sigprocmask`之后且调用`pause`之前接收到信号所导致的竞争问题。
 
-
 ## 非本地调转
