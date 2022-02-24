@@ -680,3 +680,57 @@ void handler2(int sig)
 ```
 
 #### 可移植的信号处理
+
+不同的系统有着不同的信号处理语义，因此 Posix 标准定义了`sigaction`函数，它允许用户在安装信号处理程序时清楚地指定他们想要的语义：
+
+```c
+#include <signal.h>
+int sigaction(int signum,  struct sigaction *act,
+              struct sigaction *oldact);
+// Returns: 0 if OK, −1 on error
+```
+
+然而，`sigaction`函数十分笨重，因此我们常使用它的包装函数`Signal`：
+
+```c
+handler_t *Signal(int signum, handler_t *handler)
+{
+    struct sigaction action, old_action;
+    action.sa_handler = handler;
+    sigemptyset(&action.sa_mask); /* Block sigs of type being handled */
+    action.sa_flags = SA_RESTART; /* Restart syscalls if possible */
+
+    if (sigaction(signum, &action, &old_action) < 0)
+        unix_error("Signal error");
+    return (old_action.sa_handler);
+}
+```
+
+### 避免并发错误
+
+上文提到，我们永远无法预测两个同步（并发）运行的函数的调用顺序。如果调用顺序会影响结果的正确性，我们就将这种错误称为竞争（Race）。为此，我们可以通过阻塞相关信号来避免这一问题。
+
+### 显式等待信号
+
+有时候主程序需要显式等待某个信号处理程序运行。例如 Linux Shell 创建前台任务后，必须等待任务终止并被 SIGCHLD 处理程序回收，然后才能接收下一条用户命令。
+
+```c
+#include <signal.h>
+int sigsuspend(const sigset_t *mask);
+// Returns: -1
+```
+
+函数`sigsuspend`用参数`mask`替换当前的阻塞信号集合，然后暂停进程直至其接收信号。如果该信号的动作是终止进程，则进程终止且不从`sigsuspend`返回；如果该信号的动作是运行一个处理程序，则`sigsuspend`在处理程序返回后返回，并将阻塞信号集合的状态恢复。
+
+该函数等效于下列函数组合的原子性（Atomic，即不可中断）版本：
+
+```c
+sigprocmask(SIG_SETMASK, &mask, &prev);
+pause();
+sigprocmask(SIG_SETMASK, &prev, NULL);
+```
+
+原子性保证了对第一行`sigprocmask`和第二行`pause`的调用是同时的，从而消除了如果在调用`sigprocmask`之后且调用`pause`之前接收到信号所导致的竞争问题。
+
+
+## 非本地调转
