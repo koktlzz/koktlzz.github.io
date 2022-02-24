@@ -200,7 +200,7 @@ pid_t Fork(void)
 pid = Fork();
 ```
 
-这样我们就可以使用包装函数`Fork`代替`fork`及其错误检查代码。本书使用的包装函数均定义在头文件 [<csapp.h.>](http://csapp.cs.cmu.edu/2e/ics2/code/include/csapp.h) 中。
+这样我们就可以使用包装函数`Fork`代替`fork`及其错误检查代码。本书使用的包装函数均定义在 [csapp.h](http://csapp.cs.cmu.edu/2e/ics2/code/include/csapp.h) 和  [csapp.c](http://csapp.cs.cmu.edu/2e/ics2/code/src/csapp.c) 中。
 
 ## 进程控制
 
