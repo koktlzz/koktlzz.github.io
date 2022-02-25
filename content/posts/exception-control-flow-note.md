@@ -712,7 +712,64 @@ handler_t *Signal(int signum, handler_t *handler)
 
 ### 显式等待信号
 
-有时候主程序需要显式等待某个信号处理程序运行。例如 Linux Shell 创建前台任务后，必须等待任务终止并被 SIGCHLD 处理程序回收，然后才能接收下一条用户命令。
+有时候主程序需要显式等待某个信号处理程序运行。例如 Linux Shell 创建前台任务后，必须等待任务终止并被 SIGCHLD 处理程序回收，然后才能接收下一条用户命令。示例程序展示了其基本思想：
+
+```c
+#include "csapp.h"
+
+volatile sig_atomic_t pid;
+
+void sigchld_handler(int s)
+{
+    int olderrno = errno;
+    pid = waitpid(-1, NULL, 0);
+    errno = olderrno;
+}
+void sigint_handler(int s)
+{
+}
+int main(int argc, char **argv)
+{
+    sigset_t mask, prev;
+    Signal(SIGCHLD, sigchld_handler);
+    Signal(SIGINT, sigint_handler);
+    Sigemptyset(&mask);
+    Sigaddset(&mask, SIGCHLD);
+    while (1)
+    {
+        Sigprocmask(SIG_BLOCK, &mask, &prev); /* Block SIGCHLD */
+        if (Fork() == 0)                      /* Child */
+            exit(0);
+        /* Parent */
+        pid = 0;
+        Sigprocmask(SIG_SETMASK, &prev, NULL); /* Unblock SIGCHLD */
+        /* Wait for SIGCHLD to be received (wasteful) */
+        while (!pid)
+            ;
+        /* Do some work after receiving SIGCHLD */
+        printf(".");
+    }
+    exit(0);
+}
+```
+
+父进程首先为信号 SIGCHLD 和 SIGINT 安装处理程序，然后创建子进程并将全局变量`pid`设为 0，最后进入自旋循环（`while (!pid)`）。子进程终止后，`pid`变为非 0，于是父进程退出自旋循环。为了防止父进程进入自旋循环前接收到 SIGCHLD ，我们需要在创建子进程之前阻塞该信号。
+
+这段代码是正确的，但自旋循环会浪费处理器资源。我们可以将其改为：
+
+```c
+while (!pid) /* Race! */
+    pause();
+```
+
+其问题在于：如果父进程在 While 的条件测试之后而`pause`执行之前接收到 SIGCHLD，那么程序将永远休眠。而如果我们将`pause`改为`sleep`：
+
+```c
+while (!pid) /* Too slow! */
+    sleep(1);
+```
+
+这样虽然避免了竞争问题，但会增加程序的运行时间。正确的解决方案是使用函数`sigsuspend`：
 
 ```c
 #include <signal.h>
@@ -720,9 +777,9 @@ int sigsuspend(const sigset_t *mask);
 // Returns: -1
 ```
 
-函数`sigsuspend`用参数`mask`替换当前的阻塞信号集合，然后暂停进程直至其接收信号。如果该信号的动作是终止进程，则进程终止且不从`sigsuspend`返回；如果该信号的动作是运行一个处理程序，则`sigsuspend`在处理程序返回后返回，并将阻塞信号集合的状态恢复。
+该函数用参数`mask`替换当前的阻塞信号集合，然后暂停进程直至其接收信号。如果该信号的动作是终止进程，则进程终止且不从`sigsuspend`返回；如果该信号的动作是运行一个处理程序，则`sigsuspend`在处理程序返回后返回，并将阻塞信号集合的状态恢复。
 
-该函数等效于下列函数组合的原子性（Atomic，即不可中断）版本：
+实际上它等效于下列函数组合的原子性（Atomic，即不可中断）版本：
 
 ```c
 sigprocmask(SIG_SETMASK, &mask, &prev);
@@ -730,6 +787,86 @@ pause();
 sigprocmask(SIG_SETMASK, &prev, NULL);
 ```
 
-原子性保证了对第一行`sigprocmask`和第二行`pause`的调用是同时的，从而消除了如果在调用`sigprocmask`之后且调用`pause`之前接收到信号所导致的竞争问题。
+原子性保证了对第一行`sigprocmask`和第二行`pause`的调用是同时的，从而消除了如果在调用`sigprocmask`之后且调用`pause`之前接收到信号所导致的永久休眠问题。因此我们可以将示例函数修改为：
+
+```c
+while (1)
+{
+    Sigprocmask(SIG_BLOCK, &mask, &prev); /* Block SIGCHLD */
+    if (Fork() == 0)                      /* Child */
+        exit(0);
+    /* Wait for SIGCHLD to be received */
+    pid = 0;
+    while (!pid)
+        sigsuspend(&prev);
+    /* Optionally unblock SIGCHLD */
+    Sigprocmask(SIG_SETMASK, &prev, NULL);
+    /* Do some work after receiving SIGCHLD */
+    printf(".");
+}
+```
 
 ## 非本地调转
+
+C 提供了一种用户级别的异常控制流，称为非本地跳转（Nonlocal Jump）。它可以无需经过正常的调用和返回序列，就将控制权从一个函数直接转移到另一个当前正在执行的函数。非本地跳转是通过`setjmp`和`longjmp`函数实现的：
+
+```c
+#include <setjmp.h>
+int setjmp(jmp_buf env);
+int sigsetjmp(sigjmp_buf env, int savesigs);
+// Returns: 0 from setjmp, nonzero from longjmps
+
+void longjmp(jmp_buf env, int retval);
+void siglongjmp(sigjmp_buf env, int retval);
+// Never returns
+```
+
+`setjmp`函数将当前调用环境（Calling Environment，包括程序计数器、栈指针和通用寄存器等），保存在参数`env`指定的缓冲区中。`longjmp`函数会从`env`缓冲区恢复调用环境，然后触发最近调用的`setjmp`函数的返回。此时`setjmp`会返回一个非零值`retval`。
+
+非局部跳转的一个重要应用是可以在检测到某些错误条件时，从深度嵌套的函数调用中立即返回。我们可以使用非本地跳转直接返回到常见的错误处理程序，而无需费力地展开栈（Unwind Stack）。
+
+```c
+#include "csapp.h"
+
+jmp_buf buf;
+
+int error1 = 0;
+int error2 = 1;
+
+void foo(void), bar(void);
+
+int main()
+{
+    switch (setjmp(buf))
+    {
+    case 0:
+        foo();
+        break;
+    case 1:
+        printf("Detected an error1 condition in foo\n");
+        break;
+    case 2:
+        printf("Detected an error2 condition in foo\n");
+        break;
+    default:
+        printf("Unknown error condition in foo\n");
+    }
+    exit(0);
+}
+
+/* Deeply nested function foo */
+void foo(void)
+{
+    if (error1)
+        longjmp(buf, 1);
+    bar();
+}
+
+void bar(void)
+{
+    if (error2)
+        longjmp(buf, 2);
+}
+```
+
+示例程序中主程序首先调用setjmp保存当前调用环境，然后调用函数foo，进而调用函数bar。 如果 foo 或 bar 遇到错误，它们会立即通过 longjmp 调用从 setjmp 返回。 setjmp 的非零返回值指示错误类型，然后可以在代码中的一处进行解码和处理。 longjmp 允许它跳过所有中间调用的功能可能会产生意想不到的后果。 例如，如果在中间函数调用中分配了一些数据结构，目的是在函数结束时释放它们，则释放代码将被跳过，从而造成内存泄漏。
