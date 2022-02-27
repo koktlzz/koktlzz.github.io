@@ -1,7 +1,7 @@
 ---
 title: "CSAPP 读书笔记：异常控制流"
 date: 2022-01-16T16:41:42+01:00
-draft: true
+draft: false
 tags: ["CSAPP","OS"]
 summary: "在计算机运行过程中，程序计数器将依次指向一系列的值：$a_0, a_1, ..., a_n$。其中，$a_k$ 是其对应指令 $I_k$ 的地址。每个从 $a_k$ 到 $a_{k+1}$ 的转换都称为控制转移（Control Transfer），一系列的控制转移则称为处理器的控制流（Control Flow）..."
 ---
@@ -821,7 +821,7 @@ void siglongjmp(sigjmp_buf env, int retval);
 // Never returns
 ```
 
-`setjmp`函数将当前调用环境（Calling Environment，包括程序计数器、栈指针和通用寄存器等），保存在参数`env`指定的缓冲区中。`longjmp`函数会从`env`缓冲区恢复调用环境，然后触发最近调用的`setjmp`函数的返回。此时`setjmp`会返回一个非零值`retval`。
+`setjmp`函数将当前调用环境（Calling Environment，包括程序计数器、栈指针和通用寄存器等），保存在参数`env`指定的缓冲区中。`longjmp`函数会从`env`缓冲区恢复调用环境，然后触发最近调用的`setjmp`函数的返回。此时`setjmp`会返回一个非零值`retval`。而在信号处理程序中，我们使用`sigsetjmp`和`siglongjmp`代替它们。
 
 非局部跳转的一个重要应用是可以在检测到某些错误条件时，从深度嵌套的函数调用中立即返回。我们可以使用非本地跳转直接返回到常见的错误处理程序，而无需费力地展开栈（Unwind Stack）。
 
@@ -870,3 +870,5 @@ void bar(void)
 ```
 
 示例程序中主函数首先调用`setjmp`保存当前调用环境，然后依次调用函数`foo`和`bar`。 一旦函数执行发生错误，它们会立即通过`longjmp`从`setjmp`返回。`setjmp`的非零返回值表示错误的类型，因此我们可以在代码中的某处对其进行处理。
+
+非局部跳转的另一个重要应用是从信号处理程序跳转到特定代码位置，而不是像往常那样返回到因信号中断的指令。
