@@ -102,7 +102,7 @@ int g()
 - UNDEF：在此文件中引用但在其他文件中定义的符号；
 - COMMON：未初始化的全局符号。
 
-上述三个 Section 仅存在于可重定位目标文件，而在可执行目标文件中并不存在。我们可以使用 READELF 工具阅读目标文件中的内容，[示例程序](/posts/linking-notes/#编译器驱动) 生成的目标文件`main.o`中的符号表条目如下：
+上述三个 Section 仅存在于可重定位目标文件，而在可执行目标文件中并不存在。我们可以使用 READELF 工具阅读目标文件中的内容，[示例程序](/posts/linking-note/#编译器驱动) 生成的目标文件`main.o`中的符号表条目如下：
 
 ![20220315225352](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220315225352.png)
 
