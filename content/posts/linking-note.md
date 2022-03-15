@@ -90,7 +90,7 @@ int g()
 ![20220315222437](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220315222437.png)
 
 - `name`：符号名在字符串表 *.strtab* 中的偏移量；
-- `value`：对于可重定位目标文件是符号在其 Section中的偏移量，对于可执行目标文件是绝对的运行时地址；
+- `value`：对于可重定位目标文件是符号在其 Section 中的偏移量，对于可执行目标文件是绝对的运行时地址；
 - `size`：符号的大小；
 - `type`：符号的类型；
 - `binding`：符号是局部的还是全局的；
