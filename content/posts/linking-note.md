@@ -198,6 +198,47 @@ linux> gcc -static -o prog2c main2.o ./libvector.a
 
 ## 重定位
 
-符号解析完成后，链接器会将代码中的每个符号引用与一个符号定义相关联。接下来，链接器合并各输入模块并将运行时地址分配给每个符号。
+符号解析完成后，链接器会将代码中的每个符号引用与一个符号定义相关联。接下来，链接器将开始对目标文件重定位：
+
+- 重定位 Section 和符号定义：链接器将所有输入模块中相同类型的 Section 合并为一个新的聚合 Section，然后将运行时地址分配给每个符号；
+- 在 Section 内重定位符号引用：链接器修改代码和数据段中的每个符号引用，使其指向正确的运行时地址。
 
 ### 重定位条目
+
+汇编器在生成目标文件时，并不知晓代码、数据和引用的外部符号在内存中的最终位置。它只会为每个引用生成一个重定位条目（Relocation Entry），指导链接器如何修改它们。上文提到，代码的重定位条目放在 .rel.text 中，数据的重定位条目则放在 .rel.data 中。
+
+ELF 重定位条目的数据结构为：
+
+```c
+typedef struct {
+    long offset;    /* Offset of the reference to relocate */
+    long type:32,   /* Relocation type */
+         symbol:32; /* Symbol table index */
+    long addend;    /* Constant part of relocation expression */
+} Elf64_Rela;
+```
+
+`offset`是需要被修改的引用在其所在 Section 的偏移量；`symbol`是被修改的引用指向的符号；`type`告知链接器如何修改引用；`addend`是一个有符号常量，某些类型的重定位使用它来偏置被修改的引用的值。
+
+最基本的两种重定位类型为：
+
+- R_X86_64_PC32：使用 32 位 PC 相对地址重定位引用。当 CPU 执行一条使用 PC 相对地址的指令时，它会将指令中的目标地址与 PC 当前值（即下一条指令在内存中的地址）相加得到有效地址（在 [跳转指令](/posts/machine-level-representation-of-programs-note/#跳转指令) 一节中我们讨论过这一问题）；
+- R_X86_64_32：使用 32 位绝对地址重定位引用。CPU 直接使用指令中的目标地址作为有效地址，无需进一步地修改。
+
+### 重定位符号引用
+
+重定位算法的伪码如下图所示：
+
+![20220322220835](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220322220835.png)
+
+链接器遍历每个 Section（`s`）中的每个重定位条目（`r`），`s`是一个字节数组，`r`是上一节介绍的 Elf64_Rela 类型的结构体。假设该算法运行时，链接器已经为每个 Section 和每个符号选择了运行时地址 `ADDR(s)`和`ADDR(r.symbol)`。
+
+链接器使用此算法对 [示例程序](/posts/linking-note/#编译器驱动) 进行重定位引用的结果如下（`objdump -dx main.o`）。重定位条目（图中第 5 行和第 7 行）告知链接器对符号`array`的引用使用绝对地址重定位，而对符号`sum()`的引用则使用 PC 相对地址重定位：
+
+![20220322221944](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220322221944.png)
+
+#### PC 相对地址重定位
+
+#### 绝对地址重定位
+
+## 可执行目标文件
