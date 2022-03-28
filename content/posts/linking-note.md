@@ -200,7 +200,7 @@ linux> gcc -static -o prog2c main2.o ./libvector.a
 
 符号解析完成后，链接器会将代码中的每个符号引用与一个符号定义相关联。接下来，链接器将开始对目标文件重定位：
 
-- 重定位 Section 和符号定义：链接器将所有输入模块中相同类型的 Section 合并为一个新的聚合 Section，然后将运行时地址分配给每个符号；
+- 重定位 Section 和符号定义：链接器将所有输入模块中相同类型的 Section 合并为一个新的聚合 Section，然后将运行时地址分配给每个 Section 和符号；
 - 在 Section 内重定位符号引用：链接器修改代码和数据段中的每个符号引用，使其指向正确的运行时地址。
 
 ### 重定位条目
@@ -239,6 +239,106 @@ typedef struct {
 
 #### PC 相对地址重定位
 
+如上图第 6 行所示：指令`callq`在其所在 Section 中的偏移量为 0xe，它包含一个一字节的指令码 0xe8 和一个用于指向`sum()`的 32 位 PC 相对引用的占位符。该引用对应的重定位条目为：
+
+```c
+r.offset = 0xf
+r.symbol = sum
+r.type   = R_X86_64_PC32
+r.addend = -4
+```
+
+上述字段告诉链接器需要修改从偏移量 0xf 开始的 32 位 PC 相对引用，使其在运行时指向`sum()`。 假设`ADDR(s) = ADDR(.text) = 0x4004d0`，`ADDR(r.symbol) = ADDR(sum) = 0x4004e8`，那么首先我们可以计算得到该引用的运行时地址为：
+
+```c
+refaddr = ADDR(s)  + r.offset
+        = 0x4004d0 + 0xf
+        = 0x4004df
+```
+
+然后根据上节中的算法更新引用使其指向`sum()`：
+
+```c
+*refptr = (unsigned) (ADDR(r.symbol) + r.addend - refaddr)
+        = (unsigned) (0x4004e8       + (-4)     - 0x4004df)
+        = (unsigned) (0x5)
+```
+
+指令`callq`的运行时地址为 0x4004de（`refaddr -1`）。当 CPU 执行该指令时，PC 中的值为该指令的下一条指令的地址 0x4004e3（`refaddr + 4`）。CPU 将该值压入栈中，然后加上 0x5（即`*refptr`），就得到了`sum()`的地址 0x4004e8。
+
 #### 绝对地址重定位
 
+如上图中的第四行所示：指令`mov`将数组地址拷贝到寄存器 %edi 中，它在 Section 中的偏移量为 0x9，包含一个一字节的指令码 0xbf 和一个用于指向`array`的 32 位绝对引用的占位符。该引用的重定位条目为：
+
+```c
+r.offset = 0xa
+r.symbol = array
+r.type   = R_X86_64_32
+r.addend = 0
+```
+
+上述字段告诉链接器需要修改从偏移量 0xa 开始的 32 位 PC 绝对引用，使其在运行时指向`array`。 假设`ADDR(r.symbol) = ADDR(array) = 0x601018`，那么我们可以根据上节中的算法更新该引用为：
+
+```c
+*refptr = (unsigned) (ADDR(r.symbol) + r.addend)
+        = (unsigned) (0x601018       + 0)
+        = (unsigned) (0x601018)
+```
+
+下图展示了最终生成的可执行目标文件中的 .text 和 .data：
+
+![20220323220700](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220323220700.png)
+
+加载器可以在加载时将这些 Section 中的字节直接拷贝到内存中，无需任何修改就可以运行其中的指令。
+
 ## 可执行目标文件
+
+ELF 可执行目标文件的结构如下：
+
+![20220323221156](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220323221156.png)
+
+ELF 头描述了文件的整体格式，并且包含了程序在运行时要执行的第一条指令的地址。.init 定义了一个名为`_init`的函数，它将被程序的初始化代码所调用。其余 Section 与可重定位目标文件类似，只不过它们已被重定位到运行时的内存地址。正因如此，该文件中没有 .rel.text 和 .rel.data。
+
+可执行目标文件的连续块与连续内存段之间存在映射关系，程序头表（Program Header Table）对此进行了描述：
+
+![20220328213254](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220328213254.png)
+
+第一个内存段具有读取和执行权限，从内存地址 0x40000 开始，大小为 0x69c 个字节。该内存段是由可执行目标文件的前 0x69c 个字节（偏移量为 0）初始化得到的，包含了 ELF 头、程序头表、.init、.text 和 .rodata。
+
+第二个内存段具有读取和写入权限，从内存地址 0x600df8 开始，大小为  0x230 个字节。该内存段对应了可执行目标文件中偏移量为 0xdf8 的 0x228 个字节，包含了 .data 和 .bss（两者大小之差的 8 个字节即保存在 .bss 并将在运行时初始化为 0 的数据）。
+
+对于每个内存段，链接器必须选择一个起始地址 vaddr，使得：
+
+$$vaddr\space mod\space align = off\space mod\space align$$
+
+其中，`off`是该内存段中第一个 Section 在目标文件中的偏移量，`align`是程序头中指定的对齐方式。这种对齐要求是一种优化，它可以使目标文件更加有效地加载到内存中，原因请见第九章虚拟内存。
+
+## 加载可执行目标文件
+
+下图展示了 Linux 程序的运行时内存结构：
+
+![20220328220357](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220328220357.png)
+
+加载器首先根据程序头表，将可执行目标文件中的块复制到代码和数据段中。接下来跳转到程序程序入口，即`_start_`函数（在系统目标文件`crt1.o`中定义）的地址。该函数随后调用`libc.so`中定义的系统启动函数`__libc_start_main`。最后由它初始化执行环境，调用用户级的主函数并处理其返回。
+
+## 使用共享库动态链接
+
+静态库需要定期维护和更新，因此程序员需要知晓其变动并将程序与其重新链接。另外，几乎每个 C 程序都会使用一些标准 I/O 函数，例如`printf`。这些函数的代码会在运行时复制到每个进程的代码段中，从而导致严重的内存浪费。
+
+共享库（Shared Libraries）可以解决上述静态库的缺点。它是一种可以在加载时或运行时在任意内存地址加载并与程序链接的目标模块，该过程称为动态链接（Dynamic Linking）。共享库在 Linux 系统中以 .so 为后缀，而在 Windows 系统中则被称为 DLL（Dynamic Linking Libraries）。
+
+在任意文件系统中，每个共享库都只有一个 .so 文件。与静态库不同的是，该文件中的代码和数据可以被引用该库的所有可执行文件共享，而不需要复制到可执行文件中。[示例程序](http://csapp.cs.cmu.edu/2e/ics2/code/link/main2.c) 的动态链接过程如下图所示：
+
+![20220328223854](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220328223854.png)
+
+我们使用如下指令将 [addvec.c](http://csapp.cs.cmu.edu/2e/ics2/code/link/addvec.c) 和 [multvec.c](http://csapp.cs.cmu.edu/2e/ics2/code/link/multvec.c) 构建为共享库文件`libvector.so`:
+
+```c
+linux> gcc -shared -fpic -o libvector.so addvec.c multvec.c
+```
+
+其中，`-fpic`指示编译器生成与位置无关代码（Position-Independent Code），而`-shared`则指示链接器创建共享目标文件。一旦共享库文件创建成功，我们就可以将其链接到示例程序中：
+
+```c
+inux> gcc -o prog2l main2.c ./libvector.so
+```
