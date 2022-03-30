@@ -337,8 +337,47 @@ $$vaddr\space mod\space align = off\space mod\space align$$
 linux> gcc -shared -fpic -o libvector.so addvec.c multvec.c
 ```
 
-其中，`-fpic`指示编译器生成与位置无关代码（Position-Independent Code），而`-shared`则指示链接器创建共享目标文件。一旦共享库文件创建成功，我们就可以将其链接到示例程序中：
+其中，`-fpic`指示编译器生成 [与位置无关代码](/posts/linking-note/#与位置无关代码)（Position-Independent Code），而`-shared`则指示链接器创建共享目标文件。一旦共享库文件创建成功，我们就可以将其链接到示例程序中：
 
 ```c
 inux> gcc -o prog2l main2.c ./libvector.so
 ```
+
+我们需要明确的是，`libvector.so`中的任意代码和数据都没有被复制到可执行文件`prog2l`中。链接器只会复制一些重定位和符号表信息，它们将在加载时用于解析引用了共享库的符号。
+
+加载器随后读取可执行文件中包含的动态链接器路径，加载并运行它。动态链接器也是一个共享库文件，如 Linux 系统的 ld-linux.so。它通过执行以下重定位操作来完成链接：
+
+- 将`libc.so`的代码和数据重定位到某个内存段；
+- 将`libvector.so`中的代码和数据重定位到另一个内存段；
+- 将`prog2l`中所有引用了共享库的符号重定位。
+
+最终，动态链接器将控制权转移给应用程序，共享库的位置不会在程序执行期间改变。
+
+## 从应用程序中加载和链接共享库
+
+应用程序还可以在运行时请求动态链接器加载和链接共享库，其应用场景包括：
+
+- Windows 应用程序的开发人员经常使用共享库来分发软件更新；
+
+- 现代 Web 服务器使用动态链接有效地更新或添加功能。
+
+Linux 系统为应用程序提供了一些简单接口以实现上述功能：
+
+```c
+#include <dlfcn.h>
+void *dlopen(const char *filename, int flag);
+// Returns: pointer to handle if OK, NULL on error
+```
+
+函数`dlopen`加载并链接共享库文件`filename`，参数`flag`可以是 RTLD_GLOBAL、RTLD_NOW 和 RTLD_LAZY 中的一个或多个（详见 [dlopen](https://man7.org/linux/man-pages/man3/dlopen.3.html)）。
+
+```c
+#include <dlfcn.h>
+void *dlsym(void *handle, char *symbol);
+// Returns: pointer to symbol if OK, NULL on error
+```
+
+类似的接口函数还有 [dlsym](https://man7.org/linux/man-pages/man3/dlsym.3.html)、[dlclose](https://man7.org/linux/man-pages/man3/dlclose.3.html) 和 [dlerror](https://man7.org/linux/man-pages/man3/dlerror.3.html)。[示例程序](http://csapp.cs.cmu.edu/2e/ics2/code/link/dll.c) 展示了应用程序是如何调用它们来动态链接共享库的。
+
+## 与位置无关代码
+
