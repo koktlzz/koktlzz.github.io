@@ -1,7 +1,7 @@
 ---
 title: "CSAPP 读书笔记：链接"
 date: 2022-03-02T21:31:42+01:00
-draft: true
+draft: false
 tags: ["CSAPP","OS"]
 summary: "链接（Linking）是将各部分代码和数据收集并组成单个文件的过程，该文件可以被加载（复制）到内存中执行。链接可以在编译时（即源代码被翻译成机器代码时）执行，也可以在加载时 ..."
 ---
@@ -331,7 +331,7 @@ $$vaddr\space mod\space align = off\space mod\space align$$
 
 ![20220328223854](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220328223854.png)
 
-我们使用如下指令将 [addvec.c](http://csapp.cs.cmu.edu/2e/ics2/code/link/addvec.c) 和 [multvec.c](http://csapp.cs.cmu.edu/2e/ics2/code/link/multvec.c) 构建为共享库文件`libvector.so`:
+我们使用如下指令将 [addvec.c 和 multvec.c](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220317215726.png) 构建为共享库文件`libvector.so`:
 
 ```c
 linux> gcc -shared -fpic -o libvector.so addvec.c multvec.c
@@ -385,16 +385,38 @@ void *dlsym(void *handle, char *symbol);
 
 ### PIC 数据引用
 
-无论我们在何处加载目标模块（包括共享目标模块），数据段与代码段之间的距离始终相同。编译器会在数据段的开头为每个全局变量的 PIC 引用创建一个全局偏移量表（Global Offset Table，GOT），并且为其中的每个条目生成重定位记录。加载时，动态链接器重定位每个 GOT 条目，使其包含对象的绝对地址。
+无论我们在何处加载目标模块（包括共享目标模块），数据段与代码段之间的距离始终相同。编译器会在 PIC 数据段的开头为每个全局变量的引用创建一个全局偏移量表（Global Offset Table，GOT），并且为其中的每个条目生成重定位记录。加载时，动态链接器重定位每个 GOT 条目，使其包含对象的绝对地址。每个引用了全局变量的目标模块都有自己的 GOT。
 
 下图展示了示例共享库`libvector.so`中的 GOT：
 
 ![20220331211838](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220331211838.png)
 
-函数`addvec`通过 GOT[3] 间接加载全局变量`addcnt`的地址，然后将其在内存中递增。其关键思想在于相对于 PC 对 GOT[3] 的引用中的偏移量是一个运行时常数。
-
-由于 addcnt 由 libvector.so 模块定义，因此编译器可以通过生成对 addcnt 的直接 PC 相关引用并为链接器添加重定位以在构建共享模块时解析，从而利用代码和数据段之间的恒定距离.但是，如果 addcnt 是由另一个共享模块定义的，则需要通过 GOT 进行间接访问。在这种情况下，编译器选择对所有引用使用最通用的解决方案 GOT。
+函数[`addvec`](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220317215726.png)通过 GOT[3] 间接加载全局变量`addcnt`的地址，然后令其自增。其关键思想在于下一条指令`addl`的地址（即 %rip）与 GOT[3] 之间的偏移量是一个运行时常数。如果`addcnt`是由另一个共享模块定义的，则需要通过 GOT 间接访问。
 
 ### PIC 函数调用
+
+PIC 函数调用的运行时地址是在该函数第一次被调用时确定的，这种技术称为延迟绑定（Lazy Binding）。当应用程序导入了一个包含成百上千个函数的共享库（如 `libc.so`），却只调用其中一小部分的函数时，这种技术可以大大减少加载时不必要的重定位操作。
+
+延迟绑定是通过 GOT 和过程链接表（Procedure Linkage Table，PLT）共同实现的。只要目标模块调用了共享库中定义的函数，那么它就有自己的 GOT 和 PLT。上文提到，GOT 是数据段的一部分，而 PLT 则是代码段的一部分。
+
+GOT 和 PLT 在运行时协同工作解析函数地址的过程如下图所示：
+
+![20220401173947](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220401173947.png)
+
+可执行文件中每个对共享库函数的调用都与 PLT 数组中的条目对应。其中，PLT[0] 是跳转到动态链接器的特殊条目，PLT[1] 对应系统启动函数`__libc_start_main`。从 PLT[2] 开始的条目对应用户代码调用的函数，如图中的`addvec`。
+
+当与 PLT 一起使用时，GOT [0] 和 GOT[1] 包含了动态连接器在解析函数地址时所需的信息，GOT[2] 是动态链接器的入口点。其余的每个条目均对应了一个在运行时需要被解析地址的调用函数，以及一个 PLT 条目。例如，GOT[4] 和 PLT[2] 均对应`addvec`。
+
+程序第一次调用`addvec`并解析其地址的过程如上图（a）所示：
+
+1. PLT[2] 是该函数的入口，程序首先调用它；
+2. PLT[2] 中的第一条指令间接跳转到 GOT[4]。由于最初每个 GOT 条目都指向对应 PLT 条目中的第二条指令，因此控制权将转移到 PLT[2] 中的第二条指令；
+3. PLT[2] 中的第二条指令将`addvec`的 ID 0x1 压入栈中，第三条指令跳转到 PLT[0]；
+4. PLT[0] 中的第一条指令将 *GOT[1] 压入栈中，第二条指令通过 GOT[2] 间接跳转到动态链接器。动态链接器根据被压入栈中的两个条目确定`addvec`的运行时地址，并使用该地址覆盖 GOT[4]，最终将控制权转移给`addvec`。
+
+程序再次调用`addvec`的过程如上图（b）所示：
+
+1. 程序依然首先调用 PLT[2]；
+2. 此时 GOT[4] 指向了`addvec`，因此控制权直接转移给该函数。
 
 ## 库插入
