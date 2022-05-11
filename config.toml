@@ -54,6 +54,7 @@ uglyURLs = false
 # Taxonomies
 [taxonomies]
     category = "categories"
+    series = "series"
     tag = "tags"
 
 # Modified date
@@ -213,6 +214,12 @@ uglyURLs = false
         weight = 2
         pre = "internal"
         post = "archive"
+    [[menu.main]]
+        url = "/series/"
+        name = "Series"
+        weight = 3
+        pre = "internal"
+        post = "th"
     [[menu.main]]
         url = "/tags/"
         name = "Tags"
@@ -383,7 +390,8 @@ uglyURLs = false
     # tree organization structure of your
     # posts.
 
-    categoryBy = "categories"
+    # categoryBy = "categories"
+    categoryBy = "series"
     # ATTENTION: If you set it to `sections`,
     #            be sure to delete `categories`
     #            in `taxonomies` at the top

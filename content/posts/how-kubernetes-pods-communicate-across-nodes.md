@@ -2,7 +2,7 @@
 title: "Kubernetes Pod 是如何跨节点通信的？"
 date: 2021-05-09T09:19:42+01:00
 draft: false
-tags: ["Kubernetes", "Network", "CNI"]
+tags: ["Kubernetes", "Container Network", "CNI", "Calico"]
 summary: "《A Guide to the Kubernetes Networking Model》一文生动形象地介绍了 Kubernetes 中的网络模型，然而受篇幅所限，作者并没有对 Pod 跨节点通信时数据包在节点之间传递的细节进行过多讨论 ..."
 ---
 

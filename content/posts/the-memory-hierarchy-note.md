@@ -2,7 +2,8 @@
 title: "CSAPP 读书笔记：存储系统的层级结构"
 date: 2021-12-28T21:41:42+01:00
 draft: false
-tags: ["CSAPP","OS"]
+series: ["CSAPP 读书笔记"]
+tags: ["OS"]
 summary: "存储系统（Memory System）可以分为多个层级（Hierarchy），每个层级的存储设备（Storage Device）具有不同的容量、成本和访问时间。层级越低，存储设备的容量就越大，成本也越低，但访问速度却越慢。存储系统的层次结构对应用性能有着显著的影响 ..."
 ---
 
