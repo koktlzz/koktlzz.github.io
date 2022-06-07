@@ -75,7 +75,7 @@ Node1 上的 VTEP 收到 Pod1 发来的数据包后，首先会在本地的转�
 
 [Software-defined networking - Wikipedia](https://en.wikipedia.org/wiki/Software-defined_networking)
 
-[About Kubernetes Networking](https://docs.projectcalico.org/about/about-kubernetes-networking)
+[About Kubernetes Networking](https://projectcalico.docs.tigera.io/about/about-k8s-networking)
 
 [使用 Terway 网络插件](https://help.aliyun.com/document_detail/97467.html)
 
