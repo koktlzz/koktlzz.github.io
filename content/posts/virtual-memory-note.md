@@ -79,7 +79,7 @@ $$\lbrace0,1,2,...,M -1\rbrace$$
 
 ![20220609113920](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220609113920.png)
 
-上述在磁盘和主存之间传输页面的活动被称为交换（Swapping）或者分页（Paging）。页面从磁盘传输到主存被称为 Swapping In 或 Paging In，反之则为 Swapping Out 或 Paging Out。尽管我们可以努力预测缺页故障并在引用未缓存页面前分页，但现代系统均在异常发生后才分页，即按需分页（Demand Paging）。
+上述在磁盘和主存之间传输页面的活动被称为交换（Swapping）或者分页（Paging）。页面从磁盘传输到主存被称为换入（Swapping In 或 Paging In），反之则为换出（Swapping Out 或 Paging Out）。尽管我们可以努力预测缺页故障并在引用未缓存页面前分页，但现代系统均在异常发生后才分页，即按需分页（Demand Paging）。
 
 ### 分配页面
 
@@ -111,3 +111,32 @@ $$\lbrace0,1,2,...,M -1\rbrace$$
 如果某条指令违反了上述权限，CPU 就会触发通用保护故障，并将控制权转移到内核中的异常处理程序。该处理程序会向问题进程发送一个 SIGSEGV 信号。Linux Shell 通常将此异常报告为分段故障（Segmentation Fault）。
 
 ## 地址转换
+
+![20220609223526](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220609223526.png)
+
+CPU 中的页表基址寄存器（Page Table Base Register ，PTBR）指向当前页表，$n$ 位的虚拟地址由 $p$ 位的虚拟页面偏移量（Virtual Page Offset，VPO）和 $n-p$ 位的虚拟页面编号（Virtual Page Number，VPN）组成。MMU 根据 VPN 的值选择对应的 PTE，如 VPN 0 选择 PTE 0，VPN 1 选择 PTE 1。由于物理页面和虚拟页面的大小相同，VPO 与物理页面偏移量（Physical Page Offset，PPO）也就相同，因此我们可以将页表条目中的物理页面编号（Physical Page Number，PPN）与 VPO 组成转换后的物理地址。
+
+![20220609230216](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220609230216.png)
+
+上图展示了页面命中时的 CPU 硬件操作步骤：
+
+1. 处理器生成一个虚拟地址 VA 并发送到 MMU；
+2. MMU 生成 PTE 地址 PTEA 并向高速缓存或主存发起请求；
+3. 高速缓存或主存将 PTE 返回给 MMU；
+4. MMU 构造物理地址 PA 并将其发送到高速缓存或主存；
+5. 高速缓存或主存将请求的数据返回给处理器。
+
+![20220609230237](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220609230237.png)
+
+上图展示了缺页故障时的 CPU 硬件操作步骤：
+
+1. 处理器生成一个虚拟地址 VA 并发送到 MMU；
+2. MMU 生成 PTE 地址 PTEA 并向高速缓存或主存发起请求；
+3. 高速缓存或主存将 PTE 返回给 MMU；
+4. PTE 中的有效位为 0，因此 MMU 触发异常并将控制权转移给内核中的异常处理程序；
+4. 处理程序从物理内存中选取受害者页面换出。若该页面已被修改，则还要将其复制到磁盘中；
+4. 处理程序将新页面换入并更新 PTE；
+4. 处理程序返回到原来的进程，之前引发缺页故障的指令重新执行。此时进程请求的页面已缓存，因此 CPU 随后的操作与页面命中时相同。
+
+### 高速缓存与虚拟内存
+
