@@ -35,7 +35,7 @@ CPU 也可以通过虚拟地址（Virtual Address，VA）访问主存，只不�
 
 $$\lbrace0, 1, 2, . . .\rbrace$$
 
-而如果这些整数是连续的，我们就称其为线性地址空间（Linear Address Space）。在拥有虚拟内存的系统中，CPU 从 $n$ 位线性地址空间中生成虚拟地址，该虚拟地址空间共有 $N=2^n$ 个地址：
+而如果这些整数是连续的，我们就称其为线性地址空间（Linear Address Space）。在拥有虚拟内存的系统中，CPU 从 n 位线性地址空间中生成虚拟地址，该虚拟地址空间共有 N = $2^n$ 个地址：
 
 $$\lbrace0,1,2,...,N -1\rbrace$$
 
@@ -43,13 +43,13 @@ $$\lbrace0,1,2,...,N -1\rbrace$$
 
 $$\lbrace0,1,2,...,M -1\rbrace$$
 
-与虚拟地址空间不同，$M$ 不一定是 2 的幂。但为了简化讨论，我们假设 $M=2^m$。
+与虚拟地址空间不同，M 不一定是 2 的幂。但为了简化讨论，我们假设 M = $2^m$。
 
 地址空间明确地将数据对象（字节）和其属性（地址）区分开来，因此每个数据对象都可以有多个独立的地址，这便是虚拟内存的基本思想。主存中的每个字节都有一个从物理地址空间中选择的物理地址，以及一个从虚拟地址空间中选择的虚拟地址。
 
 ## 虚拟内存作为缓存的工具
 
-与存储层级结构中的其他缓存一样，磁盘与主存之间以 [Block](/posts/the-memory-hierarchy-note/#存储系统层级) 为单位传输数据。而在虚拟内存系统中，Block 被称为虚拟页面（Virtual Page，VP），其大小为 $P=2^p$。类似地，物理内存被划分为多个物理页面（Physical Page，PP)，大小同样为 $P$。
+与存储层级结构中的其他缓存一样，磁盘与主存之间以 [Block](/posts/the-memory-hierarchy-note/#存储系统层级) 为单位传输数据。而在虚拟内存系统中，Block 被称为虚拟页面（Virtual Page，VP），其大小为 P = $2^p$。类似地，物理内存被划分为多个物理页面（Physical Page，PP)，大小同样为 P。
 
 虚拟页面有以下三种状态：
 
@@ -114,7 +114,7 @@ $$\lbrace0,1,2,...,M -1\rbrace$$
 
 ![20220609223526](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220609223526.png)
 
-CPU 中的页表基址寄存器（Page Table Base Register ，PTBR）指向当前页表，$n$ 位的虚拟地址由 $p$ 位的虚拟页面偏移量（Virtual Page Offset，VPO）和 $n-p$ 位的虚拟页面编号（Virtual Page Number，VPN）组成。MMU 根据 VPN 的值选择对应的 PTE，如 VPN 0 选择 PTE 0，VPN 1 选择 PTE 1。由于物理页面和虚拟页面的大小相同，VPO 与物理页面偏移量（Physical Page Offset，PPO）也就相同，因此我们可以将页表条目中的物理页面编号（Physical Page Number，PPN）与 VPO 组成转换后的物理地址。
+CPU 中的页表基址寄存器（Page Table Base Register ，PTBR）指向当前页表，n 位的虚拟地址由 p 位的虚拟页面偏移量（Virtual Page Offset，VPO）和 n-p 位的虚拟页面编号（Virtual Page Number，VPN）组成。MMU 根据 VPN 的值选择对应的 PTE，如 VPN 0 选择 PTE 0，VPN 1 选择 PTE 1。由于物理页面和虚拟页面的大小相同，VPO 与物理页面偏移量（Physical Page Offset，PPO）也就相同，因此我们可以将页表条目中的物理页面编号（Physical Page Number，PPN）与 VPO 组成转换后的物理地址。
 
 ![20220609230216](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220609230216.png)
 
@@ -134,9 +134,80 @@ CPU 中的页表基址寄存器（Page Table Base Register ，PTBR）指向当�
 2. MMU 生成 PTE 地址 PTEA 并向高速缓存或主存发起请求；
 3. 高速缓存或主存将 PTE 返回给 MMU；
 4. PTE 中的有效位为 0，因此 MMU 触发异常并将控制权转移给内核中的异常处理程序；
-4. 处理程序从物理内存中选取受害者页面换出。若该页面已被修改，则还要将其复制到磁盘中；
-4. 处理程序将新页面换入并更新 PTE；
-4. 处理程序返回到原来的进程，之前引发缺页故障的指令重新执行。此时进程请求的页面已缓存，因此 CPU 随后的操作与页面命中时相同。
+5. 处理程序从物理内存中选取受害者页面换出。若该页面已被修改，则还要将其复制到磁盘中；
+6. 处理程序将新页面换入并更新 PTE；
+7. 处理程序返回到原来的进程，之前引发缺页故障的指令重新执行。此时进程请求的页面已缓存，因此 CPU 随后的操作与页面命中时相同。
 
 ### 高速缓存与虚拟内存
 
+大部分同时使用虚拟内存和高速缓存（SRAM 缓存）的系统均采用物理寻址的方式访问高速缓存。下图展示了两者的集成方式：
+
+![20220610102342](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220610102342.png)
+
+### 使用 TLB 加速地址转换
+
+CPU 每次生成虚拟地址时，MMU 都必须引用 PTE 才能完成地址转换。如果 PTE 位于主存而非缓存中，那么地址转换的速度将大大下降。大多数系统的 MMU 中包含了一个被称为转换后备缓冲区（Translation Lookaside Buffer，TLB）的小型 PTE 缓存，其每个缓存行中都有一个由单条 PTE 组成的 Block。用于 [集合选择和行匹配](/posts/the-memory-hierarchy-note/#集关联型缓存) 的 Set Index 和 Tag 是从虚拟地址的 VPN 中提取的：
+
+![20220610105500](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220610105500.png)
+
+如果 TLB 有 T = $2^t$ 个集合，则 Set Index（TLBI）由 VPN 中 t 个最低位组成，Tag（TLBT）由 VPN 中的剩余高位组成。
+
+![20220610111122](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220610111122.png)
+
+上图展示了 TLB 命中时的 CPU 硬件操作步骤。由于地址转换均在 MMU 中执行，因此速度很快：
+
+1. CPU 生成一个虚拟地址 VA；
+2. MMU 向 TLB 发送 VPN 以请求 PTE；
+3. TLB 将 PTE 返回给 MMU；
+4. MMU 将虚拟地址转换为物理地址 PA 并发送到高速缓存或主存；
+5. 高速缓存或主存将请求的数据返回给处理器。
+
+![20220610111709](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220610111709.png)
+
+上图展示了 TLB 未命中时的 CPU 硬件操作步骤。MMU 必须从高速缓存或主存中获取 PTE 并将其存储在 TLB 中，这可能会覆盖现有条目。
+
+### 多级页表
+
+在之前的讨论中，我们假设系统只使用单级页表进行地址转换。但如果地址空间有 32 位，一个页面 4 KB 并且一条 PTE 4 字节。那么即使应用程序只引用一小部分虚拟内存，我们也需要一个 4 MB 的页表常驻在内存中：
+
+$$n=32, P=4K=2^{12}, n(PTE)=2^{n-p}=2^{20}=1M$$
+
+我们可以通过对页表分级来压缩页表的大小：
+
+![20220610115405](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220610115405.png)
+
+一级页表中有 1024 条 PTE，每条 PTE 都映射到一个包含 1024 个连续虚拟页面的地址空间块。每个地址空间块的大小为 1024 \* 4 KB = 4 MB，因此 1024 条 PTE 就可以覆盖 32 位（4 MB \* 1024 = 4 GB = $2^{32}$ B）地址空间。
+
+如果地址空间块中的所有页面均未分配，则一级页表中对应的 PTE 为空（如上图中的 PTE 2～7）。而如果地址空间块中至少有一个页面已分配，那么一级页表中对应的 PTE 就指向二级页表中该块的起始位置（如上图中的 PTE 0～1）。二级页表中的每条 PTE 都映射到一个 4 KB 的物理内存页，这与我们之前查看的单级页表相同。
+
+如果一级页表中的 PTE 为空，二级页表中对应的条目就无需存在。多数应用程序的 4 GB 虚拟地址空间中有很大一部分是未分配的，因此这将显著地降低页表的内存占用。另外，我们只需在主存中维护一级页表和调用最为频繁的二级页表，其它的二级页表可以由操作系统按需创建和分页。
+
+![20220610152657](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220610152657.png)
+
+在 k 级页表中，虚拟地址被划分为 k 个 VPN 和一个 VPO，VPN i（1 ≤ i ≤ k）是第 i 级页表的索引。除第 k 级页表外，每个页表中的 PTE 均指向下一级页表的起始位置，而第 k 级表中的每条 PTE 则包含了对应物理页面的 PPN。与单级页表一样，PPO 与 VPO 相同。MMU 必须先请求 k 个 PTE，然后才能确定 PPN 以生成完整的物理地址。TLB 可以缓存多级页表中的 PTE，这使得多级页表的地址转换速度并不会比单级页表慢很多。
+
+## Intel Core i7/Linux 内存系统
+
+尽管底层的 Haswell 微架构能够支持完整的 64 位虚拟和物理地址空间，但目前 Core i7 仅提供了 48 位 (256 TB) 的虚拟地址空间和 52 位 (4 PB ) 的物理地址空间，以及一个支持 32 位 (4 GB) 虚拟和物理地址空间的兼容模式。
+
+### Core i7 地址转换
+
+![20220610161613](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220610161613.png)
+
+如上图所示，Core i7 使用四级页表结构。CR 3 控制寄存器中保存了一级 (L1) 页表的起始物理地址，其值是每个进程上下文的一部分并在上下文切换时恢复。48 位的虚拟地址包含了 36 位的 VPN 和 12 位（4 K = $2^{12}$）的 VPO，其中 VPN 又被划分为四个 9 位的地址空间块。
+
+### Linux 虚拟内存系统
+
+![20220610173011](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220610173011.png)
+
+Linux 将虚拟内存划分为多个区域或段（Area 或 Segment），每个区域都是一些已分配且在某些方面相关的连续页面。例如，代码段、数据段、堆、共享库段和用户栈分别是不同的区域。每个已分配的页面都属于某个区域，因此不属于任何区域的页面不存在也无法被进程引用。区域概念的引入使得 Linux 允许虚拟地址空间中存在间隙。
+
+![20220610175658](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220610175658.png)
+
+如上图所示，Linux 内核为每个进程维护了一个独特的数据结构`task_struct`，其字段包含或指向内核运行该进程所需的全部信息（如 PID、用户栈指针、可执行目标文件名称和程序寄存器等）。其中，字段`mm`指向`mm_struct`，该结构体描述了虚拟内存的当前状态。`mm_struct`中的`pgd`字段指向一级页表的起始位置，它在进程运行时被内核存储在 CR 3 控制寄存器中。而`mmap`字段则指向一个由`vm_area_structs`组成的链表。描述区域信息的结构体`vm_area_structs`包含以下字段：
+
+- `vm_start`：指向区域的起点；
+- `vm_end`：指向区域的末端；
+- `vm_prot`：描述该区域中所有页面的读/写权限；
+- `vm_flags`：描述该区域中的页面是否与其他进程共享；
+- `vm_next`：指向链表中下一个`vm_area_structs`。
