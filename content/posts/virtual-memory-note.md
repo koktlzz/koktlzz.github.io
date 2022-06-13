@@ -233,7 +233,7 @@ Linux 使用内存映射（Memory Mapping）技术初始化虚拟内存区域并
 
 ![20220613165253](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220613165253.png)
 
-如上图 (a) 所示，两进程将私有目标文件映射到各自虚拟地址空间的不同区域。进程 1 对该私有区域的任何写入操作都对进程 2 不可见，并且这些更改也不会同步到磁盘上的原始文件。如上图 (b) 所示，当进程 2 试图修改该区域中的内容时，内核会在物理内存中为页面创建一个新副本并更新页表条目使其指向它。由于页面复制发生在写入操作前，这种技术被称为写时复制（Copy-on-Write）。
+如上图 (a) 所示，两进程将私有目标文件映射到各自虚拟地址空间的不同区域。进程 1 对该私有区域的任何写入操作都对进程 2 不可见，并且这些更改也不会同步到磁盘上的原始文件。如上图 (b) 所示，当进程 2 试图修改该区域中的内容时，内核会在物理内存中为页面创建一个新副本并更新页表条目使其指向它。由于页面复制发生在写入操作前，这种技术被称为写时复制（Copy-on-Write），这些区域则是私有写时复制的（Private Copy-on-Write）。
 
 ### 回看 fork 函数
 
@@ -244,10 +244,46 @@ Linux 使用内存映射（Memory Mapping）技术初始化虚拟内存区域并
 如果进程调用 [`execve`](/posts/exception-control-flow-note/#加载并运行程序) 函数，如 `execve("a.out", NULL, NULL)`，则加载并运行`a.out`的步骤如下：
 
 1. 删除当前进程虚拟地址空间中用户区域的`vm_area_structs`；
-2. 为新程序的代码、数据、bss 和堆栈区域创建`vm_area_structs`。代码和数据区域被映射到`a.out`文件中的 [.text 和 .data](/posts/linking-note/#可重定位目标文件)，bss 区域则被映射到匿名文件。堆栈的初始长度均为 0；
+2. 为新程序的代码、数据、bss 和堆栈区域创建`vm_area_structs`。这些区域都是私有写时复制的，代码和数据区域被映射到`a.out`文件中的 [.text 和 .data](/posts/linking-note/#可重定位目标文件)，bss 区域则被映射到匿名文件。堆栈的初始长度均为 0；
 3. 如果`a.out`文件链接了共享库，如 C 标准库 `libc.so`，那么还需要将这些对象动态链接到程序中，然后将其映射到虚拟地址空间中的共享区域内；
 4. 使当前进程上下文中的程序计数器指向新程序代码区域的入口点。
 
 ![20220613213646](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220613213646.png)
 
-### `mmap`函数
+### mmap 函数
+
+```c
+#include <unistd.h>
+#include <sys/mman.h>
+void  *mmap(void *start, size_t length, int prot, int flags,
+            int fd, off_t offset);
+// Returns: pointer to mapped area if OK, MAP_FAILED (−1) on error
+```
+
+`mmap`函数请求内核创建一个起始地址为参数`start`的虚拟内存区域，该区域映射到文件描述符`fd`所指定的对象。连续对象的长度为参数`length`，其首部在文件中的偏移量为参数`offset`：
+
+![20220613222541](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220613222541.png)
+
+参数`prot`包含了描述虚拟内存区域访问权限的位，即`vm_area_structs`中的`vm_prot`：
+
+- PROT_EXEC：该区域中的页面包含可执行指令；
+- PROT_READ：可以阅读该区域中的页面；
+- PROT_WRITE：可以写入该区域中的页面；
+- PROT_NONE：无法访问该区域中的页面。
+
+参数`flag`包含了描述了映射对象类型的位：
+
+- MAP_SHARED：共享对象；
+- MAP_PRIVATE：私有写时复制对象；
+- MAP_ANON：匿名对象，对应的虚拟页面是零需求页面。
+
+`munmap`函数删除起始于虚拟地址`start`、长度为`length`的区域，后续对已删除区域的引用会引发分段故障。
+
+```c
+#include <unistd.h>
+#include <sys/mman.h>
+int munmap(void *start, size_t length);
+// Returns: 0 if OK, −1 on error
+```
+
+## 动态内存分配
