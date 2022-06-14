@@ -244,7 +244,7 @@ Linux 使用内存映射（Memory Mapping）技术初始化虚拟内存区域并
 如果进程调用 [`execve`](/posts/exception-control-flow-note/#加载并运行程序) 函数，如 `execve("a.out", NULL, NULL)`，则加载并运行`a.out`的步骤如下：
 
 1. 删除当前进程虚拟地址空间中用户区域的`vm_area_structs`；
-2. 为新程序的代码、数据、bss 和堆栈区域创建`vm_area_structs`。这些区域都是私有写时复制的，代码和数据区域被映射到`a.out`文件中的 [.text 和 .data](/posts/linking-note/#可重定位目标文件)，bss 区域则被映射到匿名文件。堆栈的初始长度均为 0；
+2. 为新程序的代码、数据、.bss 和堆栈区域创建`vm_area_structs`。这些区域都是私有写时复制的，代码和数据区域被映射到`a.out`文件中的 [.text 和 .data](/posts/linking-note/#可重定位目标文件)，.bss 区域则被映射到匿名文件。堆栈的初始长度均为 0，其页面是零需求的；
 3. 如果`a.out`文件链接了共享库，如 C 标准库 `libc.so`，那么还需要将这些对象动态链接到程序中，然后将其映射到虚拟地址空间中的共享区域内；
 4. 使当前进程上下文中的程序计数器指向新程序代码区域的入口点。
 
@@ -287,3 +287,102 @@ int munmap(void *start, size_t length);
 ```
 
 ## 动态内存分配
+
+相比于低级别的`mmap`函数，C 程序员更倾向于在运行时调用动态内存分配器（Dynamic Memory Allocator）来创建虚拟内存区域。动态内存分配器为进程维护的虚拟内存区域被称为堆（Heap），其一般结构为：
+
+![20220614113920](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220614113920.png)
+
+堆向上增长，内核为每个进程都维护了一个指向堆顶的变量`brk`。分配器将堆看作一个包含不同尺寸 Block 的集合，每个 Block 都是一个连续的虚拟内存块。Block 有两种状态，已分配（Allocated）和空闲（Free）。所有分配器均显式地为应用程序分配 Block，但负责释放已分配 Block 的实体可能有所不同：
+
+- 显式分配器：应用程序显式地释放已分配的 Block。C 和 C++ 程序分别调用`malloc`和`new`函数请求 Block，调用`free`和`delete`函数释放 Block；
+- 隐式分配器：分配器自行释放程序不再使用的已分配 Block，该过程被称为垃圾回收（Garbage Collection）。Lisp、ML 和 Java 等高级语言均采用这种方法。
+
+### malloc 和 free 函数
+
+```c
+#include <stdlib.h>
+void *malloc(size_t size);
+// Returns: pointer to allocated block if OK, NULL on error
+```
+
+`malloc`函数请求堆中的一块 Block 并返回指向该 Block 的指针。Block 的大小至少为`size`，并可能根据其中的数据对象类型进行适当的对齐。在 32 位编译模式下，Block 的地址始终为 8 的倍数，而在 64 位中则为 16 的倍数。如果执行`malloc`遇到问题，如程序请求的 Block 大小超过了可用的虚拟内存，则函数返回 Null 并设置 [`errno`](https://man7.org/linux/man-pages/man3/errno.3.html)。我们还可以使用`malloc`的包装函数`calloc`，它会将分配的内存初始化为零。类似地，`realloc`函数可以更改已分配 Block 的大小。
+
+```c
+#include <unistd.h>
+void *sbrk(intptr_t incr);
+// Returns: old brk pointer on success, −1 on error
+```
+
+`sbrk`函数将参数`incr`与内核中的`brk`指针相加以增大或缩小堆。若执行成功，则返回`brk`的旧值，否则将返回 -1 并将`errno`设置为 ENOMEM。
+
+```c
+#include <stdlib.h>
+void free(void *ptr);
+// Returns: nothing
+```
+
+`free`函数将参数`ptr`指向的 Block 释放，而这些 Block 必须是由`malloc`、`calloc` 或 `realloc`分配的。该函数没有返回值，因此很容易产生一些令人费解的运行时错误。
+
+![20220614154301](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220614154301.png)
+
+上图展示了 C 程序如何使用`malloc`和`free`管理一个大小为 16 字（字长为 4 字节）的堆。图中的每个方框代表一个字，每个被粗线分隔的矩形代表一个 Block。有阴影的 Block 代表已分配，无阴影的 Block 则代表空闲。
+
+如上图 (a) 所示，程序请求一个 4 字的 Block，`malloc`从空闲块中切出一个 4 字的 Block 并返回指向该 Block 中第一个字的指针`p1`；如上图 (b) 所示，程序请求一个 5 字的 Block，`malloc`从空闲块中切出一个 6 字的 Block 以实现双字对齐；如上图 (c) 所示，程序请求一个 6 字的 Block，`malloc`从空闲块中切出一个 6 字的 Block；如上图 (d) 所示，程序释放图 (b) 中分配的 Block。`free`返回后，指针`p2`依然指向已释放的 Block，因此程序不应在重新初始化`p2`前继续使用它；如上图 (e) 所示，程序请求一个 2 字的 Block。`malloc`从上一步释放的 Block 中切出一部分并返回指向新 Block 的指针`p4`。
+
+### 动态内存分配的原因
+
+在程序实际运行之前，我们可能并不知道某些数据结构的大小。示例 C 程序将`n`个 ASCII 整型从标准输入读取到数组`array[MAXN]`中：
+
+```c
+#include "csapp.h"
+#define MAXN 15213
+
+int array[MAXN];
+
+int main()
+{
+    int i, n;
+    scanf("%d", &n);
+    if (n > MAXN)
+        app_error("Input file too big");
+    for (i = 0; i < n; i++)
+        scanf("%d", &array[i]);
+    exit(0);
+}
+```
+
+由于我们无法预测`n`的值，因此只能将数组大小写死为`MAXN`。`MAXN`的值是任意的，可能超出系统可用的虚拟内存量。另外，一旦程序想要读取一个比`MAXN`还大的文件，唯一的办法就是增大`MAXN`的值并重新编译程序。而如果我们在运行时根据`n`的大小动态分配内存，以上问题便迎刃而解：
+
+```c
+#include "csapp.h"
+
+int main()
+{
+    int *array, i, n;
+    scanf("%d", &n);
+    array = (int *)Malloc(n * sizeof(int));
+    for (i = 0; i < n; i++)
+        scanf("%d", &array[i]);
+    free(array);
+    exit(0);
+}
+```
+
+### 对分配器的要求和目标
+
+显式分配器必须在若干限制条件下运行：
+
+- 处理任意顺序的请求：一个应用程序发出的`malloc`和`free`请求的顺序是任意的，因此分配器不能对其作出假设。例如，分配器不能假设所有的`malloc`都紧跟一个与之匹配的`free`；
+- 立即响应请求：分配器不可以对请求重新排序或缓冲（Buffer）以提高性能；
+- 仅使用堆：分配器使用的数据结构必须存储在堆中；
+- 对齐 Block：分配器必须对齐 Block 以使其能够容纳任何类型的数据对象；
+- 不修改已分配的 Block：分配器无法修改、移动或压缩 Block。
+
+衡量分配器性能的指标有：
+
+- 吞吐量（Throughput）：单位时间内完成的请求数；
+- 内存利用率（Memory Utilization）：即堆内存的使用率。
+
+最大化吞吐量和最大化内存利用率之间存在矛盾，因此我们在设计分配器时需要找到两者的平衡。
+
+### 碎片化
