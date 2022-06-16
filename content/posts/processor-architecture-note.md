@@ -1,7 +1,7 @@
 ---
 title: "CSAPP 读书笔记：处理器架构"
 date: 2021-12-12T09:19:42+01:00
-draft: false
+draft: true
 series: ["CSAPP 读书笔记"]
 tags: ["ISA"]
 summary: "我们将处理器支持的指令及其对应的字节编码方式称为指令集架构（Instruction Set Architecture，ISA）。不同的处理器系列，例如 Intel IA32/x86-64，IBM/Freescale Power 和 ARM 等，均使用不同的 ISA。为一种机器编译得到的程序，无法在 ISA 不同的机器上运行 ..."
