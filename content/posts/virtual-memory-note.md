@@ -305,7 +305,7 @@ void *malloc(size_t size);
 // Returns: pointer to allocated block if OK, NULL on error
 ```
 
-`malloc`函数请求堆中的一块 Block 并返回指向该 Block 的指针。Block 的大小至少为`size`，并可能根据其中的数据对象类型进行适当的对齐。在 32 位编译模式下，Block 的地址始终为 8 的倍数，而在 64 位中则为 16 的倍数。如果执行`malloc`遇到问题，如程序请求的 Block 大小超过了可用的虚拟内存，则函数返回 Null 并设置 [`errno`](https://man7.org/linux/man-pages/man3/errno.3.html)。我们还可以使用`malloc`的包装函数`calloc`，它会将分配的内存初始化为零。类似地，`realloc`函数可以更改已分配 Block 的大小。
+`malloc`函数请求堆中的一块 Block 并返回指向该 Block 的指针。Block 的大小至少为`size`，并可能根据其中的数据对象类型进行适当的对齐。在 32 位编译模式下，Block 的地址始终为 8 的倍数，而在 64 位中则为 16 的倍数。如果执行`malloc`遇到问题，如程序请求的 Block 大小超过了可用的虚拟内存，则函数返回 NULL 并设置 [`errno`](https://man7.org/linux/man-pages/man3/errno.3.html)。我们还可以使用`malloc`的包装函数`calloc`，它会将分配的内存初始化为零。类似地，`realloc`函数可以更改已分配 Block 的大小。
 
 ```c
 #include <unistd.h>
@@ -405,29 +405,29 @@ int main()
 - 分割（Splitting）：完成放置后，如何处理剩余的空闲 Block？
 - 合并（Coalescing）：如何处理刚刚被释放的 Block？
 
-### 隐式空闲列表
+### 隐式空闲链表
 
 大多数分配器通过将一些数据结构嵌入到 Block 中以分辨其边界和状态，例如：
 
 ![20220615154704](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220615154704.png)
 
-如上图所示，Block 由一个单字（四字节）的头部（Header）、有效负载（Payload）和一些额外填充（Padding）组成，头部中包含了 Block 的大小（Block Size）和状态信息（Allocated or Free）。如果系统采用双字对齐策略，那么每个 Block 的大小始终为 8 的倍数，其最低 3 位始终为 0。因此我们可以仅在头部中存储 Block 大小的最高 29 位，剩余 3 位用来存储其他信息，如最低有效位指示该 Block 是已分配的还是空闲的。填充的大小是任意的，它可能是分配器为了避免外部碎片产生而设置的，也可能是为了满足对齐要求而存在的。
+如上图所示，Block 由一个单字（四字节）的头部（Header）、有效负载（Payload）和一些额外填充（Padding）组成，头部中包含了 Block 的大小（Block Size）和状态信息（Allocated or Free）。如果系统采用双字对齐策略，那么每个 Block 的大小始终为 8 的倍数，其后 3 位始终为 0。因此我们可以仅在头部中存储该字段的前 29 位，剩余 3 位用来存储其他信息。上图中的位 a 便指示了此 Block 是已分配的还是空闲的。填充的大小是任意的，它可能是分配器为了避免外部碎片产生而设置的，也可能是为了满足对齐要求而存在的。
 
 基于这种 Block 格式，我们可以将堆组织成一系列连续的已分配 Block 和空闲 Block：
 
 ![20220615162852](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220615162852.png)
 
-由于空闲 Block 的状态被隐式地编码在头部信息中，我们称这种堆组织方式为隐式空闲列表（Implicit Free List），分配器必须遍历堆中所有的 Block 才能得到全部空闲的 Block。我们还需要一个特殊的 Block 以标记堆的结尾，如上图中的 “0/1”。隐式空闲列表的优点是简单，但任何搜索空闲 Block 的操作（如放置新分配的 Block）的成本都与堆中 Block 的总数呈正比。
+空闲 Block 通过其头部中的大小字段隐式地链接起来（见上图中的箭头），因此我们将这种堆组织方式称为隐式空闲链表（Implicit Free List），分配器必须遍历堆中所有的 Block 才能得到全部空闲的 Block。我们还需要一个特殊的 Block 以标记堆的结尾，如上图中的 “0/1”。隐式空闲链表的优点是简单，但任何搜索空闲 Block 的操作（如放置新分配的 Block）的成本都与堆中 Block 的总数成正比。
 
 ### 放置新分配的 Block
 
-当应用程序请求一个 Block 时，分配器需要在空闲列表中选取一个足够大的 Block 以响应。分配器搜索空闲 Block 的方式由放置策略（Placement Policy）所决定：
+当应用程序请求一个 Block 时，分配器需要在空闲链表中选取一个足够大的 Block 以响应。分配器搜索空闲 Block 的方式由放置策略（Placement Policy）所决定：
 
-- 第一次拟合（First Fit）：从头开始遍历空闲列表并选择第一个满足条件的 Block；
-- 下一次拟合（Next Fit）：从上一次搜索停止的地方开始遍历空闲列表并选择第一个满足条件的 Block；
+- 第一次拟合（First Fit）：从头开始遍历空闲链表并选择第一个满足条件的 Block；
+- 下一次拟合（Next Fit）：从上一次搜索停止的地方开始遍历空闲链表并选择第一个满足条件的 Block；
 - 最佳拟合（Best Fit）：遍历所有 Block 并选择满足条件且最小的 Block。
 
-第一次拟合的优点是较大的 Block 通常存留在列表末尾，但一些较小的 Block 也会散落在列表开头，这将增加搜索较大 Block 的时间。如果列表开头存在大量较小的 Block，下一次拟合就比第一次拟合快很多。然而研究表明，下一次拟合的内存利用率比第一次拟合低。最佳拟合的内存利用率通常比其他两种策略高，但对隐式空闲列表来说，其搜索时间显然要比它们慢很多。
+第一次拟合的优点是较大的 Block 通常存留在链表末尾，但一些较小的 Block 也会散落在链表开头，这将增加搜索较大 Block 的时间。如果链表开头存在大量较小的 Block，下一次拟合就比第一次拟合快很多。然而研究表明，下一次拟合的内存利用率比第一次拟合低。最佳拟合的内存利用率通常比其他两种策略高，但对隐式空闲链表来说，其搜索时间显然要比它们慢很多。
 
 ### 分割空闲的 Block
 
@@ -453,9 +453,9 @@ int main()
 
 ### 使用边界标记合并 Block
 
-我们把即将释放的 Block 称为当前（Current）Block，令其头部指向下一个 Block 的头部。这样我们便很容易判断下一个 Block 是否空闲，并且只需将当前 Block 头部中的 Block 大小与之相加即可完成合并。
+我们把即将释放的 Block 称为当前（Current）Block，其头部指向下一个 Block 的头部。因此我们便很容易判断下一个 Block 是否空闲，并且只需将当前 Block 头部中的大小字段与之相加即可完成合并。
 
-而若要合并上一个 Block，我们只能遍历整个空闲 Block 列表，在到达当前 Block 前不断记下上一个 Block 的位置。因此对于隐式空闲列表，合并上一个 Block 的时间与堆内存的大小呈正比。
+而若要合并上一个 Block，我们只能遍历整个链表，在到达当前 Block 前不断记下上一个 Block 的位置。因此对于隐式空闲链表，合并上一个 Block 的时间与堆内存的大小成正比。
 
 我们可以在每个 Block 末尾都添加一个头部的副本以使合并 Block 的时间变为常数，这种技术被称为边界标记（Boundary Tags）：
 
@@ -465,6 +465,85 @@ int main()
 
 ![20220615232751](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220615232751.png)
 
-由于每个 Block 都包含头部和尾部，因此当 Block 数量较多时，边界标记显著地增加了内存的开销。考虑到分配器只有在上一个 Block 空闲时才需要获取其尾部内的 Block 大小，我们可以将上一个 Block 的状态存储在当前 Block 的多余低位中，这样已分配的 Block 便不需要尾部了。
+由于每个 Block 都包含头部和尾部，因此当 Block 数量较多时，边界标记显著地增加了内存的开销。考虑到分配器只有在上一个 Block 空闲时才需要获取其尾部内的 Block 大小，我们可以将上一个 Block 的状态存储在当前 Block 头部的多余低位中，这样已分配的 Block 便不需要尾部了。
 
-### 显式空闲列表
+### 显式空闲链表
+
+由于分配 Block 的时间与 Block 的总数成正比，隐式空闲链表不适用于通用分配器。我们可以在每个空闲 Block 中加入一个前驱（Predecessor）指针和一个后继（Successor）指针，这样堆的组织结构就变成了一个双向链表，我们称其为显式空闲链表（Explicit Free List）。
+
+![20220616115552](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220616115552.png)
+
+如果采用第一次拟合策略，显式空闲链表分配 Block 的时间与空闲 Block 的数量成正比，而释放 Block 的时间则取决于空闲 Block 的排序方式：
+
+- 后进先出（Last-in First-out，LIFO）：将刚被释放的 Block 插入到链表开头。若采用第一次拟合策略，分配器将首先检查最近被使用的 Block。此时释放 Block 的时间为常数，并且可以通过边界标记使合并 Block 的时间也为常数；
+- 地址顺序：使链表中每个 Block 的地址均小于其后继 Block 的地址。在这种情况下，释放 Block 需要一定的时间来寻找合适的位置，但堆内存利用率比后进先出高。
+
+显式空闲链表的缺点在于指针的引入增加了空闲 Block 的大小，这将增大内部碎片发生的可能性。
+
+### 分离式空闲链表
+
+我们可以将堆组织成多个空闲链表，每个链表中 Block 的大小都大致相同，这种结构被称为分离式空闲链表（Segregated Free List）。为了实现这一结构，我们需要把 Block 的大小划分为多个大小类（Size Class），如：
+
+$$\lbrace1\rbrace, \lbrace2\rbrace, \lbrace3, 4\rbrace, \lbrace5–8\rbrace,..., \lbrace1025–2048\rbrace, \lbrace2049–4096\rbrace, \lbrace4097–∞\rbrace$$
+
+也可以让每个较小的 Block 独自成为一个大小类，较大的 Block 依然按 2 的幂划分：
+
+$$\lbrace1\rbrace, \lbrace2\rbrace, \lbrace3\rbrace,..., \lbrace1024\rbrace, \lbrace1025–2048\rbrace, \lbrace2049–4096\rbrace, \lbrace4097–∞\rbrace$$
+
+每个空闲链表都对应于一个大小类，因此我们可以将堆看成一个按大小类递增的空闲链表数组。当进程请求一个 Block 时，分配器会根据其大小在适当的空闲链表中搜索。如果找不到满足要求的 Block，它会继续搜索下一个链表。
+
+不同的分离式空闲链表在定义大小类的方式、合并 Block 的时机以及是否允许分割 Block 等方面有所不同，其中最基本的两种类型为简单分离存储（Simple Segregated Storage）和分离拟合（Segregated Fits）。
+
+在简单分离存储中，空闲链表内每个 Block 的大小均完全相同，等于其大小类中最大元素的大小。如某个大小类为 {17-32}，其对应的空闲链表中 Block 的大小都是 32。
+
+当进程请求一个 Block 时，分配器选取满足请求的空闲链表并分配其中第一个 Block。当某个 Block 被释放后，分配器将其插入到合适的空闲链表前面。因此，简单分离存储分配和释放 Block 的时间均为常量。
+
+## 垃圾回收
+
+垃圾回收器（Garbage Collector）是一种动态存储分配器，它会自动释放程序不再需要的 Block（垃圾）。
+
+### 基本思想
+
+垃圾回收器将内存看作一个有向可达性图：
+
+![20220616172206](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220616172206.png)
+
+图中的节点被分为一组根节点（Root Nodes）和一组堆节点（Heap Nodes），每个堆节点都对应于堆中的一个已分配的 Block。有向边 $p \rarr q$ 表示 Block $p$ 中的某个位置指向 Block $q$ 中的某个位置。~~根节点对应于不在堆中却指向了堆的位置，这些位置可以是寄存器、栈中的变量或可读写数据区域中的全局变量~~。
+
+> Root nodes correspond to locations not in the heap that contain pointers into the heap. These locations can be registers, variables on the stack, or global variables in the read/write data area of virtual memory.
+
+如果根节点与堆节点之间存在一条有向路径，我们就称该堆节点是可达的（Reachable）。在任何时刻，不可达的节点都对应于程序不再使用的 Block。垃圾回收器定期释放不可达节点并将其返回到空闲链表。
+
+ML 和 Java 等语言的垃圾回收器对应用程序使用指针的方式进行了严格的限制，因此它可以维护一个精确的可达性图，从而回收所有的垃圾。而 C 和 C++ 等语言的垃圾回收器则无法保证可达性图的精确性，一些不可达的节点可能被错误地识别为可达的，我们称其为保守垃圾回收器（Conservative Garbage Collector）。
+
+垃圾回收器可以按需提供服务，也可以作为单独的进程与应用程序并行运行，不断更新可达性图并回收垃圾：
+
+![20220616203627](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220616203627.png)
+
+### Mark&Sweep 算法
+
+Mark&Sweep 是常用的垃圾回收算法之一，它分为两个阶段：
+
+- 标记（Mark）阶段：标记所有可达的根节点后代。通常我们将 Block 头部的多余低位之一用于指示该 Block 是否被标记；
+- 清除（Sweep）阶段：释放所有未标记且已分配的 Block。
+
+为了更好地理解 Mark&Sweep 算法，我们作出以下假设：
+
+- `ptr`：由`typedef void *ptr`定义的类型；
+- `ptr isPtr(ptr p)`：若`p`指向已分配 Block 中的某个字，则返回指向该 Block 起始位置的指针`b`，否则返回 NULL；
+- `int blockMarked(ptr b)`：如果该 Block 已被标记则返回`true`；
+- `int blockAllocated(ptr b)`：如果该 Block 已分配则返回`true`；
+- `void markBlock(ptr b)`：标记 Block；
+- `int length(ptr b)`：返回 Block 除头部外的字长；
+- `void unmarkBlock(ptr b)`：将 Block 的状态从已标记转换为未标记；
+- `ptr nextBlock(ptr b)`：返回指向下一个 Block 的指针。
+
+那么此算法就可以用下图中的伪码表示：
+
+![20220616212514](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220616212514.png)
+
+在标记阶段，垃圾回收器为每个根节点调用一次`mark`函数。如果`p`未指向已分配且未标记的 Block，则该函数直接返回。否则，它标记该 Block 并将其中的每个字作为参数递归地调用自身（`mark(b[i])`）。此阶段结束时，任何未标记且已分配的 Block 都是不可达的。在扫描阶段，垃圾回收器只调用一次`sweep`函数。该函数遍历堆中的每一个 Block，释放所有已分配且未标记的 Block。
+
+![20220616220603](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220616220603.png)
+
+上图中的每个方框代表一个字，每个被粗线分隔的矩形代表一个 Block，而每个 Block 都有一个单字的头部。最初，堆中有 6 个已分配且未标记的 Block。Block 3 中包含指向 Block 1 的指针，Block 4 中包含指向 Block 3 和 6 的指针。根节点指向 Block 4，因此 Block 1、3、4 和 6 从根节点可达，它们会被垃圾回收器标记。在扫描阶段完成后，剩余不可达的 Block 2 和 5 将被释放。
