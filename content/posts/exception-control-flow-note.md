@@ -391,7 +391,7 @@ int execve(const char *filename, const char *argv[], const char *envp[]);
 
 参数`filename`是加载并运行的可执行文件名称，`argv`和`envp`则分别是参数和环境变量列表。函数`execve`通常没有返回值，仅在出现错误时返回 -1。
 
-变量`argv`指向一个以 Null 结尾的指针数组，其中的每个指针都指向一个参数字符串。一般来说，`argv[0]`是可执行目标文件名称。变量`envp`也指向一个以 Null 结尾的指针数组，其中的每个指针都指向一个环境变量字符串，而每个字符串都是一个 name=value 形式的键值对。两者的数据结构如下：
+变量`argv`指向一个以 NULL 结尾的指针数组，其中的每个指针都指向一个参数字符串。一般来说，`argv[0]`是可执行目标文件名称。变量`envp`也指向一个以 NULL 结尾的指针数组，其中的每个指针都指向一个环境变量字符串，而每个字符串都是一个 name=value 形式的键值对。两者的数据结构如下：
 
 ![20220221214923](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220221214923.png)
 
