@@ -305,7 +305,7 @@ void *malloc(size_t size);
 // Returns: pointer to allocated block if OK, NULL on error
 ```
 
-`malloc`函数请求堆中的一块 Block 并返回指向该 Block 的指针。Block 的大小至少为`size`，并可能根据其中的数据对象类型进行适当的对齐。在 32 位编译模式下，Block 的地址始终为 8 的倍数，而在 64 位中则为 16 的倍数。如果执行`malloc`遇到问题，如程序请求的 Block 大小超过了可用的虚拟内存，则函数返回 NULL 并设置 [`errno`](https://man7.org/linux/man-pages/man3/errno.3.html)。我们还可以使用`malloc`的包装函数`calloc`，它会将分配的内存初始化为零。类似地，`realloc`函数可以更改已分配 Block 的大小。
+`malloc`函数请求堆中的一块 Block 并返回指向该 Block 的指针。Block 的大小至少为`size`，并可能根据其中的数据对象类型进行适当的对齐。在 32 位编译模式下，Block 的地址始终为 8 的倍数，而在 64 位中则为 16 的倍数。如果执行`malloc`遇到问题，如程序请求的 Block 大小超过了可用的虚拟内存，则函数返回`NULL`并设置 [`errno`](https://man7.org/linux/man-pages/man3/errno.3.html)。我们还可以使用`malloc`的包装函数`calloc`，它会将分配的内存初始化为零。类似地，`realloc`函数可以更改已分配 Block 的大小。
 
 ```c
 #include <unistd.h>
@@ -530,7 +530,7 @@ Mark&Sweep 是常用的垃圾回收算法之一，它分为两个阶段：
 为了更好地理解 Mark&Sweep 算法，我们作出以下假设：
 
 - `ptr`：由`typedef void *ptr`定义的类型；
-- `ptr isPtr(ptr p)`：若`p`指向已分配 Block 中的某个字，则返回指向该 Block 起始位置的指针`b`，否则返回 NULL；
+- `ptr isPtr(ptr p)`：若`p`指向已分配 Block 中的某个字，则返回指向该 Block 起始位置的指针`b`，否则返回`NULL`；
 - `int blockMarked(ptr b)`：如果该 Block 已被标记则返回`true`；
 - `int blockAllocated(ptr b)`：如果该 Block 已分配则返回`true`；
 - `void markBlock(ptr b)`：标记 Block；
