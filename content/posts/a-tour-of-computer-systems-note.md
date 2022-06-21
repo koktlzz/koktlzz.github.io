@@ -48,11 +48,11 @@ int main()
 
 ## 程序的运行过程
 
-从键盘上读取命令：当我们在终端中输入命令`./hello`后，bash 程序将逐一读取命令字符串到寄存器（Register），然后存储于主存中；
+从键盘上读取命令：当我们在终端中输入命令`./hello`后，Bash 程序将逐一读取命令字符串到寄存器（Register），然后存储于主存中；
 
 ![20210523175310](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20210523175310.png)
 
-从磁盘加载可执行文件到主存：当我们输入回车键后，bash 程序得知输入结束，于是开始加载可执行文件`hello`，其中的代码和数据将通过 [直接存储器访问技术](/posts/the-memory-hierarchy-note/#访问磁盘)（DMA, Direct Memory Access）从磁盘拷贝到主存中；
+从磁盘加载可执行文件到主存：当我们输入回车键后，Bash 程序得知输入结束，于是开始加载可执行文件`hello`，其中的代码和数据将通过 [直接存储器访问技术](/posts/the-memory-hierarchy-note/#访问磁盘)（DMA, Direct Memory Access）从磁盘拷贝到主存中；
 
 ![20210428021025](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20210428021025.png)
 
