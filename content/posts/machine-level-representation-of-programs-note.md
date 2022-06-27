@@ -767,7 +767,7 @@ done:
 
 ## 过程
 
-过程（Procedure）在不同的编程语言中有不同的叫法，如函数（Function）、方法（Method）、子程序（Subroutine）和 Handler 等。不过它们都提供了一种打包代码的方法，该代码使用一组参数和可选的返回值来实现某些功能，并可以在程序的不同位置调用。
+过程（Procedure）在不同的编程语言中有不同的叫法，如函数（Function）、方法（Method）、子程序（Subroutine）和处理器（Handler）等，不过它们都提供了一种打包代码的方法。该代码使用一组参数和可选的返回值来实现某些功能，并可以在程序的不同位置调用。
 
 假设过程 P 调用了过程 Q，Q 执行完毕后返回 P。那么：
 
@@ -779,7 +779,7 @@ done:
 
 ![20211103221350](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20211103221350.png)
 
-当过程所需的存储空间超过寄存器所能容纳的范围时，它便会在运行时栈上分配空间。上图为运行时栈的一般结构，主要由执行过程 Q 和调用过程 P 所需的帧（Frame）组成。每个过程可以在其栈帧内保存寄存器的值（图中的 Saved registers），为局部变量分配空间（图中的 Local Variables），以及为其调用的过程设置参数（图中的 Argument）等。当 P 调用 Q 时，它会将返回地址（图中 Return Address）压入栈中。这样当 Q 返回时，程序便知道应该在哪里恢复执行 P。
+当过程所需的存储空间超过寄存器所能容纳的范围时，它便会在运行时栈上分配空间。上图为运行时栈的一般结构，主要由执行过程 Q 和调用过程 P 所需的帧（Frame）组成。每个过程可以在其栈帧内保存寄存器的值（图中的“Saved registers”），为局部变量分配空间（图中的“Local Variables”），以及为其调用的过程设置参数（图中的“Argument”）等。当 P 调用 Q 时，它会将返回地址（图中“Return Address”）压入栈中。这样当 Q 返回时，程序便知道应该在哪里恢复执行 P。
 
 不过出于对时间和空间效率的考虑，程序只会为过程分配它们必须的栈帧。例如某个过程的参数不足 6 个，那么它们将全部存储在寄存器中而非运行时栈（图中的参数区是从 Argument 7 开始的）。许多过程的局部变量很少且不调用其他过程，那么就不需要运行时栈。
 
@@ -787,9 +787,9 @@ done:
 
 ### 传递控制
 
-在汇编代码中，过程间调用是通过指令`call`和`ret`来实现的。其中，指令`call Q`会将程序计数器设置为过程 Q 的代码起始地址，并将返回地址 A 压入栈中。指令`ret`则会将地址 A 从栈中弹出，然后将程序计数器设置为 A。实际上，地址 A 就是紧跟在`call`指令之后的指令地址。
+在汇编代码中，过程间调用是通过指令`call`和`ret`来实现的。其中，指令`call Q`会将程序计数器设置为过程 Q 代码的起始地址，并将返回地址 A 压入栈中。指令`ret`则会将地址 A 从栈中弹出，然后将程序计数器设置为 A。实际上，地址 A 就是紧跟在`call`指令之后的指令的地址。
 
-下图说明了 [代码示例](/posts/machine-level-representation-of-programs-note/#代码示例) 中主函数调用 multstore 后返回的过程中运行时栈的变化情况：
+下图说明了 [代码示例](/posts/machine-level-representation-of-programs-note/#代码示例) 中主函数调用`multstore`后返回的过程中运行时栈的变化情况：
 
 ![20211104221557](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20211104221557.png)
 
@@ -797,7 +797,7 @@ done:
 
 ![20211104222239](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20211104222239.png)
 
-当主函数调用函数 multstore 时，程序计数器 %rip 中的值为`call`指令的地址 0x400563。该指令将返回地址 0x400568 压入栈中并跳转到函数 multstore 中的第一条指令，其地址为 0x0400540。 随后函数 multstore 继续执行，直到遇到地址 0x40054d 处的`ret`指令。 该指令将返回地址  0x400568 从栈中弹出并跳转到该地址对应的指令，主函数得以继续执行。
+当主函数调用函数`multstore`时，程序计数器 %rip 中的值为`call`指令的地址 0x400563。该指令将返回地址 0x400568 压入栈中并跳转到函数`multstore`中的第一条指令，其地址为 0x0400540。 随后函数`multstore`继续执行，直到遇到地址 0x40054d 处的`ret`指令。 该指令将返回地址 0x400568 从栈中弹出并跳转到该地址对应的指令，主函数得以继续执行。
 
 ### 传递参数
 
@@ -805,7 +805,7 @@ done:
 
 ![20211104224830](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20211104224830.png)
 
-参数从第七个开始将存储在运行时栈中。一个简单的 C 程序及其通过 GCC 编译后得到的汇编代码分别如下：
+第七个及之后的参数将存储在运行时栈中。一个简单的 C 程序及其通过 GCC 编译后得到的汇编代码分别如下：
 
 ```c
 
@@ -823,7 +823,7 @@ void proc(long a1, long *a1p,
 
 ![20211109231344](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20211109231344.png)
 
-虽然参数`a4`的类型为 char，但程序分别通过`8(%rsp)`和`16(%rsp)`来对它和指针类型的`a4p`进行寻址，说明两者均占用了栈中 8 个字节的空间。参数的栈帧结构如下图所示：
+虽然参数`a4`的类型为`char`，但程序分别通过`8(%rsp)`和`16(%rsp)`来对它和指针类型的`a4p`进行寻址，说明两者均占用了栈中 8 个字节的空间。参数的栈帧结构如下图所示：
 
 ![20211109231455](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20211109231455.png)
 
@@ -853,7 +853,7 @@ long call_proc()
 
 ![20211110223306](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20211110223306.png)
 
-图中`Set up arguments to proc`阶段对应的栈帧结构如下图所示：
+图中“Set up arguments to proc”阶段对应的栈帧结构如下图所示：
 
 ![20211110223714](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20211110223714.png)
 
@@ -1246,7 +1246,7 @@ long vframe(long n, long idx, long *q)
 
 ![20211123223334](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20211123223334.png)
 
-上文提到，%rbp 是一个[被调用者保存寄存器](/posts/machine-level-representation-of-programs-note/#被保存的寄存器)，因此其原值将被保存在栈中（图中的 Saved %rbp）。在程序的执行过程中，%rbp 会一直指向这个位置。一些固定长度的局部变量，比如`i`，就可以根据其相对于 %rbp 的偏移量来引用。函数编译后生成的部分汇编代码如下：
+上文提到，%rbp 是一个[被调用者保存寄存器](/posts/machine-level-representation-of-programs-note/#被保存的寄存器)，因此其原值将被保存在栈中（图中的“Saved %rbp”）。在程序的执行过程中，%rbp 会一直指向这个位置。一些固定长度的局部变量，比如`i`，就可以根据其相对于 %rbp 的偏移量来引用。函数编译后生成的部分汇编代码如下：
 
 ![20211123224435](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20211123224435.png)
 
@@ -1289,7 +1289,7 @@ popq %rbp
 
 ![20211125224206](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20211125224206.png)
 
-如上图所示，AVX 架构允许浮点数存储在 16 个 YMM 寄存器中，每个长度均为 256 位（32 字节）。在对标量数据进行操作时，这些寄存器只会保存浮点型数据。而对于`float`类型和`double`类型，分别只有较低的 32 位和 64 位被使用。汇编代码通过 XMM 寄存器（即图中的 %xmm0–%xmm15）的名称来引用它们，每个 XMM 寄存器是其对应的 YMM 寄存器的低 128 位（16 字节）。
+如上图所示，AVX 架构允许浮点数存储在 16 个 YMM 寄存器中，每个长度均为 256 位（32 字节）。在对标量数据进行操作时，这些寄存器只会保存浮点型数据。而对于`float`类型和`double`类型，分别只有较低的 32 位和 64 位被使用。汇编代码通过 XMM 寄存器（即图中的“%xmm0–%xmm15”）的名称来引用它们，每个 XMM 寄存器是其对应的 YMM 寄存器的低 128 位（16 字节）。
 
 ### 浮点数的移动和转换操作
 
