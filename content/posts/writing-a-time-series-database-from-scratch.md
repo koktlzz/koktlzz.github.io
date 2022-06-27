@@ -195,7 +195,7 @@ $ tree ./data
 
 ![20211130204102](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20211130204102.png)
 
-每个已持久化的 Block 都是不可改变的，但我们还需要一个可变的 Block（即上图中的 Mutable Block）来接收新的样本数据。该 Block 是一个能够高效更新数据结构的内存数据库，并有着与已持久化的 Block 相同的查询特性。为了防止数据丢失，所有刚采集到的数据都会另外写入临时的预写日志（Write Ahead Log）中。它实际上就是`wal`目录中的一组文件，可以在 Prometheus 重启时恢复原有的内存数据库。
+每个已持久化的 Block 都是不可改变的，但我们还需要一个可变的 Block（即上图中的“Mutable Block”）来接收新的样本数据。该 Block 是一个能够高效更新数据结构的内存数据库，并有着与已持久化的 Block 相同的查询特性。为了防止数据丢失，所有刚采集到的数据都会另外写入临时的预写日志（Write Ahead Log）中。它实际上就是`wal`目录中的一组文件，可以在 Prometheus 重启时恢复原有的内存数据库。
 
 现在我们可以根据每个 Block 对应的时间范围将查询请求分发到各个 Block 中，最终的查询结果是由每个 Block 的返回值合并而成的。
 
