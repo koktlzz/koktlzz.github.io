@@ -308,7 +308,7 @@ Chain OPENSHIFT-MASQUERADE (1 references)
  322M   19G MASQUERADE  all  --  *      *       10.128.0.0/14        0.0.0.0/0            /* masquerade pod-to-service and pod-to-external traffic */
 ```
 
-访问集群外部显然需要通过节点的默认网关，因此数据包将从节点网卡`eth0`送出。而在`POSTROUTING`链中，数据包的源地址由 Pod IP 转换为了`eth0`的 IP 10.122.28.7。完整流程如下图所示（图中的 Router 指的是路由器而非 Openshift 中的概念）：
+访问集群外部显然需要通过节点的默认网关，因此数据包将从节点网卡`eth0`送出。而在`POSTROUTING`链中，数据包的源地址由 Pod IP 转换为了`eth0`的 IP 10.122.28.7。完整流程如下图所示（图中的“Router”指的是路由器而非 Openshift 中的概念）：
 
 ![202205132045](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/202205132045.jpeg)
 
