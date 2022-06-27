@@ -242,7 +242,7 @@ SSD 的随机写入速度比读取慢，这是因为擦除 Block 需要相对较
 
 ![20220109214508](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220109214508.png)
 
-如果有效位置为 1 且缓存行与地址中的标记位匹配，则缓存命中。同样，我们可以将 Block 看作一个以 Block Offset 为索引的字节数组。示例中的 Block Offset 为 $100_2$，因此目标 word 的起始字节为 4，即上图中的 $w_0$。
+如果有效位置为 1 且缓存行与地址中的标记位匹配，则缓存命中。同样，我们可以将 Block 看作一个以 Block Offset 为索引的字节数组。示例中的 Block Offset 为 $100_2$，因此目标 word 的起始字节为 4，即上图中的“$w_0$”。
 
 如果出现缓存缺失，则缓存将从以下一级设备中检索请求的 Block，然后存储在其 Set Index 指定的缓存集中。若当前缓存已满，考虑到直接映射缓存的缓存集中只有一个缓存行，因此对应的缓存行将被替换。
 
@@ -359,7 +359,7 @@ float dotprod(float x[8], float y[8])
 
 ![20220112221724](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220112221724.png)
 
-上图中的`i-cache`代表保存指令的缓存，`d-cache`代表保存程序数据的缓存，而`unified cache`则代表既存储指令又存储数据的缓存。有趣的是，所有的 SRAM 缓存都包含在 CPU 芯片中。
+上图中的“i-cache”代表保存指令的缓存，“d-cache”代表保存程序数据的缓存，而`unified cache`则代表既存储指令又存储数据的缓存。有趣的是，所有的 SRAM 缓存都包含在 CPU 芯片中。
 
 ### 缓存参数对性能的影响
 
