@@ -7,13 +7,13 @@ tags: ["ISA"]
 summary: "我们将处理器支持的指令及其对应的字节编码方式称为指令集架构（Instruction Set Architecture，ISA）。不同的处理器系列，例如 Intel IA32/x86-64，IBM/Freescale Power 和 ARM 等，均使用不同的 ISA。为一种机器编译得到的程序，无法在 ISA 不同的机器上运行 ..."
 ---
 
-处理器支持的指令及其对应的字节编码方式称为指令集架构（Instruction Set Architecture，ISA）。不同的处理器系列，例如 Intel IA32/x86-64，IBM/Freescale Power 和 ARM 等，均使用不同的 ISA。为一种机器编译得到的程序，无法在 ISA 不同的机器上运行。
+我们将处理器支持的指令及其对应的字节编码方式称为指令集架构（Instruction Set Architecture，ISA）。不同的处理器系列，例如 Intel IA32/x86-64，IBM/Freescale Power 和 ARM 等，均使用不同的 ISA。为一种机器编译得到的程序，无法在 ISA 不同的机器上运行。
 
 ISA 在编译器的编写者和处理器的设计者之间提供了一个抽象层。编译器的编写者只需要知道允许使用哪些指令以及它们是如何编码的，而处理器的设计者则需要创建能够执行这些指令的机器。
 
 在传统的 ISA 模型中，每条指令按顺序执行。而现代处理器则会同时执行多条指令的不同部分，从而获得比一次只执行一条指令更高的性能。不过我们还需要引入一个特殊机制，确保处理器的计算结果与顺序执行相同。
 
-在本章中，我们仿照 x86-64 创建了一个简单的指令集，称为“Y86-64”。同时使用 HCL（Hardware Control Language）来描述硬件系统的控制部分和处理器设计，它的作用类似于 [Verilog](https://en.wikipedia.org/wiki/Verilog) HDL（Hardware Description Language）。
+在本章中，我们仿照 x86-64 创建了一个简单的指令集，称其为“Y86-64”。同时使用 HCL（Hardware Control Language）来描述硬件系统的控制部分和处理器设计，它的作用类似于 [Verilog](https://en.wikipedia.org/wiki/Verilog) HDL（Hardware Description Language）。
 
 ## Y86-64 指令集架构
 
@@ -27,7 +27,7 @@ Y86-64 中的程序员可见状态包括 15 个能够存储 64 位数据的寄�
 
 ### Y86-64 指令
 
-Y86-64 指令是 x86-64 指令的子集，仅包含了 8 字节的整数运算，以及更少的寻址和运算模式。由于我们的数据均为 8 字节，因此可以无歧义地将它们称为字（word）。
+Y86-64 指令是 x86-64 指令的子集，仅包含了 8 字节的整数运算，以及更少的寻址和运算模式。由于我们的数据均为 8 字节，因此可以无歧义地将它们称为字（Word）。
 
 ![20211212175615](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20211212175615.png)
 
@@ -118,7 +118,7 @@ int main()
 
 ### 组合电路和 HCL 布尔表达式
 
-将多个逻辑门组合成一个网络，称为组合电路。其构建方式有以下要求：
+多个逻辑门组成的网络被称为组合电路，其构建方式有以下要求：
 
 - 每个逻辑门的输入必须是：
   - 整个系统的输入之一（即主输入）
@@ -127,7 +127,7 @@ int main()
 - 两个或多个逻辑门的输出不能连接到一起
 - 网络不能是一个回路（acyclic）
 
-下图展示了一个多路复用器（multiplexor，MUX）的组合电路：
+下图展示了一个多路复用器（Multiplexor，MUX）的组合电路：
 
 ![20211214105159](https://cdn.jsdelivr.net/gh/koktlzz/NoteImg@main/20211214105159.png)
 
