@@ -11,7 +11,7 @@ summary: "在《Kubernetes Pod 是如何跨节点通信的？》中，我们简�
 在 [Kubernetes Pod 是如何跨节点通信的？](/posts/how-kubernetes-pods-communicate-across-nodes/) 中，我们简单地介绍了 Kubernetes 中的两种 SDN 网络模型：Underlay 和 Overlay。而 Openshift 中的 SDN 则是由 Overlay 网络 OVS（Open vSwitch）实现的，其使用的插件如下：
 
 - ovs-subnet: 默认插件，提供一个扁平化的 Pod 网络以实现 Pod 与其他任何 Pod 或 Service 的通信；
-- ovs-multitenant：实现多租户管理，隔离不同 Project 之间的网络通信。每个 Project 都有一个 NETID（即 VxLAN 中的 VNID），可以使用 **oc get netnamespaces** 命令查看；
+- ovs-multitenant：实现多租户管理，隔离不同 Project 之间的网络通信。每个 Project 都有一个 NETID（即 VxLAN 中的 VNID），可以使用`oc get netnamespaces`命令查看；
 - ovs-networkpolicy：基于 Kubernetes 中的 NetworkPolicy 资源实现网络策略管理。
 
 OVS 在每个 Openshift 节点上都创建了如下网络接口：
@@ -21,7 +21,7 @@ OVS 在每个 Openshift 节点上都创建了如下网络接口：
 - `tun0`：节点上所有 Pod 的默认网关，用于 Pod 与集群外部和 Pod 与 Service 之间的通信；
 - `veth`：Pod 通过`veth-pair`连接到`br0`网桥的端点。
 
-使用 **ovs-ofctl -O OpenFlow13 show br0** 命令可以查看`br0`上的所有端口及其编号：
+使用以下命令可以查看`br0`上的所有端口及其编号：
 
 ```bash
 [root@node1 ~]# ovs-ofctl -O OpenFlow13 show br0
@@ -57,7 +57,7 @@ OFPT_GET_CONFIG_REPLY (OF1.3) (xid=0x5): frags=nx-match miss_send_len=0
 - Pod 访问 Service：Pod to Service
 - Pod 与集群外部互访：Pod to External
 
-由于高版本（3.11 以上）的 Openshift 不再以守护进程而是以 Pod 的形式部署 OVS 组件，不方便对 [OpenFlow](https://en.wikipedia.org/wiki/OpenFlow) 流表进行查看，因此本文选用的集群版本为 3.6：
+由于 3.11 以上版本的 Openshift 不再以守护进程而是以 Pod 的形式部署 OVS 组件，不方便对 [OpenFlow](https://en.wikipedia.org/wiki/OpenFlow) 流表进行查看，因此本文选用的集群版本为 3.6：
 
 ```bash
 [root@node1 ~]# oc version 
@@ -76,7 +76,7 @@ kubernetes v1.6.1+5115d708d7
 
 ![202205132046](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/202205132046.jpeg)
 
-数据包首先通过`veth-pair`送往 OVS 网桥`br0`，随后便进入了`br0`上的 OpenFlow 流表。我们可以用 **ovs-ofctl -O OpenFlow13 dump-flows br0** 命令查看流表中的规则，同时为了让输出结果更加简洁，略去 cookie 和 duration 的信息：
+数据包首先通过`veth-pair`送往 OVS 网桥`br0`，随后便进入了`br0`上的 OpenFlow 流表。我们可以用`ovs-ofctl -O OpenFlow13 dump-flows br0`命令查看流表中的规则，同时为了让输出结果更加简洁，略去 cookie 和 duration 的信息：
 
 - `table=0, n_packets=62751550874, n_bytes=25344802160312, priority=200,ip,in_port=1,nw_src=10.128.0.0/14,nw_dst=10.130.8.0/23 actions=move:NXM_NX_TUN_ID[0..31]->NXM_NX_REG0[],goto_table:10`
 - `table=0, n_packets=1081527047094, n_bytes=296066911370148, priority=200,ip,in_port=2 actions=goto_table:30`
