@@ -46,7 +46,7 @@ CNI 插件不仅为 Pod 分配 IP 地址，它还会将每个 Pod 所在的节�
 
 > 边界网关协议（英语：Border Gateway Protocol，缩写：BGP）是互联网上一个核心的去中心化自治路由协议。它通过维护 IP 路由表或“前缀”表来实现自治系统（AS）之间的可达性，属于矢量路由协议。BGP 不使用传统的内部网关协议（IGP）的指标，而使用基于路径、网络策略或规则集来决定路由。因此，它更适合被称为矢量性协议，而不是路由协议。
 
-对于 Calico 的 BGP 模式来说，我们可以把集群网络模型视为在每个节点上都部署了一台虚拟路由器。路由器可以与其他节点上的路由器通过 BGP 协议互通，它们称为一对 BGP Peers。Calico 的默认部署方式为 [Full-mesh](https://docs.projectcalico.org/networking/bgp#full-mesh)，即创建一个完整的内部 BGP 连接网，每个节点上的路由器均互为 BGP Peers。这种方式仅适用于 100 个节点以内的中小型集群，在大型集群中使用的效率低下。而 [Route reflectors](https://docs.projectcalico.org/networking/bgp#route-reflectors) 模式则将部分节点作为路由反射器，其他节点上的路由器只需与路由反射器互为 BGP Peers。这样便可以大大减少集群中 BGP Peers 的数量，从而提升效率。
+对于 Calico 的 BGP 模式来说，我们可以把集群网络模型视为在每个节点上都部署了一台虚拟路由器。路由器可以与其他节点上的路由器通过 BGP 协议互通，它们称为一对 BGP Peers。Calico 的默认部署方式为 [Full-mesh](https://docs.projectcalico.org/networking/bgp#full-mesh)，即创建一个完整的内部 BGP 连接网，每个节点上的路由器均互为 BGP Peers。这种方式仅适用于 100 个节点以内的中小型集群，在大型集群中使用的效率低下。而 [Route Reflectors](https://docs.projectcalico.org/networking/bgp#route-reflectors) 模式则将部分节点作为路由反射器，其他节点上的路由器只需与路由反射器互为 BGP Peers。这样便可以大大减少集群中 BGP Peers 的数量，从而提升效率。
 
 ## Overlay Network
 
