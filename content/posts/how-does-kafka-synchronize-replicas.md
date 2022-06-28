@@ -20,7 +20,7 @@ HW 定义了消息的可见性，即标识 Partition 中的哪些消息是可以
 
 ## HW 的更新机制
 
-每一个副本都保存了其 HW 值和 LEO 值，即 Leader HW（实际上也是 Partition HW）、Leader LEO 和 Follower HW、Follower LEO。而 Leader 所在的 Broker 上还保存了其他 Follower 的 LEO 值，称为 Remote LEO。上述几个值的更新流程如下：
+每一个副本都保存了其 HW 值和 LEO 值，即 Leader HW（实际上也是 Partition HW）、Leader LEO 和 Follower HW、Follower LEO。而 Leader 所在的 Broker 上还保存了其他 Follower 的 LEO 值，即 Remote LEO。上述几个值的更新流程如下：
 
 ![202103230149](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/202103230149.jpeg)
 
