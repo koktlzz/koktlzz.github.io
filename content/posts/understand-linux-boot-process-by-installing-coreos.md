@@ -60,7 +60,7 @@ GRUB1 的引导过程可以分为三个阶段：stage 1、stage 1.5 和 stage 2�
 26664   /boot/grub2/i386-pc/core.img
 ```
 
-它的作用是检查分区表是否正确，然后**定位和加载 stage 1.5** 文件。446 字节的 boot.img 放不下能够识别文件系统的代码，只能通过计算扇区的偏移量来寻找，因此 core.img 必须位于主引导记录和驱动器的第一个分区（partition）之间。第一个分区从扇区 63 开始，与位于扇区 0 的主引导记录之间有 62 个扇区（每个 512 字节），有足够的空间存储大小不足 30000 字节的 core.img 文件。当 core.img 文件加载到 RAM 后，控制权也随之转移。
+它的作用是检查分区表是否正确，然后**定位和加载 stage 1.5** 文件。446 字节的 boot.img 放不下能够识别文件系统的代码，只能通过计算扇区的偏移量来寻找，因此 core.img 必须位于主引导记录和驱动器的第一个分区（Partition）之间。第一个分区从扇区 63 开始，与位于扇区 0 的主引导记录之间有 62 个扇区（每个 512 字节），有足够的空间存储大小不足 30000 字节的 core.img 文件。当 core.img 文件加载到 RAM 后，控制权也随之转移。
 
 #### stage 1.5
 
@@ -136,9 +136,9 @@ menuentry 'coreos' {
 - `linux16 /rhcos-live-kernel-x86_64 ...`
 - `initrd16 /rhcos-live-initramfs.x86_64.img`
 
-第一条命令指定了 GRUB2 的根目录，也就是 /boot 所在分区在计算机硬件上的位置。既然我们已经将内核文件拷贝到了 /boot 目录下，那么能够识别文件系统的 GRUB2 便可以定位和加载它。本例中`hd`代表硬盘（hard drive），`0`代表第一块硬盘，`mosdos`代表分区格式，`1` 代表第一个分区。详细的硬件命名规范见 [Naming Convention](https://www.gnu.org/software/grub/manual/grub/grub.html#Naming-convention)。
+第一条命令指定了 GRUB2 的根目录，也就是 /boot 所在分区在计算机硬件上的位置。既然我们已经将内核文件拷贝到了 /boot 目录下，那么能够识别文件系统的 GRUB2 便可以定位和加载它。本例中`hd`代表硬盘（Hard Drive），`0`代表第一块硬盘，`mosdos`代表分区格式，`1` 代表第一个分区。详细的硬件命名规范见 [Naming Convention](https://www.gnu.org/software/grub/manual/grub/grub.html#Naming-convention)。
 
-第二条命令将从`rhcos-live-kernel-x86_64`（CoreOS 系统的内核文件）中以 16 位模式加载 Linux 内核映像，并通过`coreos.live.rootfs_url`和`coreos.inst.ignition_url`参数指定根文件系统（rootfs）的镜像文件和点火文件的下载链接。`ip=dhcp`代表该计算机网络将由 DHCP 服务器动态配置，也可以按`ip={{HostIP}}::{{Gateway}}:{{Genmask}}:{{Hostname}}::none nameserver={{DNSServer}}`的格式写入静态配置。
+第二条命令将从`rhcos-live-kernel-x86_64`（CoreOS 系统的内核文件）中以 16 位模式加载 Linux 内核映像，并通过`coreos.live.rootfs_url`和`coreos.inst.ignition_url`参数指定根文件系统（Rootfs）的镜像文件和点火文件的下载链接。`ip=dhcp`代表该计算机网络将由 DHCP 服务器动态配置，也可以按`ip={{HostIP}}::{{Gateway}}:{{Genmask}}:{{Hostname}}::none nameserver={{DNSServer}}`的格式写入静态配置。
 
 第三条命令将从`rhcos-live-initramfs.x86_64.img`中加载 RAM Filesystem。GRUB2 读取的内核文件实际上只包含了内核的核心模块，缺少硬件驱动模块的它无法完成 rootfs 的挂载。然而这些硬件驱动模块位于 /lib/modules/$(uname -r)/kernel/ 目录下，必须在 rootfs 挂载完毕后才能被识别和加载。为了解决这一问题，initramfs（前身为 initrd）应运而生。它是一个包含了必要驱动模块的临时 rootfs，内核可以从中加载所需的驱动程序。待真正的 rootfs 挂载完毕后，它便会从内存中移除。
 
@@ -157,7 +157,7 @@ vmlinuz-4.18.0-305.12.1.el8_4.x86_64
 vmlinuz-4.18.0-305.3.1.el8.x86_64
 ```
 
-内核通过压缩自身来节省存储空间，所以当选定的内核被加载到内存中后，它首先需要进行解压缩（extracting）。一旦解压完成，内核便会开始**加载 systemd 并将控制权移交给它**。
+内核通过压缩自身来节省存储空间，所以当选定的内核被加载到内存中后，它首先需要进行解压缩（Extracting）。一旦解压完成，内核便会开始**加载 systemd 并将控制权移交给它**。
 
 ## Startup 阶段
 
@@ -184,7 +184,7 @@ lrwxrwxrwx. 1 root root 37 Oct 17  2019 /etc/systemd/system/default.target -> /l
 | 5                | graphical.target  | runlevel5.target     | 所有服务都在运行，并且可以使用图形化界面（GUI）。                             |
 | 6                | reboot.target     | runlevel6.target     | 重启系统                                                   |
 
-每个 target 都在其配置文件中指定了一组依赖，由 systemd 负责启动。这些依赖是 Linux 达到某个运行级别所必须的服务（service）。换句话说，当一个 target 配置文件中的所有 service 都已成功加载，那么系统就达到了该 target 对应的运行级别。
+每个 target 都在其配置文件中指定了一组依赖，由 systemd 负责启动。这些依赖是 Linux 达到某个运行级别所必须的服务（Service）。换句话说，当一个 target 配置文件中的所有 service 都已成功加载，那么系统就达到了该 target 对应的运行级别。
 
 下图展示了 systemd 启动过程中各 target 和 service 实现的一般顺序：
 
