@@ -87,7 +87,7 @@ summary: "在计算机的运行过程中，程序计数器依次指向一系列�
 #### 故障和中止
 
 - 除法故障（Divide Error）：当应用程序尝试除以 0 或除法指令的结果对目标操作数来说太大时，就会发生除法故障。Unix 不会试图纠正除法故障，而是直接中止程序；
-- 一般保护故障（General Protection Fault）：一般保护故障出现的原因有很多，通常是程序引用了未定义的虚拟内存区域，或试图向只读文本段写入。Linux 不会试图纠正该故障，Shell 一般将其报告为分段故障（Segmentation Faults）；
+- 一般保护故障（General Protection Fault）：一般保护故障出现的原因有很多，通常是程序引用了未定义的虚拟内存区域，或试图向只读文本段写入。Linux 不会试图纠正该故障，而 Shell 一般将其报告为分段故障（Segmentation Faults）；
 - 缺页故障（Page Fault）：程序引用不在内存而在磁盘上的虚拟页面会导致缺页故障。处理程序将磁盘上合适的虚拟内存页面映射到物理内存页面，然后重新执行故障指令；
 - 机器检查（Machine Check）：一旦系统在执行指令期间检测到致命的硬件错误，便会发生机器检查。处理程序永远不会将控制权返回给应用程序。
 
@@ -95,9 +95,9 @@ summary: "在计算机的运行过程中，程序计数器依次指向一系列�
 
 ![20220213214429](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220213214429.png)
 
-上图中的每个系统调用都有一个唯一的数字，对应了内核中跳转表的偏移量。该跳转表与上文提到的异常表不同。
+上图中的每个系统调用都有一个唯一的数字，对应了内核中跳转表的偏移量。注意，该跳转表与上文提到的异常表不同。
 
-C 标准库为大多数系统调用提供了一组包装函数（Wrapper Function），它们比直接使用系统调用更加方便。系统调用及其相关的包装函数统称为系统级函数。举例来说，我们可以使用系统级函数`write`代替`printf`：
+C 标准库为大多数系统调用提供了一组包装函数（Wrapper Function），它们比直接使用系统调用更加方便。系统调用及其相关的包装函数被统称为系统级函数。举例来说，我们可以使用系统级函数`write`代替`printf`：
 
 ```c
 int main()
@@ -113,7 +113,7 @@ X86-64 系统通过`syscall`指令使用系统调用，其所有参数均通过�
 
 ## 进程
 
-进程是正在执行的程序实例，而系统中的每个程序都在进程的上下文中运行。上下文包含了程序正确运行所需的状态，如程序代码和存储在内存中的数据、栈、寄存器、程序计数器、环境变量和打开的文件描述符集合。
+进程是正在执行的程序的实例，系统中的每个程序都在进程的上下文中运行。上下文由程序正确运行所需的状态组成，包括存储在内存中的程序代码和数据、栈、通用寄存器中的内容、程序计数器、环境变量以及打开 [文件描述符](https://en.wikipedia.org/wiki/File_descriptor) 。
 
 进程为应用提供了两个关键抽象：
 
@@ -134,27 +134,27 @@ X86-64 系统通过`syscall`指令使用系统调用，其所有参数均通过�
 
 ### 私有地址空间
 
-进程为程序提供了私有地址空间。它是程序独享的，与空间内特定地址相关的内存字节通常不能被其他任何进程读取或写入。尽管私有地址空间的内容不同，但其具有相同的组织结构：
+进程为程序提供了独享的私有地址空间，与空间内特定地址相关的内存字节通常不能被其他任何进程读取或写入。尽管私有地址空间的内容不同，但其具有相同的组织结构：
 
 ![20220214215948](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220214215948.png)
 
-地址空间底部是为用户程序保留的，代码段总是从地址 0x400000 开始。地址空间顶部是为内核保留的，包含了内核为进程执行指令（如程序执行系统调用）时使用的代码、数据和栈。
+地址空间底部是为用户程序保留的，代码段总是从地址 0x400000 开始。地址空间顶部是为内核保留的，包含了内核为进程执行指令（如系统调用）时使用的代码、数据和栈。
 
 ### 用户态和内核态
 
-处理器通过保存在控制寄存器中的模式位（Mode Bit）来识别进程当前享有的特权。当模式位被设置时，进程运行在内核态（Kernel Mode），反之则运行在用户态（User Mode）。在内核态中运行的程序可以执行指令集中的任意指令，并且可以访问系统中的任意位置。而在用户态中运行的程序则受到限制，只能使用系统调用间接地访问内核代码和数据。
+处理器通过保存在控制寄存器中的模式位（Mode Bit）来识别进程当前享有的特权。当模式位被设置时，进程运行在内核态（Kernel Mode），反之则运行在用户态（User Mode）。在内核态中运行的程序可以执行指令集中的任意指令，并且能够访问系统中的任意位置。而在用户态中运行的程序则受到限制，只能使用系统调用间接地访问内核代码和数据。
 
 应用程序的进程只能通过异常来从用户态切换到内核态。当异常发生且控制转移到异常处理程序时，处理器切换到内核态。随后异常处理程序在内核态中运行，处理器将在它返回时切换回用户态。
 
 ### 上下文切换
 
-在进程执行期间，内核可以暂时挂起当前进程并重启先前被抢占的进程，这一过程被称为调度（Scheduling）。内核调度新进程是通过上下文切换（Context Switch）机制来实现的，该机制：
+在进程执行期间，内核可以暂时挂起当前进程并重启先前被抢占的进程，这一行为被称为调度（Scheduling）。内核调度新进程是通过上下文切换（Context Switch）机制来实现的，该机制：
 
 - 保存当前进程的上下文；
 - 恢复之前被抢占进程的上下文；
 - 将控制权转移给新进程。
 
-程序使用系统调用时可能会发生上下文切换。比如系统调用`read`需要访问磁盘中的数据，内核可以通过上下文切换来调度另一个进程，这样就无需等待数据从磁盘加载到内存。
+程序执行系统调用时可能会发生上下文切换。比如系统调用`read`需要访问磁盘中的数据，内核可以通过上下文切换来调度另一个进程，这样就无需等待数据从磁盘加载到内存中。
 
 ![20220215211459](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220215211459.png)
 
@@ -170,7 +170,7 @@ if ((pid = fork()) < 0)
 }
 ```
 
-其中，`strerror`函数会根据`errno`的值返回相关的文本字符串。我们可以定义一个错误报告（Error-reporting）函数，从而将上述代码进行简化：
+其中，`strerror`函数会根据`errno`的值返回相关的文本字符串。我们定义一个错误报告（Error-reporting）函数以简化上述代码：
 
 ```c
 void unix_error(char *msg) /* Unix-style error */
@@ -183,7 +183,7 @@ if ((pid = fork()) < 0)
     unix_error("fork error");
 ```
 
-我们再定义一个错误处理（Error-handling）函数，将代码进一步地简化：
+当然还可以进一步地将代码简化为一个错误处理（Error-handling）函数：
 
 ```c
 pid_t Fork(void)
@@ -197,13 +197,13 @@ pid_t Fork(void)
 pid = Fork();
 ```
 
-这样我们就可以使用包装函数`Fork`代替`fork`及其错误检查代码。本书使用的包装函数均定义在 [csapp.h](http://csapp.cs.cmu.edu/2e/ics2/code/include/csapp.h) 和  [csapp.c](http://csapp.cs.cmu.edu/2e/ics2/code/src/csapp.c) 中。
+这样我们便能够使用包装函数`Fork`代替`fork`及其错误检查代码。本书使用的包装函数均定义在 [`csapp.h`](http://csapp.cs.cmu.edu/2e/ics2/code/include/csapp.h) 和  [`csapp.c`](http://csapp.cs.cmu.edu/2e/ics2/code/src/csapp.c) 中。
 
 ## 进程控制
 
 ### 获取进程 ID
 
-每个进程都有一个唯一且大于 0 的进程 ID（PID）。函数`getpid`返回调用进程的 PID，而函数`getppid则返回创建调用进程的进程（父进程） 的 PID。
+每个进程都有一个唯一且大于 0 的进程 ID（PID）。函数`getpid`返回调用进程的 PID，而函数`getppid`则返回创建调用进程的进程（即父进程） 的 PID。
 
 ```c
 #include <sys/types.h>
@@ -212,7 +212,7 @@ pid_t getpid(void);
 pid_t getppid(void);
 ```
 
-二者返回值的类型为`pid_t`，它在 Linux 系统的 sys/types.h 中定义为 int。
+二者返回值的类型均为`pid_t`，它在 Linux 系统的`sys/types.h`文件中被定义为`int`。
 
 ### 创建和中止进程
 
@@ -229,7 +229,7 @@ pid_t getppid(void);
 void exit(int status);
 ```
 
-父进程通过调用`fork`函数创建一个新的子进程：
+父进程可以调用`fork`函数来创建一个新的子进程：
 
 ```c
 #include <sys/types.h>
@@ -237,9 +237,9 @@ void exit(int status);
 pid_t fork(void);
 ```
 
-子进程将获得一个与父进程相同但独立的用户级虚拟内存空间副本，包括代码、数据、堆、共享库和用户栈等。它还会得到与父进程相同的文件描述符副本，因此可以在调用`fork`时读写任意父进程打开的文件。父进程和子进程之间最显著的区别便是 PID 不同。
+子进程将获得一个与父进程相同但独立的用户级虚拟内存空间副本，包括代码、数据、堆、共享库和用户栈等。它还会得到与父进程相同的打开文件描述符副本，因此能够读写任意父进程打开的文件。父进程和子进程之间最显著的区别便是 PID 不同。
 
-函数`fork`执行一次却返回两次：在父进程中返回子进程的 PID，在子进程中返回 0。由于子进程的 PID 始终大于 0 ，因此我们可以通过返回值判断程序在哪个进程中执行。
+函数`fork`执行一次却返回两次：在父进程中返回子进程的 PID，在子进程中返回 0。由于子进程的 PID 始终大于 0 ，我们可以通过返回值判断程序在哪个进程中执行。
 
 ```c
 #include "csapp.h"
@@ -278,9 +278,9 @@ child : x=2
 
 ### 回收子进程
 
-当进程终止时，内核不会立即将其移除。它需要被其父进程回收（Reap），否则将变成僵尸（Zombie）进程。当父进程回收其终止的子进程时，内核会将子进程的退出状态传递给父进程，然后再丢弃它。
+进程终止后，内核不会立即将其移除。它需要被其父进程回收（Reap），否则将成为僵尸（Zombie）进程。当父进程回收其终止的子进程时，内核将子进程的退出状态传递给父进程，然后再丢弃它。
 
-如果父进程终止，内核需要安排`init`进程（PID 为 1）“收养”孤儿进程。如果父进程在终止前没有回收僵尸子进程，那么`init`进程会回收它们。
+如果父进程终止，内核会安排`init`进程（PID 为 1）“收养”孤儿进程；如果父进程在终止前没有回收僵尸子进程，那么则由`init`进程回收它们。
 
 进程通过调用函数`waitpid`等待其子进程终止或停止：
 
@@ -291,27 +291,27 @@ pid_t waitpid(pid_t pid, int *statusp, int options);
 // Returns: PID of child if OK, 0 (if WNOHANG), or −1 on error
 ```
 
-默认情况下（参数`options`为 0 时），函数`waitpid`会暂停调用进程，直至其等待集（Wait Set）中的某个子进程终止。该函数始终返回导致其返回的子进程 PID。此时，终止的子进程已被回收，内核从系统中删除了它的所有痕迹。
+默认情况下（参数`options`为 0 时），函数`waitpid`会暂停调用进程，直至其等待集（Wait Set）中的某个子进程终止。该函数始终返回第一个终止的子进程 PID。此时，终止的子进程已被回收，内核从系统中删除了它的所有痕迹。
 
-若参数`pid_t`大于 0 ，则等待集中只有一个 PID 等于该参数的子进程。若参数`pid_t`等于 -1，则等待集包含调用进程的所有子进程。
+若参数`pid_t`大于 0 ，则等待集中只有一个 PID 与该参数相等的子进程。若参数`pid_t`等于 -1，则等待集包含调用进程的所有子进程。
 
 我们可以通过修改参数`options`的值来改变函数`waitpid`的行为：
 
-- WNOHANG：如果等待集中的子进程还未终止，则立即返回 0；
-- WUNTRACED：暂停调用进程执行，直到等待集中的进程终止或停止（默认情况下仅会对终止的子进程返回）；
-- WCONTINUED：暂停调用进程执行，直到等待集中的进程终止或等待集中停止的进程收到 SIGCONT 信号恢复。
+- `WNOHANG`：如果等待集中的子进程还未终止，则立即返回 0；
+- `WUNTRACED`：暂停调用进程执行，直到等待集中的进程终止或停止（默认情况下仅返回终止的子进程 PID）；
+- `WCONTINUED`：暂停调用进程执行，直到等待集中的进程终止或等待集中停止的进程收到 SIGCONT 信号恢复。
 
-若参数`statusp`不为`NULL`，那么`waitpid`还会将导致其返回的子进程状态信息编码到`status`中（`*statusp = status`）。wait.h 文件定义了几个用于解释参数`status`的宏：
+若参数`statusp`不为`NULL`，那么`waitpid`还会将返回的子进程状态信息编码到`status`中（`*statusp = status`）。`wait.h`文件定义了几个用于解释参数`status`的宏：
 
-- WIFEXITED(status)：如果子进程正常终止（比如调用`exit`或返回），则返回 True；
-- WEXITSTATUS(status)：如果 WIFEXITED() 返回 True，则返回终止子进程的退出状态；
-- WIFSIGNALED(status)：如果子进程由于未捕获的信号而终止，则返回 True；
-- WTERMSIG(status)：如果 WIFSIGNALED() 返回 True，则返回导致子进程终止的信号编号；
-- WIFSTOPPED(status)：如果导致返回的子进程当前已停止，则返回 True；
-- WSTOPSIG(status)：如果 WIFSTOPPED() 返回 True，则返回导致子进程停止的信号编号；
-- WIFCONTINUED(status)：如果子进程收到 SIGCONT 信号后恢复，则返回 True。
+- `WIFEXITED(status)`：如果子进程正常终止（比如调用`exit`或返回），则返回`True`；
+- `WEXITSTATUS(status)`：如果`WIFEXITED()`返回`True`，则返回终止子进程的退出状态；
+- `WIFSIGNALED(status)`：如果子进程由于未捕获的信号而终止，则返回`True`；
+- `WTERMSIG(status)`：如果`WIFSIGNALED()`返回`True`，则返回导致子进程终止的信号编号；
+- `WIFSTOPPED(status)`：如果返回的子进程当前已停止，则返回`True`；
+- `WSTOPSIG(status)`：如果`WIFSTOPPED()`返回`True`，则返回导致子进程停止的信号编号；
+- `WIFCONTINUED(status)`：如果子进程收到 SIGCONT 信号后恢复，则返回`True`。
 
-如果调用进程没有子进程，`waitpid`将返回 -1 并将全局变量`errno`设为 ECHILD。而如果`waitpid`被信号中断，则返回 -1 并将全局变量`errno`设为 EINTR。
+如果调用进程没有子进程，`waitpid`将返回 -1 并将全局变量`errno`设为`ECHILD`；如果`waitpid`被信号中断，则返回 -1 并将全局变量`errno`设为 `EINTR`。
 
 函数`wait`是`waitpid`的简化版本， `wait(&status)`等效于`waitpid(-1, &status, 0)`。
 
@@ -346,7 +346,7 @@ int main()
 }
 ```
 
-如示例程序所示，父进程首先调用`Fork`创建了 N 个退出状态唯一的子进程（`exit(100+i)`）。 随后在 While 循环的测试条件中通过`waitpid`等待其所有的子进程终止，并打印子进程的退出状态。最终所有的子进程均被回收，`waitpid`返回 -1 且将全局变量`errno`设为 ECHILD，函数执行完毕。
+如示例程序所示，父进程首先调用`Fork`创建了两个退出状态唯一的子进程（`exit(100+i)`）。 随后在 While 循环的测试条件中通过`waitpid`等待其所有的子进程终止，并打印子进程的退出状态。最终所有的子进程均被回收，`waitpid`返回 -1 且将全局变量`errno`设为 ECHILD，函数执行完毕。
 
 在 Linux 系统上运行该程序时，它会产生以下输出：
 
@@ -365,9 +365,10 @@ child 22967 terminated normally with exit status=101
 ```c
 #include <unistd.h>
 unsigned int sleep(unsigned int secs);
+// Returns: seconds left to sleep
 ```
 
-如果请求的暂停时间已经过去，则函数返回 0，否则将返回剩余的暂停时间。当该进程被信号中断时，后一种情况便会发生。
+如果请求的暂停时间已经过去，则函数返回 0；如果该进程被信号中断，则返回剩余的暂停时间。
 
 函数`pause`会使调用进程进入休眠状态，直至收到信号。该函数始终返回 -1:
 
@@ -387,7 +388,7 @@ int execve(const char *filename, const char *argv[], const char *envp[]);
 
 参数`filename`是加载并运行的可执行文件名称，`argv`和`envp`则分别是参数和环境变量列表。函数`execve`通常没有返回值，仅在出现错误时返回 -1。
 
-变量`argv`指向一个以`NULL`结尾的指针数组，其中的每个指针都指向一个参数字符串。一般来说，`argv[0]`是可执行目标文件名称。变量`envp`也指向一个以`NULL`结尾的指针数组，其中的每个指针都指向一个环境变量字符串，而每个字符串都是一个 name=value 形式的键值对。两者的数据结构如下：
+变量`argv`指向一个以`NULL`为结尾的指针数组，其中的每个元素都指向一个参数字符串。一般来说，`argv[0]`是可执行目标文件名称；变量`envp`也指向一个以`NULL`结尾的指针数组，其中的每个元素均指向一个环境变量字符串，每个字符串都是一个`name=value`形式的键值对。两者的数据结构如下：
 
 ![20220221214923](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220221214923.png)
 
@@ -397,7 +398,7 @@ int execve(const char *filename, const char *argv[], const char *envp[]);
 int main(int argc, char *argv[], char *envp[]);
 ```
 
-`main`函数执行时的用户栈结构如下图所示。其三个参数分别保存在不同的寄存器中：参数`argc`给出数组`argv[]`中的非空指针数量，参数`argv`指向数组`argv[]`中第一个元素，而参数`envp`则指向数组`envp[]`中的第一个元素。
+`main`函数执行时的用户栈结构如下图所示，从栈底到栈顶分别是：环境变量字符串、参数字符串、指向环境变量字符串的指针数组和指向参数字符串的指针数组。该函数的三个参数分别保存在不同的寄存器中：参数`argc`给出数组`argv[]`中的非空指针数量；参数`argv`指向数组`argv[]`中第一个元素；参数`envp`则指向数组`envp[]`中的第一个元素：
 
 ![20220221221725](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220221221725.png)
 
@@ -410,7 +411,7 @@ int setenv(const char *name, const char *newvalue, int overwrite);
 void unsetenv(const char *name);
 ```
 
-如果数组包含格式为 name=value 的字符串，则函数`getenv`会返回其对应的 value， 函数`unsetenv`会将其删除，而函数`setenv`会将 value 替换为参数`newvalue`（`overwrite`非零时）。如果 name 不存在，则函数`setenv`会将 name=`newvalue` 添加到数组中。
+如果数组中包含以参数`name`为键的字符串，则函数`getenv`返回其对应的值，函数`unsetenv`删除该字符串，函数`setenv`将值替换为参数`newvalue`（`overwrite`非零时）；如果不存在以`name`为键的字符串，则函数`setenv`会将`name=newvalue`添加到数组中。
 
 ### 使用 fork 和 execve 运行程序
 
@@ -805,7 +806,7 @@ while (1)
 
 ## 非本地调转
 
-C 提供了一种用户级别的异常控制流，即非本地跳转（Nonlocal Jump）。它可以无需经过正常的调用和返回序列，就将控制权从一个函数直接转移到另一个当前正在执行的函数。非本地跳转是通过`setjmp`和`longjmp`函数实现的：
+C 提供了一种用户级别的异常控制流，即非本地跳转（Nonlocal Jump）。它无需经过正常的调用/返回序列，就可以将控制权从一个函数直接转移到另一个当前正在执行的函数。非本地跳转是通过`setjmp`和`longjmp`函数实现的：
 
 ```c
 #include <setjmp.h>
@@ -818,7 +819,7 @@ void siglongjmp(sigjmp_buf env, int retval);
 // Never returns
 ```
 
-`setjmp`函数将当前调用环境（Calling Environment，包括程序计数器、栈指针和通用寄存器等），保存在参数`env`指定的缓冲区中。`longjmp`函数会从`env`缓冲区恢复调用环境，然后触发最近调用的`setjmp`函数的返回。此时`setjmp`会返回一个非零值`retval`。而在信号处理程序中，我们使用`sigsetjmp`和`siglongjmp`代替它们。
+`setjmp`函数将当前调用环境（Calling Environment，包括程序计数器、栈指针和通用寄存器等），保存在参数`env`指定的缓冲区中。`longjmp`函数会从`env`缓冲区恢复调用环境，然后触发最近调用的`setjmp`函数的返回。此时`setjmp`会返回一个非零值`retval`。在信号处理程序中，我们使用`sigsetjmp`和`siglongjmp`代替它们。
 
 非局部跳转的一个重要应用是可以在检测到某些错误条件时，从深度嵌套的函数调用中立即返回。我们可以使用非本地跳转直接返回到常见的错误处理程序，而无需费力地展开栈（Unwind Stack）。
 
