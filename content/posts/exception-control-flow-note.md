@@ -819,7 +819,7 @@ void siglongjmp(sigjmp_buf env, int retval);
 // Never returns
 ```
 
-`setjmp`函数将当前调用环境（Calling Environment，包括程序计数器、栈指针和通用寄存器等），保存在参数`env`指定的缓冲区中并返回 0。`longjmp`函数会从`env`缓冲区恢复调用环境，然后触发最近调用的`setjmp`函数的返回。在这种情况下，`setjmp`会返回一个非零值`retval`。在信号处理程序中，我们使用`sigsetjmp`和`siglongjmp`代替它们。
+`setjmp`函数将当前调用环境（Calling Environment，包括程序计数器、栈指针和通用寄存器等），保存在参数`env`指定的缓冲区中并返回 0。`longjmp`函数会从`env`缓冲区恢复调用环境，然后触发最近调用的`setjmp`函数的返回。这种情况下，`setjmp`会返回一个非零值`retval`。在信号处理程序中，我们使用`sigsetjmp`和`siglongjmp`代替它们。
 
 非局部跳转的一个重要应用是可以在检测到某些错误条件时，从深度嵌套的函数调用中立即返回。我们使用非本地跳转直接返回到常见的错误处理程序，无需费力地展开栈（Unwind Stack）。
 
