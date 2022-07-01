@@ -419,18 +419,18 @@ Unix shell 和 Web 服务器等程序大量使用了`fork`和`execve`函数。�
 
 ## 信号
 
-信号（Signal）是一种高级的异常控制流，它允许进程和内核通知其他进程系统中发生了某些类型的事件。Linux 支持的信号类型多达三十种：
+信号（Signal）是一种高级的异常控制流，它允许进程和内核将某些类型的系统事件通知给其他进程。Linux 支持的信号类型多达三十种：
 
 ![20220222213150](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220222213150.png)
 
-低级别的硬件异常由内核的异常处理程序处理，通常不会对用户进程可见，而信号则可以将此类异常暴露给用户进程。例如一个进程试图除以 0，内核就会向它发送一个 SIGFPE（编号 8）信号。
+低级别的硬件异常由内核中的异常处理程序处理，通常不会对用户进程可见，而信号则可以将此类异常暴露给用户进程。如果一个进程试图除以 0，内核就会向它发送一个 SIGFPE（编号 8）信号。
 
 ### 信号术语
 
 发送信号到目标进程需要完成两个步骤：
 
-1. 发送（传递）信号：内核通过更新目标进程上下文中的某些状态来向目标进程发送信号。发送信号的原因有两种：（1）内核检测到系统事件的发生，如被 0 除错误或子进程终止；（2）进程调用了`kill`函数（将在下一节介绍）。进程可以向自己发送信号；
-2. 接收信号：当内核强制目标进程以某种方式对信号做出响应时，它便会接收到信号。该进程可以通过执行用户级别的信号处理程序（Signal Handler）来忽略、终止或捕获信号。
+1. 发送（传递）信号：内核通过更新目标进程上下文中的某些状态来向目标进程发送信号。发送信号的原因有两种：① 内核检测到系统事件的发生，如被 0 除错误或子进程终止等；② 进程调用了`kill`函数（将在下一节介绍）。进程可以向自己发送信号；
+2. 接收信号：当内核强制目标进程以某种方式对信号做出响应时，它便接收到了信号。该进程可以通过执行用户级别的信号处理程序（Signal Handler）来忽略、终止或捕获信号。
 
 ![20220222214754](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220222214754.png)
 
@@ -447,18 +447,14 @@ Unix shell 和 Web 服务器等程序大量使用了`fork`和`execve`函数。�
 pid_t getpgrp(void);
 ```
 
-默认情况下，子进程与其父进程属于同一个进程组。一个进程可以通过`setpgid`函数改变自己或另一个进程的进程组：
+默认情况下，子进程与其父进程属于同一个进程组。进程可以通过`setpgid`函数改变自己或另一个进程的进程组：
 
 ```c
 #include <unistd.h>
 int setpgid(pid_t pid, pid_t pgid);
 ```
 
-该函数会将进程`pid`的进程组更改为`pgid`。若将参数`pid`或`pgid`设为 0，则相当于使用调用进程的 PID 作为参数。举例来说，如果进程 15213 调用函数 `setpgid(0, 0)`，那么将会创建一个进程组 ID 为 15213 的新进程组，并使该进程加入此组。
-
-#### 使用 /bin/kill 程序发送信号
-
-命令`/bin/kill -9 15213`会将编号为 9 的 SIGKILL 信号发送到进程 15213。而 PID 为负则代表信号将发送到进程组 ID 中的所有进程，因此命令`/bin/kill -9 -15213`会该信号发送到进程组 15213 中的每一个进程。
+该函数会把进程`pid`的进程组更改为`pgid`。若将参数`pid`或`pgid`设为 0，则相当于使用调用进程的 PID 作为参数。举例来说，如果进程 15213 调用函数 `setpgid(0, 0)`，那么将会创建一个进程组 ID 为 15213 的新进程组，并使该进程加入此组。
 
 #### 从键盘发送信号
 
@@ -466,41 +462,43 @@ Unix Shell 使用任务（Job）表示单个命令行（如`ls | sort`）创建�
 
 ![20220222223432](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220222223432.png)
 
-在键盘上键入 Ctrl+C 会使内核向前台进程组中的每个进程发送一个 SIGINT 信号，这将终止前台任务。同样，键入 Ctrl+Z 会使内核向前台进程组中的每个进程发送一个 SIGTSTP 信号，这将停止（挂起）前台任务。
+在键盘上输入 Ctrl+C 会使内核向前台进程组中的所有进程发送 SIGINT 信号，这将终止前台任务。同样，输入 Ctrl+Z 会使内核向前台进程组中的所有进程发送 SIGTSTP 信号，这将停止（挂起）前台任务。
 
 #### 使用 kill 函数发送信号
 
-进程可以通过调用`kill`函数向其他进程（包括其自身）发送信号：
+进程可以调用`kill`函数向其他进程（包括其自身）发送信号：
 
 ```c
 #include <sys/types.h>
 #include <signal.h>
 int kill(pid_t pid, int sig);
+// Returns: 0 if OK, −1 on error
 ```
 
-如果参数`pid`大于 0，则该函数将编号为`sig`的信号发送给进程`pid`；如果参数`pid`等于 0，则该函数将信号发送给调用进程所在进程组中的所有进程；如果参数`pid`小于 0，则该函数将信号发送给进程`|pid|`所在进程组中的所有进程。
+若参数`pid`大于 0，则该函数将编号为`sig`的信号发送给进程`pid`；若参数`pid`等于 0，则该函数将信号发送给调用进程所在进程组中的所有进程；如果参数`pid`小于 0，则该函数将信号发送给进程组 ID 为`|pid|`的进程组中的所有进程。
 
 #### 使用 alarm 函数发送信号
 
-进程可以通过调用`alarm`函数向自己发送 SIGALRM 信号：
+进程可以调用`alarm`函数向自己发送 SIGALRM 信号：
 
 ```c
 #include <unistd.h>
 unsigned int alarm(unsigned int secs);
+// Returns: remaining seconds of previous alarm, or 0 if no previous alarm
 ```
 
-内核将在`secs`秒内向调用进程发送 SIGALRM 信号。该函数会丢弃任何未处理的警告信号，并返回其本应剩余的秒数。
+内核将在`secs`秒后向调用进程发送 SIGALRM 信号，取消所有之前设置的`alarm`，并返回其剩余的秒数。
 
 ### 接收信号
 
-当内核将进程 p 从内核态切换到用户态时，它会检查 p 未阻塞且未处理（Pending & ~Blocked）的信号集。通常该集合为空，内核将控制权转移给 p 逻辑控制流中的下一条指令。而如果该集合非空，则内核会选择集合中的某个信号 k 并强制 p 接收它。信号将触发进程完成一些动作（Action），预定义的默认动作有：
+当内核将进程 p 从内核态切换到用户态时，它会检查 p 未阻塞且未处理（Pending & ~Blocked）的信号集。通常该集合为空，内核将控制权转移给 p 的逻辑控制流中的下一条指令。但如果该集合非空，内核就会选择信号集中的某个信号 k 并强制 p 接收它。信号将触发进程完成一些动作（Action），预定义的默认动作有：
 
 - 进程终止；
 - 进程终止并转储核心（Dump Core，即将代码和数据内存段的镜像写入磁盘）；
 - 进程停止（暂停），直到接收 SIGCONT 信号重新启动；
 - 进程忽略该信号。
 
-每种信号的默认动作见 [图 8.26](/posts/exception-control-flow-note/#信号)。除 SIGSTOP 和 SIGKILL 信号外，进程可以通过函数`signal`修改信号的默认动作：
+每种信号的默认动作见 [图 8.26](/posts/exception-control-flow-note/#信号)。除 SIGSTOP 和 SIGKILL 信号外，进程还可以通过函数`signal`修改信号的默认动作：
 
 ```c
 #include <signal.h>
@@ -509,9 +507,9 @@ sighandler_t signal(int signum, sighandler_t handler);
 // Returns: pointer to previous handler if OK, SIG_ERR on error (does not set errno)
 ```
 
-如果参数`handler`为 SIG_IGN，则 `signum`类型的信号将会被忽略；如果参数`handler`为 SIG_DFL，则`signum`类型的信号的动作将恢复为默认；如果参数`handler`为用户定义的信号处理程序地址，则进程接收到`signum`类型的信号后会调用该程序，这种方法被称为安装处理程序（Installing Handler）。调用处理程序被称为捕获信号（Catching Signal），执行处理程序被称为处理信号（Handling Signal）。
+若参数`handler`为 SIG_IGN，则 `signum`类型的信号将会被忽略；若参数`handler`为 SIG_DFL，则`signum`类型的信号的动作将恢复为默认；若参数`handler`为用户定义的信号处理程序地址，则进程接收到`signum`类型的信号后会调用该程序，这种方法被称为安装处理程序（Installing Handler）。在这种情况下，调用处理程序被称为捕获信号（Catching Signal），执行处理程序被称为处理信号（Handling Signal）。
 
-如果我们在示例程序运行时按下 Ctrl+C，该进程不会直接终止而是输出一段信息后才终止：
+如果我们在示例程序运行时按下 Ctrl+C，该进程就不会直接终止而是输出一段信息后才终止：
 
 ```c
 #include "csapp.h"
@@ -533,7 +531,7 @@ int main()
 }
 ```
 
-信号处理程序还可以被其他处理程序中断（$s \ne t$）：
+信号处理程序还可以被其他处理程序中断（信号 $s \ne t$）：
 
 ![20220223154049](https://cdn.jsdelivr.net/gh/koktlzz/NoteImg@main/20220223154049.png)
 
@@ -541,8 +539,8 @@ int main()
 
 Linux 为阻塞信号提供了显式和隐式的实现机制：
 
-- 隐式：默认情况下，内核会阻塞任何与处理程序当前正在处理的信号类型相同的未处理信号。比如上图 8.31 中，如果信号 t 的类型与 s 相同，则 t 将在处理程序 S 返回前持续挂起；
-- 显式：应用程序可以通过调用`sigprocmask`等函数阻塞信号或解除信号的阻塞。
+- 隐式：默认情况下，内核会阻塞任何与处理程序当前正在处理的信号类型相同的未处理信号。比如上图 8.31 中，若信号 $t$ 的类型与 $s$ 相同，则 $t$ 将在处理程序 $S$ 返回前持续挂起；
+- 显式：应用程序可以调用`sigprocmask`等函数阻塞信号或解除信号的阻塞。
 
 ```c
 #include <signal.h>
@@ -565,39 +563,37 @@ int sigismember(const sigset_t *set, int signum);
 
 如果参数`oldset`非空，则先前`blocked`的值会存储在`oldset`中。
 
-函数`sigemptyset`将`set`初始化为空集；`sigfillset`将所有信号加入到`set`中；`sigaddset`将编号为`signum`的信号加入到`set`中；`sigdelset`将编号为`signum`的信号从`set`中删除；如果`signum`信号在`set`中，则函数`sigismember`返回 1，否则返回 0。
+除此之外，函数`sigemptyset`将`set`初始化为空集；`sigfillset`将所有信号加入到`set`中；`sigaddset`将编号为`signum`的信号加入到`set`中；`sigdelset`将编号为`signum`的信号从`set`中删除；如果`signum`信号在`set`中，则函数`sigismember`返回 1，否则返回 0。
 
 示例程序暂时阻塞了 SIGINT 信号的接收：
 
 ```c
 sigset_t mask, prev_mask;
-Sigemptyset(&mask);
-Sigaddset(&mask, SIGINT);
+sigemptyset(&mask);
+sigaddset(&mask, SIGINT);
 /* Block SIGINT and save previous blocked set */
-Sigprocmask(SIG_BLOCK, &mask, &prev_mask);
+sigprocmask(SIG_BLOCK, &mask, &prev_mask);
 
 // Code region that will not be interrupted by SIGINT
 
 /* Restore previous blocked set, unblocking SIGINT */
-Sigprocmask(SIG_SETMASK, &prev_mask, NULL);
+sigprocmask(SIG_SETMASK, &prev_mask, NULL);
 ```
 
 ### 编写信号处理程序
 
 #### 安全的信号处理
 
-如果处理程序和主程序并发地访问同一个全局数据结构，就会发生不可预知的严重问题。因此我们应当遵循以下守则：
+如果处理程序和主程序并发地访问同一个全局数据结构，就会发生不可预知的严重问题。因此我们在编写信号处理程序时应当遵循以下守则：
 
 - 使信号处理程序尽可能的简单；
-- 仅调用异步信号安全（Async-Signal-Safe）的函数。这种函数一般只访问局部变量，或者不会被其他信号处理程序中断。值得注意的是，许多常用的函数，如`printf`、`sprintf`、`malloc`和`exit`等并非异步信号安全。而调用`write`函数是信号处理程序生成输出的唯一安全方法；
-- 保存并恢复变量`errno`：许多 Linux 异步信号安全函数返回错误时会设置变量`errno`的值，可能会干扰程序中其他依赖`errno`的部分。因此当处理程序有返回时，我们应当在调用前将`errno`保存到局部变量中，并在返回前恢复其值；
+- 仅调用异步信号安全（Async-Signal-Safe）的函数。这种函数一般只访问局部变量，或者不会被其他信号处理程序中断。值得注意的是，许多常用的函数，如`printf`、`sprintf`、`malloc`和`exit`等并非异步信号安全。调用`write`函数是信号处理程序生成输出的唯一安全方法；
+- 保存并恢复变量`errno`：许多 Linux 异步信号安全函数返回错误时会设置变量`errno`的值，因此可能会干扰程序中其他依赖`errno`的部分。当处理程序有返回时，我们应当在调用前将`errno`保存到局部变量中，并在返回前恢复其值；
 - 访问全局数据结构时阻塞所有信号；
-- 使用`volatile`声明全局变量，如`volatile int g;`；
-- 使用`sig_atomic_t`类型声明标识（Flag），如`volatile sig_atomic_t flag;`。
+- 假设主程序和信号处理程序共享全局变量`g`，处理程序更新`g`的值，主程序定期读取`g`的值。优化编译器会从寄存器中读取已缓存的`g`，因此主函数中的`g`可能永远不会改变，并且每次对`g`的引用也都是安全的。若使用`volatile`声明全局变量，如`volatile int g;`，那么当代码引用`g`时，编译器就会从内存中读取其值。在这种情况下，我们应当临时阻塞信号以保护对`g`的访问；
+- 在常见的设计中，处理程序通过写入全局标识（Flag）来记录信号的接收。若使用`sig_atomic_t`类型声明标识，如`volatile sig_atomic_t flag;`，那么便可以保证`flag`写入的原子性（Atomic/Uninterruptible）。
 
 #### 正确的信号处理
-
-上文提到，同一时间内相同类型的未处理信号最多只能有一个。关键在于，未处理信号的存在仅表明至少有一个信号已经到达。
 
 ```c
 #include "csapp.h"
@@ -644,7 +640,7 @@ int main()
 }
 ```
 
-在示例程序中，父进程安装了处理程序`handler1`并创建三个子进程。它等待来自终端的输入，然后进入 While 循环。每当一个子进程终止时，内核将发送一个 SIGCHLD 通知父进程。父进程捕获信号后回收子进程，输出一段信息然后返回。
+在示例程序中，父进程安装了处理程序`handler1`并创建三个子进程。它等待来自终端的输入，然后进入 While 循环。每当一个子进程终止时，内核将发送一个 SIGCHLD 信号通知父进程。父进程捕获信号后回收子进程，输出一段信息然后返回。
 
 在 Linux 上运行该程序得到的输出结果为：
 
@@ -659,7 +655,7 @@ CR
 Parent processing input
 ```
 
-我们发现父进程创建了三个子进程，然而却只回收了两个。这是因为信号处理程序在处理第一个信号时，第二个信号到达并添加到未处理信号集中。此时如果第三个信号到达，由于已有一个 SIGCHLD 信号未处理，因此它被直接丢弃。处理程序返回后，内核发现第二个信号还未处理，于是强制父进程接收该信号。父进程再次捕获信号并第二次执行处理程序。当处理程序第二次返回后，不再有任何未处理的信号，第三个子进程成为了僵尸进程。
+我们发现父进程创建了三个子进程，然而却只回收了两个，这是因为同一时间内相同类型的未处理信号最多只能有一个。信号处理程序在处理第一个信号时，第二个信号到达并被添加到未处理信号集中。由于已有一个未处理的 SIGCHLD 信号，如果此时第三个信号到达便会被直接丢弃。当处理程序返回后，内核发现第二个信号还未处理，于是强制父进程接收该信号。父进程捕获信号并重新执行处理程序，当处理程序再次返回后，不再有任何未处理的 SIGCHLD 信号。
 
 适当修改处理程序可以解决这一问题：
 
@@ -706,11 +702,11 @@ handler_t *Signal(int signum, handler_t *handler)
 
 ### 避免并发错误
 
-上文提到，我们永远无法预测两个同步（并发）运行的函数的调用顺序。如果调用顺序会影响结果的正确性，我们就将这种错误称为竞争（Race）。为此，我们可以通过阻塞相关信号来避免这一问题。
+上文提到，我们永远无法预测两个同步（并发）运行的函数的调用顺序。如果调用顺序会影响结果的正确性，我们就将这种错误称为竞争（Race）。我们可以通过阻塞相关信号来避免这一问题。
 
 ### 显式等待信号
 
-有时候主程序需要显式等待某个信号处理程序运行。例如 Linux Shell 创建前台任务后，必须等待任务终止并被 SIGCHLD 处理程序回收，然后才能接收下一条用户命令。示例程序展示了其基本思想：
+有时候主程序需要显式等待某个信号处理程序运行完毕。例如 Linux Shell 创建前台任务后，必须等待任务终止并被 SIGCHLD 处理程序回收，然后才能接收下一条用户命令。示例程序展示了其基本思想：
 
 ```c
 #include "csapp.h"
@@ -760,7 +756,7 @@ while (!pid) /* Race! */
     pause();
 ```
 
-其问题在于：如果父进程在 While 的条件测试之后而`pause`执行之前接收到 SIGCHLD，那么程序将永远休眠。而如果我们将`pause`改为`sleep`：
+问题在于：如果父进程在 While 的条件测试之后而`pause`的执行之前接收到 SIGCHLD，那么程序就会永远休眠。我们还可以将`pause`改为`sleep`：
 
 ```c
 while (!pid) /* Too slow! */
