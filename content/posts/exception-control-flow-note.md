@@ -557,9 +557,9 @@ int sigismember(const sigset_t *set, int signum);
 
 `sigprocmask`函数可以改变当前阻塞信号的集合（设为`blocked`），具体行为取决于参数`how`的值：
 
-- SIG_BLOCK：将参数`set`中的信号阻塞（`blocked = blocked | set`）；
-- SIG_UNBLOCK：为`set`中的信号解除阻塞（`blocked = blocked & ~set`）；
-- SIG_SETMASK：将阻塞信号集合设为`set`（`blocked = set`）。
+- `SIG_BLOCK`：将参数`set`中的信号阻塞（`blocked = blocked | set`）；
+- `SIG_UNBLOCK`：为`set`中的信号解除阻塞（`blocked = blocked & ~set`）；
+- `SIG_SETMASK`：将阻塞信号集合设为`set`（`blocked = set`）。
 
 如果参数`oldset`非空，则先前`blocked`的值会存储在`oldset`中。
 
