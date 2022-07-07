@@ -311,7 +311,7 @@ pid_t waitpid(pid_t pid, int *statusp, int options);
 - `WSTOPSIG(status)`：如果`WIFSTOPPED()`返回`True`，则返回导致子进程停止的信号编号；
 - `WIFCONTINUED(status)`：如果子进程收到 SIGCONT 信号后恢复，则返回`True`。
 
-如果调用进程没有子进程，`waitpid`将返回 -1 并将全局变量`errno`设为`ECHILD`；如果`waitpid`被信号中断，则返回 -1 并将全局变量`errno`设为 `EINTR`。
+如果调用进程没有子进程，`waitpid`将返回 -1 并将全局变量`errno`设为`ECHILD`；如果`waitpid`被信号中断，则返回 -1 并将全局变量`errno`设为`EINTR`。
 
 函数`wait`是`waitpid`的简化版本， `wait(&status)`等效于`waitpid(-1, &status, 0)`。
 
@@ -346,7 +346,7 @@ int main()
 }
 ```
 
-如示例程序所示，父进程首先调用`Fork`创建了两个退出状态唯一的子进程（`exit(100+i)`）。 随后在 While 循环的测试条件中通过`waitpid`等待其所有的子进程终止，并打印子进程的退出状态。最终所有的子进程均被回收，`waitpid`返回 -1 且将全局变量`errno`设为 ECHILD，函数执行完毕。
+如示例程序所示，父进程首先调用`Fork`创建了两个退出状态唯一的子进程（`exit(100+i)`）。 随后在 While 循环的测试条件中通过`waitpid`等待其所有的子进程终止，并打印子进程的退出状态。最终所有的子进程均被回收，`waitpid`返回 -1 且将全局变量`errno`设为`ECHILD`，函数执行完毕。
 
 在 Linux 系统上运行该程序时，它会产生以下输出：
 
