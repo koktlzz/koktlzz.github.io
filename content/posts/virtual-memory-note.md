@@ -202,7 +202,7 @@ $$n=32, P=4K=2^{12}, n(PTE)=2^{n-p}=2^{20}=1M$$
 
 ![20220610173011](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220610173011.png)
 
-Linux 将虚拟内存划分为多个区域或段（Area 或 Segment），每个区域都是一些已分配且在某些方面相关的连续页面。例如，代码段、数据段、堆、共享库段和用户栈分别是不同的区域。每个已分配的页面都属于某个区域，因此不属于任何区域的页面不存在也无法被进程引用。区域概念的引入使得 Linux 允许虚拟地址空间中存在间隙。
+Linux 将虚拟内存划分为多个区域或段（Area 或 Segment），每个区域都是一些已分配且在某些方面相关的连续页面。例如，代码段、数据段、堆、共享库段和用户栈分别是不同的区域。每个已分配的页面都属于某个区域，因此不属于任何区域的页面不存在也无法被进程引用。区域概念的引入使得 Linux 允许虚拟地址空间存在间隙。
 
 ![20220610175658](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220610175658.png)
 
@@ -216,14 +216,14 @@ Linux 将虚拟内存划分为多个区域或段（Area 或 Segment），每个�
 
 ![20220613110654](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220613110654.png)
 
-异常处理程序可以将虚拟地址与所有`vm_area_structs`结构体中的`vm_start`和`vm_end`字段比较，从而判断它是否属于某个区域，如上图 ①。还可以根据`vm_prot`字段判断进程是否有权限访问目标区域中的页面，如上图 ②。
+异常处理程序可以将虚拟地址与`vm_start`和`vm_end`字段比较，从而判断它是否属于某个区域，如上图 ①。还可以根据`vm_prot`字段判断进程是否有权限访问目标区域中的页面，如上图 ②。
 
 ## 内存映射
 
 Linux 使用内存映射（Memory Mapping）技术初始化虚拟内存区域并将其与磁盘上的“对象”相关联。该“对象”有两种类型：
 
 - 文件系统中的常规文件（Regular File）：文件被分成多个与页面大小相同的片段，而每个片段都包含了一个虚拟页面的初始内容。由于操作系统采用按需分页的策略，因此页面在第一次被 CPU 引用前不会被换入到物理内存中。如果虚拟内存区域比文件大，则多余部分用零填充；
-- 匿名文件（Anonymous File）：由内核创建，其内容全部为二进制零。CPU 第一次引用该区域内的虚拟页面时，内核会在物理内存中选择一个合适的受害者页面换出并用二进制零将其覆盖，然后更新页表使虚拟页面指向被覆盖后的物理页面。整个过程没有数据被换入到物理内存中，因此该区域内的页面又被称为零需求页面（Demand-zero Page）。
+- 匿名文件（Anonymous File）：由内核创建，其内容全部为二进制零。当 CPU 第一次引用该区域内的虚拟页面时，内核会先在物理内存中选择一个合适的受害者页面（若该页面已被修改则需要将其换出）并用二进制零将其覆盖，然后更新页表使虚拟页面指向被覆盖后的物理页面。整个过程中没有数据被换入到物理内存，因此该区域内的页面又被称为零需求页面（Demand-zero Page）。
 
 一旦我们使用内存映射初始化一个虚拟页面，它就会在由内核维护的交换文件（Swap File）与物理内存之间来回交换。交换文件又称交换区（Swap Area）或交换空间（Swap Space），它的大小限制了当前运行进程所能申请的虚拟页面总量。
 
@@ -239,15 +239,15 @@ Linux 使用内存映射（Memory Mapping）技术初始化虚拟内存区域并
 
 ### 回看 fork 函数
 
-进程调用 [`fork`](/posts/exception-control-flow-note/#创建和中止进程) 函数后，内核会为子进程分配一个唯一的 PID 并为其创建与父进程相同的 `mm_struct`、`vm_area_structs`以及页表。当任一进程后续执行写入操作时，内核将使用写时复制技术创建新页面，这便保证了进程虚拟地址空间的私有性。
+进程调用 [`fork`](/posts/exception-control-flow-note/#创建和中止进程) 函数后，内核会为子进程分配一个唯一的 PID 并为其创建与父进程相同的 `mm_struct`、`vm_area_structs`以及页表。当任意进程后续执行写入操作时，内核将使用写时复制技术创建新页面，这便保证了进程虚拟地址空间的私有性。
 
 ### 回看 execve 函数
 
 如果进程调用 [`execve`](/posts/exception-control-flow-note/#加载并运行程序) 函数，如 `execve("a.out", NULL, NULL)`，则加载并运行`a.out`的步骤如下：
 
 1. 删除当前进程虚拟地址空间中用户区域的`vm_area_structs`；
-2. 为新程序的代码、数据、.bss 和堆栈区域创建`vm_area_structs`。这些区域都是私有写时复制的，代码和数据区域被映射到`a.out`文件中的 [.text 和 .data](/posts/linking-note/#可重定位目标文件)，.bss 区域则被映射到匿名文件。堆栈的初始长度均为 0，其页面是零需求的；
-3. 如果`a.out`文件链接了共享库，如 C 标准库 `libc.so`，那么还需要将这些对象动态链接到程序中，然后将其映射到虚拟地址空间中的共享区域内；
+2. 为新程序的代码、数据、bss 和堆栈区域创建`vm_area_structs`。这些区域都是私有写时复制的，代码和数据区域被映射到`a.out`文件中的 [.text 和 .data](/posts/linking-note/#可重定位目标文件)，bss 区域则被映射到大小包含在`a.out`内的匿名文件。堆栈的初始长度均为 0，其页面是零需求的；
+3. 如果`a.out`文件链接了共享库，如 C 标准库 `libc.so`，那么还需要把这些对象动态链接到程序中，并将其映射到虚拟地址空间中的共享区域内；
 4. 使当前进程上下文中的程序计数器指向新程序代码区域的入口点。
 
 ![20220613213646](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220613213646.png)
@@ -266,18 +266,18 @@ void  *mmap(void *start, size_t length, int prot, int flags,
 
 ![20220613222541](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220613222541.png)
 
-参数`prot`包含了描述虚拟内存区域访问权限的位，即`vm_area_structs`中的`vm_prot`：
+参数`prot`中包含了描述虚拟内存区域访问权限的位，即`vm_area_structs`中的`vm_prot`：
 
-- PROT_EXEC：该区域中的页面包含可执行指令；
-- PROT_READ：可以阅读该区域中的页面；
-- PROT_WRITE：可以写入该区域中的页面；
-- PROT_NONE：无法访问该区域中的页面。
+- `PROT_EXEC`：该区域中的页面包含可执行指令；
+- `PROT_READ`：可以阅读该区域中的页面；
+- `PROT_WRITE`：可以写入该区域中的页面；
+- `PROT_NONE`：无法访问该区域中的页面。
 
-参数`flag`包含了描述了映射对象类型的位：
+参数`flag`中包含了描述了映射对象类型的位：
 
-- MAP_SHARED：共享对象；
-- MAP_PRIVATE：私有写时复制对象；
-- MAP_ANON：匿名对象，对应的虚拟页面是零需求页面。
+- `MAP_SHARED`：共享对象；
+- `MAP_PRIVATE`：私有写时复制对象；
+- `MAP_ANON`：匿名对象，对应的虚拟页面是零需求页面。
 
 `munmap`函数删除起始于虚拟地址`start`、长度为`length`的区域，后续对已删除区域的引用会引发分段故障。
 
@@ -307,7 +307,7 @@ void *malloc(size_t size);
 // Returns: pointer to allocated block if OK, NULL on error
 ```
 
-`malloc`函数请求堆中的一块 Block 并返回指向该 Block 的指针。Block 的大小至少为`size`，并可能根据其中的数据对象类型进行适当的对齐。在 32 位编译模式下，Block 的地址始终为 8 的倍数，而在 64 位中则为 16 的倍数。如果执行`malloc`遇到问题，如程序请求的 Block 大小超过了可用的虚拟内存，则函数返回`NULL`并设置 [`errno`](https://man7.org/linux/man-pages/man3/errno.3.html)。我们还可以使用`malloc`的包装函数`calloc`，它会将分配的内存初始化为零。类似地，`realloc`函数可以更改已分配 Block 的大小。
+`malloc`函数请求堆中的一块 Block 并返回指向该 Block 的指针。Block 的大小至少为参数`size`，并可能根据其保存的数据对象类型进行适当对齐。在 32 位编译模式下，Block 的地址始终为 8 的倍数，而在 64 位中则为 16 的倍数。如果执行`malloc`遇到问题，如程序请求的 Block 大小超过了可用的虚拟内存，则函数返回`NULL`并设置 [`errno`](https://man7.org/linux/man-pages/man3/errno.3.html)。我们还可以使用`malloc`的包装函数`calloc`，它会将分配的内存初始化为零。类似地，`realloc`函数可以更改已分配 Block 的大小。
 
 ```c
 #include <unistd.h>
@@ -315,7 +315,7 @@ void *sbrk(intptr_t incr);
 // Returns: old brk pointer on success, −1 on error
 ```
 
-`sbrk`函数将参数`incr`与内核中的`brk`指针相加以增大或缩小堆。若执行成功，则返回`brk`的旧值，否则将返回 -1 并将`errno`设置为 ENOMEM。
+`sbrk`函数将参数`incr`与内核中的`brk`指针相加以增大或缩小堆。若执行成功，则返回`brk`的旧值，否则将返回 -1 并将`errno`设置为`ENOMEM`。
 
 ```c
 #include <stdlib.h>
@@ -353,7 +353,7 @@ int main()
 }
 ```
 
-由于我们无法预测`n`的值，因此只能将数组大小写死为`MAXN`。`MAXN`的值是任意的，可能超出系统可用的虚拟内存量。另外，一旦程序想要读取一个比`MAXN`还大的文件，唯一的办法就是增大`MAXN`的值并重新编译程序。而如果我们在运行时根据`n`的大小动态分配内存，以上问题便迎刃而解：
+由于我们无法预测`n`的值，因此只能将数组大小写死为`MAXN`。`MAXN`的值是任意的，可能超出系统可用的虚拟内存量。另外，一旦程序想要读取一个比`MAXN`还大的文件，唯一的办法就是增大`MAXN`的值并重新编译程序。如果我们在运行时根据`n`的大小动态分配内存，以上问题便迎刃而解：
 
 ```c
 #include "csapp.h"
@@ -374,11 +374,11 @@ int main()
 
 显式分配器必须在若干限制条件下运行：
 
-- 处理任意顺序的请求：一个应用程序发出的`malloc`和`free`请求的顺序是任意的，因此分配器不能对其作出假设。例如，分配器不能假设所有的`malloc`都紧跟一个与之匹配的`free`；
+- 处理任意顺序的请求：分配器不能对`malloc`和`free`的请求顺序作出假设。例如，分配器不能假设所有的`malloc`都紧跟一个与之匹配的`free`；
 - 立即响应请求：分配器不可以对请求重新排序或缓冲（Buffer）以提高性能；
 - 仅使用堆：分配器使用的数据结构必须存储在堆中；
 - 对齐 Block：分配器必须对齐 Block 以使其能够容纳任何类型的数据对象；
-- 不修改已分配的 Block：分配器无法修改、移动或压缩 Block。
+- 不修改已分配的 Block：分配器无法修改、移动或压缩已分配的 Block。
 
 衡量分配器性能的指标有：
 
@@ -389,18 +389,18 @@ int main()
 
 ### 碎片
 
-我们将未使用的堆内存无法满足分配请求的现象称为碎片（Fragmentation），它是内存利用率低的主要原因。碎片有两种形式：
+我们将空闲堆内存无法满足分配请求的现象称为碎片（Fragmentation），它是内存利用率低的主要原因。碎片有两种形式：
 
 - 内部碎片（Internal Fragmentation）：已分配的 Block 比进程请求的 Block（即 Payload）大，通常因分配器为满足对齐要求而产生；
 - 外部碎片（External Fragmentation）：空闲内存充足但却没有空闲的 Block 能够满足分配请求。例如堆中有 4 个空闲的字且分布在两个不相邻的 Block 上，此时若进程申请一个 4 字的 Block 就会出现外部碎片。
 
-内部碎片很容易量化，它只是已分配 Block 与 Payload 之间大小差异的总和，其数量仅取决于先前的请求模式和分配器的实现方式。外部碎片则难以量化，因为它还受未来请求模式的影响。为了减少外部碎片的产生，分配器力求维护少量较大的空闲 Block 而非大量较小的空闲 Block。
+内部碎片很容易量化，因为它只是已分配 Block 与 Payload 之间大小差异的总和，其数量仅取决于先前的请求模式和分配器的实现方式；外部碎片则难以量化，因为它还要受到未来请求模式的影响。为了减少外部碎片的产生，分配器力求维护少量较大的空闲 Block 而非大量较小的空闲 Block。
 
 ### 分配器的实现难点
 
 我们可以想象一个简单的分配器，它将堆看作一个大型的字节数组，指针`p`指向该数组的第一个字节。当进程请求`size`大小的 Block 时，`malloc`先把`p`的当前值保存在栈中，然后将其加上`size`，最后返回`p`的旧值。当进程想要释放 Block 时，`free`则只是简单地返回给调用者而不做任何事情。
 
-由于`malloc`和`free`仅由少量指令组成，这种分配器的吞吐量很大。然而`malloc`不会将已释放的 Block 分配给进程 ，因此堆内存的利用率非常低。能够在吞吐量和内存利用率之间取得良好平衡的分配器必须考虑以下问题：
+由于`malloc`和`free`仅由少量指令组成，这种分配器的吞吐量很大。然而`malloc`不会重用任何 Block，因此堆内存的利用率非常低。能够在吞吐量和内存利用率之间取得良好平衡的分配器必须考虑以下问题：
 
 - 组织（Organization）：如何跟踪空闲的 Block？
 - 放置（Placement）：如何从空闲的 Block 中选择合适的来放置新分配的 Block？
@@ -413,13 +413,13 @@ int main()
 
 ![20220615154704](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220615154704.png)
 
-如上图所示，Block 由一个单字（四字节）的头部（Header）、有效负载（Payload）和一些额外填充（Padding）组成，头部中包含了 Block 的大小（Block Size）和状态信息（Allocated or Free）。如果系统采用双字对齐策略，那么每个 Block 的大小始终为 8 的倍数，其后 3 位始终为 0。因此我们可以仅在头部中存储该字段的前 29 位，剩余 3 位用来存储其他信息。上图中的位“a”便指示了此 Block 是已分配的还是空闲的。填充的大小是任意的，它可能是分配器为了避免外部碎片产生而设置的，也可能是为了满足对齐要求而存在的。
+如上图所示，Block 由一个单字（四字节）的头部（Header）、有效负载（Payload）和一些额外填充（Padding）组成，头部中包含了 Block 的大小（Block Size）和状态信息（Allocated or Free）。如果系统采用双字对齐策略，那么每个 Block 的大小始终为 8 的倍数，其二进制表达的后 3 位始终为 0。因此我们可以仅在头部中存储该字段的前 29 位，剩余 3 位用来存储其他信息。上图中的位“a”便指示了此 Block 是已分配的还是空闲的。填充的大小是任意的，它可能是分配器为了避免外部碎片产生而设置的，也可能是为了满足对齐要求而存在的。
 
 基于这种 Block 格式，我们可以将堆组织成一系列连续的已分配 Block 和空闲 Block：
 
 ![20220615162852](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220615162852.png)
 
-空闲 Block 通过其头部中的大小字段隐式地链接起来（见上图中的箭头），因此我们将这种堆组织方式称为隐式空闲链表（Implicit Free List），分配器必须遍历堆中所有的 Block 才能得到全部空闲的 Block。我们还需要一个特殊的 Block 以标记堆的结尾，如上图中的 “0/1”。隐式空闲链表的优点是简单，但任何搜索空闲 Block 的操作（如放置新分配的 Block）的成本都与堆中 Block 的总数成正比。
+Block 通过其头部中的大小字段隐式地链接起来（addr(next_block) = addr(current_block) + block_size），因此我们将这种堆组织方式称为隐式空闲链表（Implicit Free List），分配器必须遍历堆中所有的 Block 才能得到全部空闲的 Block。我们还需要一个特殊的 Block 以标记堆的结尾，如上图中的 “0/1”。隐式空闲链表的优点是简单，但任何搜索空闲 Block 的操作（如放置新分配的 Block）的成本都与堆中 Block 的总数成正比。
 
 ### 放置新分配的 Block
 
@@ -449,15 +449,15 @@ int main()
 
 ![20220615220820](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220615220820.png)
 
-如图 9.38 所示，分配器将图 9.37 中第二个 4 字 Block 释放。尽管两个连续空闲 Block 中均有 3 字的有效负载，但它们也无法满足一个 4 字的分配请求。因此，分配器必须将相邻空闲的 Block 合并。
+如图 9.38 所示，分配器将图 9.37 中第二个 4 字 Block 释放。尽管两个连续空闲 Block 中均有 3 字的有效负载，它们也无法满足一个 4 字的分配请求。因此，分配器必须将相邻空闲的 Block 合并。
 
-分配器可以在每次释放 Block 后立即合并 Block，也可以等到某个时刻，比如分配请求失败时才合并堆中所有的空闲 Block。立即合并很简单，但它也可能造成“颠簸”，即某个 Block 在短时间内被多次合并和分割。
+分配器可以在每次释放 Block 后立即合并 Block，也可以等到某个时刻，比如分配请求失败时才合并堆中所有空闲的 Block。立即合并很简单，但它也有可能造成“颠簸”，即某个 Block 在短时间内被多次合并和分割。
 
 ### 使用边界标记合并 Block
 
-我们把即将释放的 Block 称为当前（Current）Block，其头部指向下一个 Block 的头部。因此我们便很容易判断下一个 Block 是否空闲，并且只需将当前 Block 头部中的大小字段与之相加即可完成合并。
+我们把即将释放的 Block 称为当前（Current）Block，其头部指向下一个 Block 的头部（addr(next_block) = addr(current_block) + block_size）。因此我们很容易判断下一个 Block 是否空闲，并且只需将当前 Block 头部中的大小字段与之相加即可完成合并。
 
-而若要合并上一个 Block，我们只能遍历整个链表，在到达当前 Block 前不断记下上一个 Block 的位置。因此对于隐式空闲链表，合并上一个 Block 的时间与堆内存的大小成正比。
+但若要合并上一个 Block，我们只能遍历整个链表，并在到达当前 Block 前不断记下上一个 Block 的位置。因此对于隐式空闲链表，合并上一个 Block 的时间与堆内存的大小成正比。
 
 我们可以在每个 Block 末尾都添加一个头部的副本以使合并 Block 的时间变为常数，这种技术被称为边界标记（Boundary Tags）：
 
@@ -467,7 +467,7 @@ int main()
 
 ![20220615232751](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220615232751.png)
 
-由于每个 Block 都包含头部和尾部，因此当 Block 数量较多时，边界标记显著地增加了内存的开销。考虑到分配器只有在上一个 Block 空闲时才需要获取其尾部内的 Block 大小，我们可以将上一个 Block 的状态存储在当前 Block 头部的多余低位中，这样已分配的 Block 便不需要尾部了。
+由于每个 Block 都包含头部和尾部，当 Block 数量较多时，边界标记显著地增加了内存的开销。考虑到分配器只有在上一个 Block 空闲时才需要获取其尾部内的 Block 大小，因此我们可以将上一个 Block 的状态存储在当前 Block 头部的多余低位中，这样已分配的 Block 便不需要尾部了。
 
 ### 显式空闲链表
 
@@ -510,11 +510,9 @@ $$\lbrace1\rbrace, \lbrace2\rbrace, \lbrace3\rbrace,..., \lbrace1024\rbrace, \lb
 
 ![20220616172206](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220616172206.png)
 
-图中的节点被分为一组根节点（Root Nodes）和一组堆节点（Heap Nodes），每个堆节点都对应于堆中的一个已分配的 Block。有向边 $p \rarr q$ 表示 Block $p$ 中的某个位置指向 Block $q$ 中的某个位置。~~根节点对应于不在堆中却指向了堆的位置，这些位置可以是寄存器、栈中的变量或可读写数据区域中的全局变量~~。
+图中的节点被分为一组根节点（Root Nodes）和一组堆节点（Heap Nodes），每个堆节点都对应于一个堆中已分配的 Block。有向边 $p \rarr q$ 表示 Block $p$ 中的某个位置指向 Block $q$ 中的某个位置。根节点对应于不在堆中却包含了指向堆的指针的位置，这些位置可以是寄存器、栈中的变量或可读写数据区域中的全局变量。
 
-> Root nodes correspond to locations not in the heap that contain pointers into the heap. These locations can be registers, variables on the stack, or global variables in the read/write data area of virtual memory.
-
-如果根节点与堆节点之间存在一条有向路径，我们就称该堆节点是可达的（Reachable）。在任何时刻，不可达的节点都对应于程序不再使用的 Block。垃圾回收器定期释放不可达节点并将其返回到空闲链表。
+如果根节点与堆节点之间存在一条有向路径，我们就称该堆节点是可达的（Reachable）。在任何时刻，不可达的节点都与程序不再使用的 Block 对应。垃圾回收器定期释放不可达节点并将其返回到空闲链表。
 
 ML 和 Java 等语言的垃圾回收器对应用程序使用指针的方式进行了严格的限制，因此它可以维护一个精确的可达性图，从而回收所有的垃圾。而 C 和 C++ 等语言的垃圾回收器则无法保证可达性图的精确性，一些不可达的节点可能被错误地识别为可达的，我们称其为保守垃圾回收器（Conservative Garbage Collector）。
 
@@ -544,7 +542,7 @@ Mark&Sweep 是常用的垃圾回收算法之一，它分为两个阶段：
 
 ![20220616212514](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220616212514.png)
 
-在标记阶段，垃圾回收器为每个根节点调用一次`mark`函数。如果`p`未指向已分配且未标记的 Block，则该函数直接返回。否则，它标记该 Block 并将其中的每个字作为参数递归地调用自身（`mark(b[i])`）。此阶段结束时，任何未标记且已分配的 Block 都是不可达的。在扫描阶段，垃圾回收器只调用一次`sweep`函数。该函数遍历堆中的每一个 Block，释放所有已分配且未标记的 Block。
+在标记阶段，垃圾回收器为每个根节点调用一次`mark`函数。若`p`未指向已分配且未标记的 Block，则该函数直接返回。否则，它标记该 Block 并将其中的每个字作为参数递归地调用自身（`mark(b[i])`）。此阶段结束时，任何未标记且已分配的 Block 都是不可达的；在扫描阶段，垃圾回收器只调用一次`sweep`函数。该函数遍历堆中的每一个 Block，释放所有已分配且未标记的 Block。
 
 ![20220616220603](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220616220603.png)
 
