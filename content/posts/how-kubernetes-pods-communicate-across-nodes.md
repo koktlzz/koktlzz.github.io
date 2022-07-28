@@ -28,9 +28,9 @@ summary: "《A Guide to the Kubernetes Networking Model》一文生动形象地�
 
 CNI 插件不仅为 Pod 分配 IP 地址，它还会将每个 Pod 所在的节点信息下发给 SDN 交换机。这样当 SDN 交换机接收到 ARP 请求时，将会答复 Pod2 所在节点 Node2 的 MAC 地址，数据包也就顺利地送到了 Node2 上。
 
-阿里云 [Terway](https://help.aliyun.com/document_detail/86500.html) 模式的 ACK 服务使用的便是这种网络模型，只不过 Pod 间通信使用的 SDN 交换机不再是节点的交换机（下图中的“Node VSwitch”），而是单独创建的 Pod VSwitch：
+阿里云 [Terway](https://help.aliyun.com/document_detail/97467.htm?spm=a2c4g.11186623.0.0.695c7dd0F8vevY#task-1797447) 模式的 ACK 服务使用的便是这种网络模型，只不过 Pod 间通信使用的 SDN 交换机不再是节点的交换机（下图中的“Node vSwitch”），而是单独创建的“Pod vSwitch”：
 
-![p32414](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/p32414.png)
+![202207291217](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/202207291217.jpeg)
 
 ### 三层
 
@@ -77,7 +77,7 @@ Node1 上的 VTEP 收到 Pod1 发来的数据包后，首先会在本地的转�
 
 [About Kubernetes Networking](https://projectcalico.docs.tigera.io/about/about-k8s-networking)
 
-[使用 Terway 网络插件](https://help.aliyun.com/document_detail/97467.html)
+[使用 Terway 网络插件](https://help.aliyun.com/document_detail/97467.htm?spm=a2c4g.11186623.0.0.695c7dd0F8vevY#task-1797447)
 
 [边界网关协议 - Wikipedia](https://zh.wikipedia.org/wiki/%E8%BE%B9%E7%95%8C%E7%BD%91%E5%85%B3%E5%8D%8F%E8%AE%AE)
 
