@@ -33,3 +33,49 @@ $$B_0, B_1, ..., B_k, ..., B_{m-1}$$
 ![20220807220609](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220807220609.png)
 
 ## 打开和关闭文件
+
+进程可以调用函数`open`来打开一个已存在的文件或创建一个新文件：
+
+```c
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+int open(char *filename, int flags, mode_t mode);
+// Returns: new file descriptor if OK, −1 on error
+```
+
+返回的文件描述符是进程当前未打开的最小描述符。参数`flags`指示进程如何访问文件：
+
+- `O_RDONLY`：只读
+- `O_WRONLY`：只写
+- `O_RDWR`：读写
+
+该参数还可以与一个或多个位掩码进行或（`OR`）运算，这些位掩码提供写入的附加说明：
+
+- `O_CREAT`：如果文件不存在，则创建一个空文件；
+- `O_TRUNC`：如果文件已经存在，则清空文件内容；
+- `O_APPEND`：在每次写入操作之前，将文件位置设置为文件末尾。
+
+若文件已存在，参数`mode`应设为 0；反之，则设为新文件的访问权限位，可选项如下图所示：
+
+![20220807233921](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220807233921.png)
+
+作为进程上下文的一部分，每个进程都有一个通过`umask`函数设置的`umask`掩码。当进程调用`open`函数创建新文件时，文件的访问权限位会被设置为`mode & ~umask`。如下示例程序将创建一个所有者拥有读写权限、其他用户都有读取权限的新文件：
+
+```c
+#define DEF_MODE   S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH
+#define DEF_UMASK  S_IWGRP|S_IWOTH
+
+umask(DEF_UMASK);
+fd = Open("foo.txt", O_CREAT|O_TRUNC|O_WRONLY, DEF_MODE);
+```
+
+进程调用`close`函数来关闭一个打开的文件，若文件描述符已关闭将引发错误：
+
+```c
+#include <unistd.h>
+int close(int fd);
+// Returns: 0 if OK, −1 on error
+```
+
+## 读写文件
