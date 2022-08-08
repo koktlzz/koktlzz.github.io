@@ -79,3 +79,224 @@ int close(int fd);
 ```
 
 ## 读写文件
+
+应用程序调用`read`和`write`函数来执行输入和输出：
+
+```c
+#include <unistd.h>
+ssize_t read(int fd, void *buf, size_t n);
+// Returns: number of bytes read if OK, 0 on EOF, −1 on error
+ssize_t write(int fd, const void *buf, size_t n);
+// Returns: number of bytes written if OK, −1 on error
+```
+
+`read`函数从参数`fd`的当前文件位置复制最多`n`个字节到内存中`buf`指向的位置，`write`函数则从内存中`buf`指向的位置复制最多`n`个字节到参数`fd`的当前位置。示例程序使用上述两种函数将标准输入以字节为单位复制到标准输出：
+
+```c
+#include "csapp.h"
+
+int main(void) 
+{
+    char c;
+    while(Read(STDIN_FILENO, &c, 1) != 0) 
+        Write(STDOUT_FILENO, &c, 1);
+    exit(0);
+}
+```
+
+在某些情况下，读写操作传输的字节数小于应用程序请求的字节数。不足数（Short Count）的产生并不代表发生了错误，它可能由多种原因导致：
+
+- 读取时遇到 EOF：若我们对一个 20 字节的文件执行`read(fd, *buf, 50)`，那么第一次调用将返回一个 20 的不足数，第二次调用则返回 0（EOF）；
+- 从终端读取文本行：若打开的文件是终端设备（即键盘和显示器），那么每次`read`调用都将传输一个文本行并返回一个与文本行大小相等的不足数；
+- 读写 Socket：若打开的文件是 Socket，那么内部缓冲区限制和网络延迟将使读写操作返回不足数。
+
+因此除遇到 EOF 外，读写磁盘文件不会导致不足数的产生。但如果我们想要构建健壮而可靠的网络应用程序，就必须重复调用`read`和`write`以保证所有请求的字节均已被传输。
+
+## 使用 $R_{IO}$ 包实现健壮读写
+
+$R_{IO}$ 包为应用程序提供了方便、健壮且高效的 I/O，可以解决编写网络程序时遇到的不足数问题：
+
+- 无缓冲的输入/输入函数：直接在内存和文件之间传输数据，适用于从网络中读写二进制数据；
+- 有缓冲的输入函数：从应用程序级别的缓冲区中读取文本行和二进制数据，与标准 I/O（如`printf`）函数类似。该函数是线程安全（Thread-safe）的，并且可以对同一描述符任意交错（Interleave）。例如，我们可以从描述符中读取一些文本行，然后读取一些二进制数据，最后再读取一些文本行。
+
+### 无缓冲的输入/输入函数
+
+```c
+#include "csapp.h"
+ssize_t rio_readn(int fd, void *usrbuf, size_t n);
+ssize_t rio_writen(int fd, void *usrbuf, size_t n);
+// Returns: number of bytes transferred if OK, 0 on EOF (rio_readn only), −1 on error
+```
+
+`rio_readn`函数从参数`fd`的当前文件位置复制最多`n`个字节到内存中`usrbuf`指向的位置，`rio_writen`函数则从内存中`usrbuf`指向的位置复制最多`n`个字节到参数`fd`的当前位置。前者只有在遇到 EOF 时返回不足数，后者则从不返回不足数。
+
+若上述函数被应用程序的信号处理程序的返回中断，它们会重新调用`read`和`write`函数：
+
+```c
+ssize_t rio_readn(int fd, void *usrbuf, size_t n)
+{
+    size_t nleft = n;
+    ssize_t nread;
+    char *bufp = usrbuf;
+    while (nleft > 0)
+    {
+        if ((nread = read(fd, bufp, nleft)) < 0)
+        {
+            if (errno == EINTR) /* Interrupted by sig handler return */
+                nread = 0;      /* and call read() again */
+            else
+                return -1;      /* errno set by read() */
+        }
+        else if (nread == 0)
+            break;              /* EOF */
+        nleft -= nread;
+        bufp += nread;
+    }
+    return (n - nleft);         /* Return >= 0 */
+}
+
+ssize_t rio_writen(int fd, void *usrbuf, size_t n)
+{
+    size_t nleft = n;
+    ssize_t nwritten;
+    char *bufp = usrbuf;
+    while (nleft > 0)
+    {
+        if ((nwritten = read(fd, bufp, nleft)) < 0)
+        {
+            if (errno == EINTR) /* Interrupted by sig handler return */
+                nwritten = 0;   /* and call write() again */
+            else
+                return -1;      /* errno set by write() */
+        }
+        nleft -= nwritten;
+        bufp += nwritten;
+    }
+    return n;
+}
+```
+
+### 有缓冲的输入函数
+
+假设我们需要编写一个计算文本文件行数的程序，最简单的方法便是调用`read`函数每次读取一个字节并检查是否有换行符。但由于`read`是系统调用，频繁的上下文切换将导致程序效率低下。
+
+更好的方法是调用包装函数`rio_readlineb`从内部读取缓冲区（Read Buffer）复制文本行，当缓冲区为空时才调用`read`以重新填充缓冲区。$R_{IO}$ 包还为同时包含文本行和二进制数据的文件（如 HTTP 响应）提供了`rio_readn`的有缓冲版本，即`rio_readnb`：
+
+```c
+#include "csapp.h"
+ssize_t rio_readlineb(rio_t *rp, void *usrbuf, size_t maxlen);
+ssize_t rio_readnb(rio_t *rp, void *usrbuf, size_t n);
+// Returns: number of bytes read if OK, 0 on EOF, −1 on error
+```
+
+在调用上述两种有缓冲的输入函数前，我们需要为每个打开文件描述符调用一次`rio_readinitb`。该函数将描述符`fd`与地址`rp`处的读取缓冲区（类型为`rio_t`）相关联：
+
+```c
+#define RIO_BUFSIZE 8192
+typedef struct {
+    int rio_fd;                /* Descriptor for this internal buf */
+    int rio_cnt;               /* Unread bytes in internal buf */
+    char *rio_bufptr;          /* Next unread byte in internal buf */
+    char rio_buf[RIO_BUFSIZE]; /* Internal buffer */
+} rio_t;
+
+void rio_readinitb(rio_t *rp, int fd) 
+{
+    rp->rio_fd = fd;  
+    rp->rio_cnt = 0;  
+    rp->rio_bufptr = rp->rio_buf;
+}
+```
+
+$R_{IO}$ 包的核心是`rio_read`函数，它是 Linux `read`函数的有缓冲版本。若读取缓冲区中的未读字节数`rp->rio_cnt`为 0，则进入 While 循环并调用`read`函数对其填充；若读取缓冲区为非空，则调用`memcpy`函数将`min(n, rp->rio_cnt)`字节从缓冲区复制到`usrbuf`指向的内存位置：
+
+```c
+static ssize_t rio_read(rio_t *rp, char *usrbuf, size_t n)
+{
+    int cnt;
+
+    while (rp->rio_cnt <= 0)
+    { /* Refill if buf is empty */
+        rp->rio_cnt = read(rp->rio_fd, rp->rio_buf,
+                           sizeof(rp->rio_buf));
+        if (rp->rio_cnt < 0)
+        {
+            if (errno != EINTR) /* Interrupted by sig handler return */
+                return -1;
+        }
+        else if (rp->rio_cnt == 0) /* EOF */
+            return 0;
+        else
+            rp->rio_bufptr = rp->rio_buf; /* Reset buffer ptr */
+    }
+
+    /* Copy min(n, rp->rio_cnt) bytes from internal buf to user buf */
+    cnt = n;
+    if (rp->rio_cnt < n)
+        cnt = rp->rio_cnt;
+    memcpy(usrbuf, rp->rio_bufptr, cnt);
+    rp->rio_bufptr += cnt;
+    rp->rio_cnt -= cnt;
+    return cnt;
+}
+```
+
+在应用程序看来，`rio_read`函数与 Linux `read`函数具有相同的语义：执行发生错误时，它返回 -1 并设置 errno；执行遇到 EOF 时，它返回 0；当请求的字节数大于读取缓冲区中的未读字节数时，它返回一个不足数。因此我们可以通过将`read`替换为`rio_read`来构建不同类型的有缓冲读取函数。
+
+实际上，`rio_readnb`与`rio_readn`具有完全相同的结构，只不过我们用`rio_read`替换了`read`：
+
+```c
+ssize_t rio_readnb(rio_t *rp, void *usrbuf, size_t n)
+{
+    size_t nleft = n;
+    ssize_t nread;
+    char *bufp = usrbuf;
+
+    while (nleft > 0)
+    {
+        if ((nread = rio_read(rp, bufp, nleft)) < 0)
+            return -1; /* errno set by read() */
+        else if (nread == 0)
+            break; /* EOF */
+        nleft -= nread;
+        bufp += nread;
+    }
+    return (n - nleft); /* return >= 0 */
+}
+```
+
+类似地，`rio_readlineb`函数调用`rio_read`最多`maxlen-1`次。每次调用从读取缓冲区返回一个字节，然后检查它是否是换行符：
+
+```c
+ssize_t rio_readlineb(rio_t *rp, void *usrbuf, size_t maxlen)
+{
+    int n, rc;
+    char c, *bufp = usrbuf;
+
+    for (n = 1; n < maxlen; n++)
+    {
+        if ((rc = rio_read(rp, &c, 1)) == 1)
+        {
+            *bufp++ = c;
+            if (c == '\n')
+            {
+                n++;
+                break;
+            }
+        }
+        else if (rc == 0)
+        {
+            if (n == 1)
+                return 0; /* EOF, no data read */
+            else
+                break; /* EOF, some data was read */
+        }
+        else
+            return -1; /* Error */
+    }
+    *bufp = 0;
+    return n - 1;
+}
+```
+
+## 读取文件元数据
