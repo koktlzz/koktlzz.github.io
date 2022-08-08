@@ -314,7 +314,7 @@ pid_t waitpid(pid_t pid, int *statusp, int options);
 
 如果调用进程没有子进程，`waitpid`将返回 -1 并将全局变量`errno`设为`ECHILD`；如果`waitpid`被信号中断，则返回 -1 并将全局变量`errno`设为`EINTR`。
 
-函数`wait`是`waitpid`的简化版本， `wait(&status)`等效于`waitpid(-1, &status, 0)`。
+函数`wait`是`waitpid`的简化版本，`wait(&status)`等效于`waitpid(-1, &status, 0)`。
 
 ```c
 #include "csapp.h"
@@ -455,7 +455,7 @@ pid_t getpgrp(void);
 int setpgid(pid_t pid, pid_t pgid);
 ```
 
-该函数会把进程`pid`的进程组更改为`pgid`。若将参数`pid`或`pgid`设为 0，则相当于使用调用进程的 PID 作为参数。举例来说，如果进程 15213 调用函数 `setpgid(0, 0)`，那么将会创建一个进程组 ID 为 15213 的新进程组，并使该进程加入此组。
+该函数会把进程`pid`的进程组更改为`pgid`。若将参数`pid`或`pgid`设为 0，则相当于使用调用进程的 PID 作为参数。举例来说，如果进程 15213 调用函数`setpgid(0, 0)`，那么将会创建一个进程组 ID 为 15213 的新进程组，并使该进程加入此组。
 
 #### 从键盘发送信号
 
@@ -508,7 +508,7 @@ sighandler_t signal(int signum, sighandler_t handler);
 // Returns: pointer to previous handler if OK, SIG_ERR on error (does not set errno)
 ```
 
-若参数`handler`为 SIG_IGN，则 `signum`类型的信号将会被忽略；若参数`handler`为 SIG_DFL，则`signum`类型的信号的动作将恢复为默认；若参数`handler`为用户定义的信号处理程序地址，则进程接收到`signum`类型的信号后会调用该程序，这种方法被称为安装处理程序（Installing Handler）。在这种情况下，调用处理程序被称为捕获信号（Catching Signal），执行处理程序被称为处理信号（Handling Signal）。
+若参数`handler`为`SIG_IGN`，则`signum`类型的信号将会被忽略；若参数`handler`为`SIG_DFL`，则`signum`类型的信号的动作将恢复为默认；若参数`handler`为用户定义的信号处理程序地址，则进程接收到`signum`类型的信号后会调用该程序，这种方法被称为安装处理程序（Installing Handler）。在这种情况下，调用处理程序被称为捕获信号（Catching Signal），执行处理程序被称为处理信号（Handling Signal）。
 
 如果我们在示例程序运行时按下 Ctrl+C，该进程就不会直接终止而是输出一段信息后才终止：
 
