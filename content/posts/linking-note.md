@@ -232,7 +232,7 @@ typedef struct {
 
 ![20220322220835](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220322220835.png)
 
-链接器遍历每个 Section（`s`）中的每个重定位条目（`r`），`s`是一个字节数组，`r`是上一节介绍的`Elf64_Rela`类型的结构体，`*refptr`是指令中的目标地址。假设该算法运行时，链接器已经为每个 Section 和每个符号选择了运行时地址 `ADDR(s)`和`ADDR(r.symbol)`。
+链接器遍历每个 Section（`s`）中的每个重定位条目（`r`），`s`是一个字节数组，`r`是上一节介绍的`Elf64_Rela`类型的结构体，`*refptr`是指令中的目标地址。假设该算法运行时，链接器已经为每个 Section 和每个符号选择了运行时地址`ADDR(s)`和`ADDR(r.symbol)`。
 
 我们使用命令`objdump -dx main.o`得到汇编器为 [示例程序 main.c](/posts/linking-note/#编译器驱动) 生成的机器码和重定位条目：
 
@@ -394,7 +394,7 @@ void *dlsym(void *handle, char *symbol);
 
 ### PIC 函数调用
 
-PIC 函数调用的运行时地址是在该函数第一次被调用时确定的，这种技术被称为延迟绑定（Lazy Binding）。当应用程序导入了一个包含成百上千个函数的共享库（如 `libc.so`），却只调用其中一小部分的函数时，这种技术可以大大减少加载时不必要的重定位操作。
+PIC 函数调用的运行时地址是在该函数第一次被调用时确定的，这种技术被称为延迟绑定（Lazy Binding）。当应用程序导入了一个包含成百上千个函数的共享库（如`libc.so`），却只调用其中一小部分的函数时，这种技术可以大大减少加载时不必要的重定位操作。
 
 延迟绑定是通过 GOT 和过程链接表（Procedure Linkage Table，PLT）共同实现的。只要目标模块调用了共享库中定义的函数，那么它就有自己的 GOT 和 PLT。上文提到，GOT 是数据段的一部分，而 PLT 则是代码段的一部分。
 
