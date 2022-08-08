@@ -180,7 +180,7 @@ ssize_t rio_writen(int fd, void *usrbuf, size_t n)
 
 假设我们需要编写一个计算文本文件行数的程序，最简单的方法便是调用`read`函数每次读取一个字节并检查是否有换行符。但由于`read`是系统调用，频繁的上下文切换将导致程序效率低下。
 
-更好的方法是调用包装函数`rio_readlineb`从内部读取缓冲区（Read Buffer）复制文本行，当缓冲区为空时才调用`read`以重新填充缓冲区。$R_{IO}$ 包还为同时包含文本行和二进制数据的文件（如 HTTP 响应）提供了`rio_readn`的有缓冲版本，即`rio_readnb`：
+更好的方法是调用包装函数`rio_readlineb`从内部读取缓冲区（Read Buffer）复制文本行，只有当缓冲区为空时才调用`read`以重新填充缓冲区。$R_{IO}$ 包还为同时包含文本行和二进制数据的文件（如 HTTP 响应）提供了`rio_readn`函数的有缓冲版本，即`rio_readnb`：
 
 ```c
 #include "csapp.h"
@@ -208,7 +208,7 @@ void rio_readinitb(rio_t *rp, int fd)
 }
 ```
 
-$R_{IO}$ 包的核心是`rio_read`函数，它是 Linux `read`函数的有缓冲版本。若读取缓冲区中的未读字节数`rp->rio_cnt`为 0，则进入 While 循环并调用`read`函数对其填充；若读取缓冲区为非空，则调用`memcpy`函数将`min(n, rp->rio_cnt)`字节从缓冲区复制到`usrbuf`指向的内存位置：
+$R_{IO}$ 包读取例程的核心是`rio_read`函数，它其实是`read`函数的有缓冲版本。若读取缓冲区中的未读字节数`rp->rio_cnt`为 0，则在循环内调用`read`函数对其填充；若读取缓冲区非空，则调用`memcpy`函数将`min(n, rp->rio_cnt)`字节从缓冲区复制到`usrbuf`指向的内存位置：
 
 ```c
 static ssize_t rio_read(rio_t *rp, char *usrbuf, size_t n)
@@ -221,10 +221,10 @@ static ssize_t rio_read(rio_t *rp, char *usrbuf, size_t n)
                            sizeof(rp->rio_buf));
         if (rp->rio_cnt < 0)
         {
-            if (errno != EINTR) /* Interrupted by sig handler return */
+            if (errno != EINTR)           /* Interrupted by sig handler return */
                 return -1;
         }
-        else if (rp->rio_cnt == 0) /* EOF */
+        else if (rp->rio_cnt == 0)        /* EOF */
             return 0;
         else
             rp->rio_bufptr = rp->rio_buf; /* Reset buffer ptr */
@@ -241,7 +241,7 @@ static ssize_t rio_read(rio_t *rp, char *usrbuf, size_t n)
 }
 ```
 
-在应用程序看来，`rio_read`函数与 Linux `read`函数具有相同的语义：执行发生错误时，它返回 -1 并设置 errno；执行遇到 EOF 时，它返回 0；当请求的字节数大于读取缓冲区中的未读字节数时，它返回一个不足数。因此我们可以通过将`read`替换为`rio_read`来构建不同类型的有缓冲读取函数。
+在应用程序看来，`rio_read`函数与`read`函数具有相同的语义：执行发生错误时，它返回 -1 并设置 errno；执行遇到 EOF 时，它返回 0；当请求的字节数大于读取缓冲区中的未读字节数时，它返回一个不足数。因此我们可以通过将`read`替换为`rio_read`来构建不同类型的有缓冲读取函数。
 
 实际上，`rio_readnb`与`rio_readn`具有完全相同的结构，只不过我们用`rio_read`替换了`read`：
 
@@ -255,7 +255,7 @@ ssize_t rio_readnb(rio_t *rp, void *usrbuf, size_t n)
     while (nleft > 0)
     {
         if ((nread = rio_read(rp, bufp, nleft)) < 0)
-            return -1; /* errno set by read() */
+            return -1;  /* errno set by read() */
         else if (nread == 0)
             break; /* EOF */
         nleft -= nread;
@@ -265,7 +265,7 @@ ssize_t rio_readnb(rio_t *rp, void *usrbuf, size_t n)
 }
 ```
 
-类似地，`rio_readlineb`函数调用`rio_read`最多`maxlen-1`次。每次调用从读取缓冲区返回一个字节，然后检查它是否是换行符：
+类似地，`rio_readlineb`函数从文件`rp`中读取一个文本行并将其复制到内存中`usrbuf`指向的位置。循环内每次对`rio_read`的调用都会把读取缓冲区中的一个字节复制到`&c`，然后检查它是否是换行符：
 
 ```c
 ssize_t rio_readlineb(rio_t *rp, void *usrbuf, size_t maxlen)
@@ -277,7 +277,7 @@ ssize_t rio_readlineb(rio_t *rp, void *usrbuf, size_t maxlen)
     {
         if ((rc = rio_read(rp, &c, 1)) == 1)
         {
-            *bufp++ = c;
+            *bufp++ = c;  /* Copy rp to user buf */
             if (c == '\n')
             {
                 n++;
@@ -289,10 +289,10 @@ ssize_t rio_readlineb(rio_t *rp, void *usrbuf, size_t maxlen)
             if (n == 1)
                 return 0; /* EOF, no data read */
             else
-                break; /* EOF, some data was read */
+                break;    /* EOF, some data was read */
         }
         else
-            return -1; /* Error */
+            return -1;    /* Error */
     }
     *bufp = 0;
     return n - 1;
@@ -300,3 +300,113 @@ ssize_t rio_readlineb(rio_t *rp, void *usrbuf, size_t maxlen)
 ```
 
 ## 读取文件元数据
+
+应用程序调用`stat`和`fstat`函数获取一个文件的元数据：
+
+```c
+#include <unistd.h>
+#include <sys/stat.h>
+int stat(const char *filename, struct stat *buf);
+int fstat(int fd, struct stat *buf);
+// Returns: 0 if OK, −1 on error
+```
+
+函数`stat`使用文件名`*filename`作为输入，将信息填写到`stat`结构体中。`fstat`与之类似，但它的参数是文件描述符`fd`。结构体`stat`如下图所示，我们只需关注字段`st_mode`和`st_size`：
+
+![20220808223653](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220808223653.png)
+
+`st_size`包含了文件的大小，而`st_mode`则包含了文件的访问权限和类型。
+
+## 读取目录内容
+
+应用程序调用`opendir`和`readdir`函数读取目录中的内容：
+
+```c
+#include <sys/types.h>
+#include <dirent.h>
+DIR *opendir(const char *name);
+// Returns: pointer to handle if OK, NULL on error
+#include <dirent.h>
+struct dirent *readdir(DIR *dirp);
+// Returns: pointer to next directory entry if OK, NULL if no more entries or error
+```
+
+函数`opendir`以目录的路径名为参数，返回一个指向目录流（Directory Stream）的指针。流是对有序项目列表的抽象，此处指的是目录中条目的列表。函数`readdir`返回指向目录流中下一个条目的指针，每个条目都是一个`dirent`结构体：
+
+```c
+struct dirent {
+    ino_t d_ino;       /* inode number */
+    char  d_name[256]; /* Filename */
+};
+```
+
+`d_name`是文件名，`d_ino`是文件的 inode 数。当发生错误时，`readdir`返回`NULL`并设置`errno`。
+
+函数`closedir`关闭目录流并释放所有相关资源：
+
+```c
+#include <dirent.h>
+int closedir(DIR *dirp);
+// Returns: 0 on success, −1 on error
+```
+
+## 共享文件
+
+内核使用三种数据结构来表示打开的文件：
+
+- 描述符表：每个进程都有一个独立的描述符表，每个条目均指向文件表中的条目，其索引是进程打开的文件描述符；
+- 文件表：所有进程共享一个文件表，它表示了打开文件的集合。每个文件表条目由当前文件位置（下图中的“FIle pos”）、当前指向它的描述符表条目数量（下图中的“refcnt”）和一个指向 v-node 表条目的指针。只有当`refcnt`为 0 时，内核才会删除对应的文件表条目；
+- v-node 表：与文件表一样，v-node 表由所有进程共享。每个条目都包含了`stat`结构体中的大部分信息，如`st_mode`和`st_size`。
+
+![20220808234547](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220808234547.png)
+
+如上图所示，描述符 1 和 4 通过不同的文件表条目引用不同的文件。这是最典型的情况，文件并未共享，每个描述符对应一个不同的文件。
+
+多个描述符可以通过不同的文件表条目引用同一个文件，若使用相同的文件名两次调用`open`函数便有可能发生这种情况：
+
+![20220808235153](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220808235153.png)
+
+每个描述符都有自己独立的文件位置，因此示例程序的输出结果为`f`：
+
+```c
+#include "csapp.h" 2
+
+int main()
+{
+    int fd1, fd2;
+    char c;
+    fd1 = Open("foobar.txt", O_RDONLY, 0);
+    fd2 = Open("foobar.txt", O_RDONLY, 0);
+    Read(fd1, &c, 1);
+    Read(fd2, &c, 1);
+    printf("c = %c\n", c);
+    exit(0);
+}
+```
+
+假设父进程打开的文件如上图 10.12 所示，则调用`fork`函数后父子进程的打开文件情况如下图所示：
+
+![20220809000232](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220809000232.png)
+
+子进程得到父进程的描述符表副本，两者共享相同的文件表和文件位置，因此如下示例程序的输出结果为`o`：
+
+```c
+#include "csapp.h"
+int main()
+{
+    int fd;
+    char c;
+    fd = Open("foobar.txt", O_RDONLY, 0);
+    if (Fork() == 0)
+    {
+        Read(fd, &c, 1);
+        exit(0);
+    }
+    Wait(NULL);
+    Read(fd, &c, 1);
+    printf("c = %c\n", c);
+    exit(0);
+}
+```
+
+## I/O 重定向
