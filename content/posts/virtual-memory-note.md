@@ -239,15 +239,15 @@ Linux 使用内存映射（Memory Mapping）技术初始化虚拟内存区域并
 
 ### 回看 fork 函数
 
-进程调用 [`fork`](/posts/exception-control-flow-note/#创建和中止进程) 函数后，内核会为子进程分配一个唯一的 PID 并为其创建与父进程相同的 `mm_struct`、`vm_area_structs`以及页表。当任意进程后续执行写入操作时，内核将使用写时复制技术创建新页面，这便保证了进程虚拟地址空间的私有性。
+进程调用 [`fork`](/posts/exception-control-flow-note/#创建和中止进程) 函数后，内核会为子进程分配一个唯一的 PID 并为其创建与父进程相同的`mm_struct`、`vm_area_structs`以及页表。当任意进程后续执行写入操作时，内核将使用写时复制技术创建新页面，这便保证了进程虚拟地址空间的私有性。
 
 ### 回看 execve 函数
 
-如果进程调用 [`execve`](/posts/exception-control-flow-note/#加载并运行程序) 函数，如 `execve("a.out", NULL, NULL)`，则加载并运行`a.out`的步骤如下：
+如果进程调用 [`execve`](/posts/exception-control-flow-note/#加载并运行程序) 函数，如`execve("a.out", NULL, NULL)`，则加载并运行`a.out`的步骤如下：
 
 1. 删除当前进程虚拟地址空间中用户区域的`vm_area_structs`；
 2. 为新程序的代码、数据、bss 和堆栈区域创建`vm_area_structs`。这些区域都是私有写时复制的，代码和数据区域被映射到`a.out`文件中的 [.text 和 .data](/posts/linking-note/#可重定位目标文件)，bss 区域则被映射到大小包含在`a.out`内的匿名文件。堆栈的初始长度均为 0，其页面是零需求的；
-3. 如果`a.out`文件链接了共享库，如 C 标准库 `libc.so`，那么还需要把这些对象动态链接到程序中，并将其映射到虚拟地址空间中的共享区域内；
+3. 如果`a.out`文件链接了共享库，如 C 标准库`libc.so`，那么还需要把这些对象动态链接到程序中，并将其映射到虚拟地址空间中的共享区域内；
 4. 使当前进程上下文中的程序计数器指向新程序代码区域的入口点。
 
 ![20220613213646](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220613213646.png)
@@ -323,7 +323,7 @@ void free(void *ptr);
 // Returns: nothing
 ```
 
-`free`函数将参数`ptr`指向的 Block 释放，而这些 Block 必须是由`malloc`、`calloc` 或 `realloc`分配的。该函数没有返回值，因此很容易产生一些令人费解的运行时错误。
+`free`函数将参数`ptr`指向的 Block 释放，而这些 Block 必须是由`malloc`、`calloc`或`realloc`分配的。该函数没有返回值，因此很容易产生一些令人费解的运行时错误。
 
 ![20220614154301](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220614154301.png)
 
