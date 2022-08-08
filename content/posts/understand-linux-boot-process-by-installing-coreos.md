@@ -136,7 +136,7 @@ menuentry 'coreos' {
 - `linux16 /rhcos-live-kernel-x86_64 ...`
 - `initrd16 /rhcos-live-initramfs.x86_64.img`
 
-第一条命令指定了 GRUB2 的根目录，也就是 /boot 所在分区在计算机硬件上的位置。既然我们已经将内核文件拷贝到了 /boot 目录下，那么能够识别文件系统的 GRUB2 便可以定位和加载它。本例中`hd`代表硬盘（Hard Drive），`0`代表第一块硬盘，`mosdos`代表分区格式，`1` 代表第一个分区。详细的硬件命名规范见 [Naming Convention](https://www.gnu.org/software/grub/manual/grub/grub.html#Naming-convention)。
+第一条命令指定了 GRUB2 的根目录，也就是 /boot 所在分区在计算机硬件上的位置。既然我们已经将内核文件拷贝到了 /boot 目录下，那么能够识别文件系统的 GRUB2 便可以定位和加载它。本例中`hd`代表硬盘（Hard Drive），`0`代表第一块硬盘，`mosdos`代表分区格式，`1`代表第一个分区。详细的硬件命名规范见 [Naming Convention](https://www.gnu.org/software/grub/manual/grub/grub.html#Naming-convention)。
 
 第二条命令将从`rhcos-live-kernel-x86_64`（CoreOS 系统的内核文件）中以 16 位模式加载 Linux 内核映像，并通过`coreos.live.rootfs_url`和`coreos.inst.ignition_url`参数指定根文件系统（Rootfs）的镜像文件和点火文件的下载链接。`ip=dhcp`代表该计算机网络将由 DHCP 服务器动态配置，也可以按`ip={{HostIP}}::{{Gateway}}:{{Genmask}}:{{Hostname}}::none nameserver={{DNSServer}}`的格式写入静态配置。
 
