@@ -72,7 +72,7 @@ kubectl create -f manifests/
 
 ### 为 Prometheus 实例配置远程写入
 
-使用 `kubectl edit -n monitoring prometheus k8s`命令开启 Prometheus 的远程写入：
+使用`kubectl edit -n monitoring prometheus k8s`命令开启 Prometheus 的远程写入：
 
 ```yaml
 # local cluster
@@ -107,7 +107,7 @@ spec:
 
 如上图所示，监控集群（Local）以及两个外部集群（Kazusa 和 Setsuna）中的 Prometheus 均将指标数据写入到软租户（soft-tenant）的 [Receiver](https://github.com/koktlzz/thanos-k8s-demo/blob/main/base/receiver/receiver-default.yaml) 中。而由于 Kazusa 和 Setsuna 的 Prometheus 还在远程写入中配置了 HTTP 头部，因此软租户 Receiver 会根据其中的租户 ID 将其转发到对应的硬租户 Receiver 中。
 
-我们可以在 Receiver 容器挂载的 Hashring 配置文件中找到每个租户 Receiver 的 `endpoints`：
+我们可以在 Receiver 容器挂载的 Hashring 配置文件中找到每个租户 Receiver 的`endpoints`：
 
 ```sh
 [root@master1 thanos]# kubectl exec -n thanos thanos-receiver-default-0 -- cat /etc/prometheus/hashring-config/hashrings.json | jq
@@ -141,7 +141,7 @@ spec:
 ]
 ```
 
-实际上该文件来自于 Configmap `thanos-receiver-hashring-generated-config`，它是由 [Thanos-Receive-Controller](https://github.com/observatorium/thanos-receive-controller) 读取当前集群中的 Receiver 实例并根据 Configmap [`thanos-receiver-hashring-config`](https://github.com/koktlzz/thanos-k8s-demo/blob/main/base/receiver/receiver-hashring-config.yaml) 动态生成的。
+实际上该文件来自于 Configmap`thanos-receiver-hashring-generated-config`，它是由 [Thanos-Receive-Controller](https://github.com/observatorium/thanos-receive-controller) 读取当前集群中的 Receiver 实例并根据 Configmap [`thanos-receiver-hashring-config`](https://github.com/koktlzz/thanos-k8s-demo/blob/main/base/receiver/receiver-hashring-config.yaml) 动态生成的。
 
 > Receiver 使用一致性哈希作为数据分发策略的原因详见：[Thanos Receiver - why does it need consistent hashing?](https://github.com/thanos-io/thanos/discussions/4659)
 
