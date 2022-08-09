@@ -438,6 +438,16 @@ extern FILE *stdout; /* Standard output (descriptor 1) */
 extern FILE *stderr; /* Standard error (descriptor 2) */
 ```
 
-`FILE`类型的流是文件描述符和流缓冲区的抽象。 流缓冲区的目的与 Rio 读取缓冲区的目的相同：最大限度地减少昂贵的 Linux I/O 系统调用的数量。 例如，假设我们有一个程序重复调用标准 I/O getc 函数，其中每次调用都返回文件中的下一个字符。 第一次调用 getc 时，库通过一次调用 read 函数来填充流缓冲区，然后将缓冲区中的第一个字节返回给应用程序。 只要缓冲区中有未读取的字节，就可以直接从流缓冲区中提供对 getc 的后续调用。
+`FILE`类型的流是文件描述符和流缓冲区（Stream Buffer）的抽象。与 $R_{io}$ 读取缓冲区相同，流缓冲区可以最大限度地减少昂贵的 Linux I/O 系统调用的次数。
 
 ## 我们应当使用哪种 I/O 函数？
+
+Unix I/O、标准 I/O 和 $R_{io}$ 包函数之间的关系如下图所示：
+
+![20220809214929](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220809214929.png)
+
+那么我们应当使用哪种 I/O 函数呢？以下是一些建议：
+
+- 尽可能使用标准 I/O 函数，它们是在磁盘和终端上执行 I/O 操作的最佳选择；
+- 不要使用`scanf`或`rio_readlineb`函数读取二进制文件，它们是专门为读取文本文件设计的；
+- 当我们将标准 I/O 函数 用于 Socket 时，可能会导致一些令人讨厌的问题，因此应当在网络编程时使用 $R_{io}$ 包函数。
