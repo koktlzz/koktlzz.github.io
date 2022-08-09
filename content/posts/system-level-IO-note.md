@@ -354,22 +354,22 @@ int closedir(DIR *dirp);
 
 内核使用三种数据结构来表示打开的文件：
 
-- 描述符表：每个进程都有一个独立的描述符表，每个条目均指向文件表中的条目，其索引是进程打开的文件描述符；
-- 文件表：所有进程共享一个文件表，它表示了打开文件的集合。每个文件表条目由当前文件位置（下图中的“FIle pos”）、当前指向它的描述符表条目数量（下图中的“refcnt”）和一个指向 v-node 表条目的指针。只有当`refcnt`为 0 时，内核才会删除对应的文件表条目；
-- v-node 表：与文件表一样，v-node 表由所有进程共享。每个条目都包含了`stat`结构体中的大部分信息，如`st_mode`和`st_size`。
+- 描述符表（Descriptor Table）：每个进程都有一个独立的描述符表，每个条目均指向打开文件表中的条目，其索引是进程打开的文件描述符；
+- 打开文件表（Open File Table）：所有进程共享一个打开文件表，它表示了打开文件的集合。每个文件表条目由当前文件位置（下图中的“File pos”）、当前指向它的描述符表条目数量（下图中的“refcnt”）和一个指向 v-node 表条目的指针。只有当`refcnt`为 0 时，内核才会删除对应的文件表条目；
+- v-node 表（V-node Table）：与打开文件表一样，v-node 表由所有进程共享。每个条目都包含了`stat`结构体中的大部分信息，如`st_mode`和`st_size`等。
 
 ![20220808234547](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220808234547.png)
 
-如上图所示，描述符 1 和 4 通过不同的文件表条目引用不同的文件。这是最典型的情况，文件并未共享，每个描述符对应一个不同的文件。
+如上图所示，描述符 1 和 4 通过不同的打开文件表条目引用不同的文件。这是最典型的情况，文件并未共享，每个描述符对应一个不同的文件。
 
-多个描述符可以通过不同的文件表条目引用同一个文件，若使用相同的文件名两次调用`open`函数便有可能发生这种情况：
+多个描述符也可以通过不同的打开文件表条目引用相同的文件，例如对同一文件多次调用`open`函数：
 
 ![20220808235153](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220808235153.png)
 
-每个描述符都有自己独立的文件位置，因此示例程序的输出结果为`f`：
+描述符 1 和 4 指向不同的打开文件表条目，因此其文件位置不同。假设文件`foobar.txt`中包含 6 个 ASCII 字符`foobar`，那么如下示例程序的输出结果为`f`：
 
 ```c
-#include "csapp.h" 2
+#include "csapp.h"
 
 int main()
 {
@@ -384,11 +384,11 @@ int main()
 }
 ```
 
-假设父进程打开的文件如上图 10.12 所示，则调用`fork`函数后父子进程的打开文件情况如下图所示：
+若父进程打开文件的数据结构如上图 [10.12](/posts/system-level-io-note/#共享文件) 所示，则父进程调用`fork`函数后情况变为：
 
 ![20220809000232](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220809000232.png)
 
-子进程得到父进程的描述符表副本，两者共享相同的文件表和文件位置，因此如下示例程序的输出结果为`o`：
+子进程得到父进程的描述符表副本，两者共享相同的打开文件表和文件位置，因此如下示例程序的输出结果为`o`：
 
 ```c
 #include "csapp.h"
@@ -410,3 +410,34 @@ int main()
 ```
 
 ## I/O 重定向
+
+`dup2`函数将描述符表条目`oldfd`复制到`newfd`并覆盖其原始内容。如果`newfd`已经打开，则该函数在复制`oldfd`之前会先关闭`newfd`：
+
+```c
+#include <unistd.h>
+int dup2(int oldfd, int newfd);
+// Returns: nonnegative descriptor if OK, −1 on error
+```
+
+假设某进程的打开文件数据结构如上图 [10.12](/posts/system-level-io-note/#共享文件） 所示。描述符 1（标准输出）指向文件 A（如终端），描述符 4 指向文件 B（如磁盘上的文件），文件 A 和 B 的`refcnt`均为 1。那么该进程调用函数`dup2(4, 1)`后情况变为：
+
+![20220809160850](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220809160850.png)
+
+文件 A 被关闭，内核会删除其打开文件表和 v-node 表条目。两个描述符均指向文件 B，其`refcnt`已增加为 2。从现在开始，任何写入到标准输出的数据都会被重定向到文件 B。
+
+## 标准 I/O
+
+C 定义了一组更高级别的输入和输出函数，即标准 I/O 库，它为程序员提供了比 Unix I/O 更高级别的替代方案。`libc`库提供了用于打开和关闭文件（`fopen`和`fclose`）、读取和写入字节（`fread`和`fwrite`）、读取和写入字符串（`fgets`和`fputs`）以及复杂的格式化 I/O（`scanf`和`printf`）函数。
+
+标准 I/O 库将打开的文件建模为流。对于程序员来说，流是指向`FILE`类型结构体的指针。每个 [ANSI C](https://zh.wikipedia.org/wiki/ANSI_C) 程序都以三个打开的​​流`stdin`、`stdout`和`stderr`开头，分别与标准输入、标准输出和标准错误对应：
+
+```c
+#include <stdio.h>
+extern FILE *stdin;  /* Standard input (descriptor 0) */
+extern FILE *stdout; /* Standard output (descriptor 1) */
+extern FILE *stderr; /* Standard error (descriptor 2) */
+```
+
+`FILE`类型的流是文件描述符和流缓冲区的抽象。 流缓冲区的目的与 Rio 读取缓冲区的目的相同：最大限度地减少昂贵的 Linux I/O 系统调用的数量。 例如，假设我们有一个程序重复调用标准 I/O getc 函数，其中每次调用都返回文件中的下一个字符。 第一次调用 getc 时，库通过一次调用 read 函数来填充流缓冲区，然后将缓冲区中的第一个字节返回给应用程序。 只要缓冲区中有未读取的字节，就可以直接从流缓冲区中提供对 getc 的后续调用。
+
+## 我们应当使用哪种 I/O 函数？
