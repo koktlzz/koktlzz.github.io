@@ -419,7 +419,7 @@ int dup2(int oldfd, int newfd);
 // Returns: nonnegative descriptor if OK, −1 on error
 ```
 
-假设某进程的打开文件数据结构如上图 [10.12](/posts/system-level-io-note/#共享文件） 所示。描述符 1（标准输出）指向文件 A（如终端），描述符 4 指向文件 B（如磁盘上的文件），文件 A 和 B 的`refcnt`均为 1。那么该进程调用函数`dup2(4, 1)`后情况变为：
+假设某进程的打开文件数据结构如上图 [10.12](/posts/system-level-io-note/#共享文件) 所示。描述符 1（标准输出）指向文件 A（如终端），描述符 4 指向文件 B（如磁盘上的文件），文件 A 和 B 的`refcnt`均为 1。那么该进程调用函数`dup2(4, 1)`后情况变为：
 
 ![20220809160850](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220809160850.png)
 
