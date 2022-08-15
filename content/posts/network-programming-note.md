@@ -98,7 +98,7 @@ const char *inet_ntop(AF_INET, const void *src, char *dst,
 
 客户端和服务器通过连接来收发字节流并进行通信。连接是点对点，全双工（数据可以同时在两个方向上传输）且可靠的——除非发生一些灾难性的故障。
 
-Socket 是连接的端点，每个 Socket 都对应了一个Socket 地址。该地址由 IP 地址和 16 位整型的端口（Port）组成，表示为：`address:port`。
+Socket 是连接的端点，每个 Socket 都对应了一个 Socket 地址。该地址由 IP 地址和 16 位整型的端口（Port）组成，表示为：`address:port`。
 
 客户端 Socket 地址中的端口通常是其发起连接请求时由内核自动分配的，被称为临时端口（Ephemeral Port）；而服务器 Socket 地址中的端口则通常与服务永久关联，被称为知名端口（Well-known Port）。
 
@@ -108,4 +108,103 @@ Socket 是连接的端点，每个 Socket 都对应了一个Socket 地址。该�
 
 ## Socket 接口
 
+上文提到，Socket 接口是一组函数，它们与 Unix I/O 函数一同用于构建网络应用程序：
+
 ![20220814174316](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220814174316.png)
+
+### Socket 地址结构体
+
+从 Linux 内核的角度来看，Socket 是连接的一个端点；而从 Linux 程序的角度来看，Socket 则是一个与描述符对应的打开文件。IPv4 Socket 地址存储在 `sockaddr_in`类型的 16 字节结构体中：
+
+```c
+/* IP socket address structure */
+struct sockaddr_in  {
+    uint16_t        sin_family;  /* Protocol family (always AF_INET) */
+    uint16_t        sin_port;    /* Port number in network byte order */
+    struct in_addr  sin_addr;    /* IP address in network byte order */
+    unsigned char   sin_zero[8]; /* Pad to sizeof(struct sockaddr) */
+};
+```
+
+`sin_family`字段为`AF_INET`，`sin_port`字段为 16 位端口号，`sin_addr`字段中包含 32 位 IP 地址。IP 地址和端口号始终以网络字节顺序（大端）存储。
+
+在调用函数`connect`、`bind`和`accept`时，我们需要传入一个指向 Socket 地址结构体的指针。由于 Socket 有多种类型，不同协议的 Socket 地址结构体类型也有所不同。如 IPv6 Socket 地址存储在`sockaddr_in6`类型的结构体中，`sin_family`字段为`AF_INET6`；Unix Domain Socket 地址存储在`sockaddr_un`类型的结构体中，`sin_family`字段为`AF_UNIX`。然而在 Socket 接口设计者所处的时代，C 还并不支持使用`void *`指针。于是他们只好重新定义一个适用于所有协议的`sockaddr`结构体，然后要求应用程序将任何与协议有关的结构体指针转换为这种通用的结构体指针：
+
+```c
+/* Generic socket address structure (for connect, bind, and accept) */
+struct sockaddr {
+    uint16_t  sa_family;    /* Protocol family */
+    char      sa_data[14];  /* Address data  */
+};
+```
+
+### `socket`函数
+
+客户端和服务器使用`socket`函数创建一个 Socket 文件描述符：
+
+```c
+#include <sys/types.h>
+#include <sys/socket.h>
+int socket(int domain, int type, int protocol);
+// Returns: nonnegative descriptor if OK, −1 on erro
+```
+
+如果我们希望 Socket 成为连接的端点，那么可以使用以下参数调用该函数：
+
+```c
+clientfd = Socket(AF_INET, SOCK_STREAM, 0);
+```
+
+其中，`AF_INET`代表使用 32 位 IP 地址，`SOCK_STREAM`表示 Socket 将成为连接的端点。该函数返回的描述符`clientfd`只是部分打开，还不能进行读写。
+
+### `connect`函数
+
+客户端调用`connect`函数与服务器建立连接：
+
+```c
+#include <sys/socket.h>
+int connect(int clientfd, const struct sockaddr *addr,
+            socklen_t addrlen);
+//Returns: 0 if OK, −1 on error
+```
+
+该函数尝试连接 Socket 地址为`addr`的服务器，参数`addrlen`是结构体`sockaddr_in`的大小。`connect`函数在连接建立或发生错误前会一直阻塞，若建立成功则 Socket 描述符`clientfd`便可进行读写。
+
+### `bind`函数
+
+`bind`函数请求内核将参数`addr`中的服务器 Socket 地址与 Socket 描述符`sockfd`相关联，参数`addrlen`是结构体`sockaddr_in`的大小：
+
+```c
+#include <sys/socket.h>
+int bind(int sockfd, const struct sockaddr *addr,
+         socklen_t addrlen);
+// Returns: 0 if OK, −1 on error
+```
+
+### `listen`函数
+
+默认情况下，内核假定`socket`函数创建的描述符是用于客户端连接的。因此服务器需要调用`listen`函数告诉内核参数`sockfd`用于服务器而非客户端：
+
+```c
+#include <sys/socket.h>
+int listen(int sockfd, int backlog);
+// Returns: 0 if OK, −1 on error
+```
+
+参数`backlog`是内核开始拒绝请求前应当排队的未完成连接请求数，通常设为 1024。
+
+### `accept`函数
+
+服务器调用`accept`函数等待客户端的连接请求到达监听描述符`listenfd`，然后将客户端 Socket 地址写入到`addr`中，最后返回一个可使用 Unix I/O 函数与客户端通信的连接描述符：
+
+```c
+#include <sys/socket.h>
+int accept(int listenfd, struct sockaddr *addr, int *addrlen);
+// Returns: nonnegative connected descriptor if OK, −1 on error
+```
+
+监听描述符通常只会创建一次，它在服务器的生命周期内存在；连接描述符在每次服务器接受连接请求时创建，并且仅在服务器为客户端提供服务时才存在：
+
+![20220816000447](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220816000447.png)
+
+### 主机和服务转换
