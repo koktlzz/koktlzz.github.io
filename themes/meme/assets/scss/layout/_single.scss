@@ -258,7 +258,7 @@ dd {
 
 code {
     padding: ($fontSize / 8) ($fontSize / 4);
-    background-color: alpha(var(--color-contrast-lower), 0.5);
+    // background-color: alpha(var(--color-contrast-lower), 0.5);
     font-size: 80%;
 }
 pre {
