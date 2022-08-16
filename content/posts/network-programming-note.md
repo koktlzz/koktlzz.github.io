@@ -1,7 +1,7 @@
 ---
 title: "CSAPP 读书笔记：网络编程"
 date: 2022-08-11T09:48:42+01:00
-draft: false
+draft: true
 series: ["CSAPP 读书笔记"]
 tags: ["Network"]
 summary: "所有的网络应用程序都基于相同的基本编程模型，具有相似的整体逻辑结构，并且依赖于相同的编程接口。每个网络应用程序都基于客户端-服务器模型（Client-Server Model），并由一个服务器进程和多个客户端进程组成 ..."
@@ -102,7 +102,7 @@ Socket 是连接的端点，每个 Socket 都对应了一个 Socket 地址。该
 
 客户端 Socket 地址中的端口通常是其发起连接请求时由内核自动分配的，被称为临时端口（Ephemeral Port）；而服务器 Socket 地址中的端口则通常与服务永久关联，被称为知名端口（Well-known Port）。
 
-连接由两个端点的 Socket 地址（Socket Pair）唯一标识，可以用元组表示为：`(cliaddr:cliport, servaddr:servport)`。
+连接由两个端点的 Socket 地址（即 Socket Pair）唯一标识，可以用元组表示为：`(cliaddr:cliport, servaddr:servport)`。
 
 ![20220814173954](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220814173954.png)
 
@@ -203,8 +203,76 @@ int accept(int listenfd, struct sockaddr *addr, int *addrlen);
 // Returns: nonnegative connected descriptor if OK, −1 on error
 ```
 
-监听描述符通常只会创建一次，它在服务器的生命周期内存在；连接描述符在每次服务器接受连接请求时创建，并且仅在服务器为客户端提供服务时才存在：
+监听描述符作为客户端发起连接请求的端点，通常只会创建一次，在服务器的生命周期内存在；连接描述符是客户端与服务器之间已建立的连接的端点，在每次服务器接受连接请求时创建，并且仅在服务器为客户端提供服务时存在：
 
 ![20220816000447](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220816000447.png)
 
+在连接建立之后，客户端和服务器可以分别通过读写`clientfd`和`connfd`来传输数据。
+
 ### 主机和服务转换
+
+我们可以将`getaddrinfo`和`getnameinfo`函数与 Socket 接口函数结合，编写适用于任何版本 IP 协议的网络程序。
+
+#### `getaddrinfo`函数
+
+`getaddrinfo`函数将主机名（或主机地址）`host`和服务名（或端口号）`service`转换为 Socket 地址结构体：
+
+```c
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
+int getaddrinfo(const char *host, const char *service,
+                const struct addrinfo *hints,
+                struct addrinfo **result);
+// Returns: 0 if OK, nonzero error code on error
+```
+
+`result`指向一个`addrinfo`结构体的链表，其中的每个结构体都指向一个与`host`和`service`对应的 Socket 地址：
+
+![20220816134619](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220816134619.png)
+
+对于客户端，该函数会遍历链表并依次尝试每个 Socket 地址，直到调用`socket`和`connect`函数成功并建立连接；对于服务器，该函数会遍历该链表并依次尝试每个 Socket 地址，直到调用`socket`和`bind`函数成功并且描述符被绑定到一个有效的 Socket 地址。
+
+为了避免内存泄漏，应用程序最终必须调用`freeaddrinfo`函数释放链表：
+
+```c
+void freeaddrinfo(struct addrinfo *result);
+// Returns: nothing
+```
+
+`getaddrinfo`函数会返回非零错误码，应用程序可以调用`gai_strerror`函数将其转换为消息字符串：
+
+```c
+const char *gai_strerror(int errcode);
+// Returns: error message
+```
+
+参数`host`可以是域名，也可以是数字地址（如点分十进制 IP 地址）；参数`service`可以是服务名称（如 `http`），也可以是十进制端口号。
+
+可选的参数`hint`是一个`addrinfo`结构体：
+
+```c
+struct addrinfo {
+    int     ai_flags;           /* Hints argument flags */
+    int     ai_family;          /* First arg to socket function */
+    int     ai_socktype;        /* Second arg to socket function */
+    char    ai_protocol;        /* Third arg to socket function  */
+    char    *ai_canonname;      /* Canonical hostname */
+    size_t  ai_addrlen          /* Size of ai_addr struct */
+    struct  sockaddr *ai_addr;  /* Ptr to socket address structure */
+    struct  addrinfo *ai_next;  /* Ptr to next item in linked list */      
+}
+```
+
+当`hint`作为参数传递时，只有`ai_family`、`ai_socktype`、`ai_protocol`和`ai_flags`字段可以被设置，其他字段必须为 0 或`NULL`。在实际使用中，我们使用 [`memset`](https://pubs.opengroup.org/onlinepubs/7908799/xsh/memset.html) 函数将整个结构体归零，然后设置以下字段：
+
+- `ai_family`为`AF_INET`时链表会被限制为 IPv4 Socket地址，字段为`AF_INET6`时链表会被限制为 IPv6 Socket地址;
+- 默认情况下，对于与主机关联的每个唯一地址，`getaddrinfo`函数最多可以返回三个`addrinfo`结构体。当`ai_socktype`设置为`SOCK_STREAM`时，链表会被限制为每个唯一地址最多一个`addrinfo`结构体，其 Socket 地址可用作连接的端点；
+- `ai_flags`是进一步修改函数默认行为的位掩码，主要有：
+  - `AI_ADDRCONFIG`：仅当本地主机使用 IPv4 时返回 IPv4 Socket 地址；
+  - `AI_CANONNAME`：默认情况下，`*ai_canonname`字段为`NULL`。若设置该掩码，它会指示`getaddrinfo`将链表中第一个`addrinfo`结构体中的`ai_canonname`字段指向主机的规范（官方）名称（参见图 11.15）;
+  - `AI_NUMERICSERV`：强制参数`service`使用端口号；
+  - `AI_PASSIVE`：指示函数返回可供服务器用作监听描述符的 Socket 地址。在这种情况下，主机参数应当为`NULL`，表示该服务器将接受对该主机的任何 IP 地址的请求；
+
+当 getaddrinfo 在输出列表中创建 addrinfo 结构时，它会填充除 ai_flags 之外的每个字段。 ai_addr 字段指向一个套接字地址结构，ai_addrlen 字段给出这个套接字地址结构的大小，ai_next 字段指向列表中的下一个 addrinfo 结构。其他字段描述套接字地址的各种属性。
+getaddrinfo 的优点之一是 addrinfo 结构中的字段是不透明的，因为它们可以直接传递给套接字接口中的函数，而无需应用程序代码进行任何进一步的操作。例如，ai_family、ai_socktype 和 ai_protocol 可以直接传递给 socket。同理，ai_addr 和 ai_addrlen 可以直接传递给连接和绑定。这个强大的属性使我们能够编写独立于任何特定版本的 IP 协议的客户端和服务器。
