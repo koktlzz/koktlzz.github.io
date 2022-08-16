@@ -276,3 +276,40 @@ struct addrinfo {
 
 当 getaddrinfo 在输出列表中创建 addrinfo 结构时，它会填充除 ai_flags 之外的每个字段。 ai_addr 字段指向一个套接字地址结构，ai_addrlen 字段给出这个套接字地址结构的大小，ai_next 字段指向列表中的下一个 addrinfo 结构。其他字段描述套接字地址的各种属性。
 getaddrinfo 的优点之一是 addrinfo 结构中的字段是不透明的，因为它们可以直接传递给套接字接口中的函数，而无需应用程序代码进行任何进一步的操作。例如，ai_family、ai_socktype 和 ai_protocol 可以直接传递给 socket。同理，ai_addr 和 ai_addrlen 可以直接传递给连接和绑定。这个强大的属性使我们能够编写独立于任何特定版本的 IP 协议的客户端和服务器。
+
+```c
+#include "csapp.h"
+int main(int argc, char **argv)
+{
+    struct addrinfo *p, *listp, hints;
+    char buf[MAXLINE];
+    int rc, flags;
+    if (argc != 2)
+    {
+        fprintf(stderr, "usage: %s <domain name>\n", argv[0]);
+        exit(0);
+    }
+    /* Get a list of addrinfo records */
+    memset(&hints, 0, sizeof(struct addrinfo));
+    hints.ai_family = AF_INET;       /* IPv4 only */
+    hints.ai_socktype = SOCK_STREAM; /* Connections only */
+    if ((rc = getaddrinfo(argv[1], NULL, &hints, &listp)) != 0)
+    {
+        fprintf(stderr, "getaddrinfo error: %s\n", gai_strerror(rc));
+        exit(1);
+    }
+    
+    /* Walk the list and display each IP address */
+    flags = NI_NUMERICHOST; /* Display address string instead of domain name */
+    for (p = listp; p; p = p->ai_next)
+    {
+        getnameinfo(p->ai_addr, p->ai_addrlen, buf, MAXLINE, NULL, 0, flags);
+        printf("%s\n", buf);
+    }
+    
+    /* Clean up */
+    freeaddrinfo(listp);
+    exit(0);
+
+}
+```
