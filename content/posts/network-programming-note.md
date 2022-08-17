@@ -251,7 +251,7 @@ int getaddrinfo(const char *host, const char *service,
 
 当`hints`作为参数传递时，只有`ai_family`、`ai_socktype`、`ai_protocol`和`ai_flags`字段可以被设置，其他字段必须为 0 或`NULL`。在实际使用中，我们调用 [`memset`](https://pubs.opengroup.org/onlinepubs/7908799/xsh/memset.html) 函数将`hints`归零，然后设置以下字段：
 
-- `ai_family`为`AF_INET`时，该函数将生成 IPv4 Socket地址；`ai_family`为`AF_INET6`时，该函数将生成 IPv6 Socket地址；
+- `ai_family`为`AF_INET`时，该函数将生成 IPv4 Socket 地址；`ai_family`为`AF_INET6`时，该函数将生成 IPv6 Socket 地址；
 - 对于面向连接的网络应用程序，`ai_socktype`应当设为`SOCK_STREAM`；
 - `ai_flags`是能够修改函数默认行为的位掩码，主要包括：
   - `AI_ADDRCONFIG`：仅当本地主机使用 IPv4 时生成 IPv4 Socket 地址；
