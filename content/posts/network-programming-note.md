@@ -336,3 +336,198 @@ int main(int argc, char **argv)
 ```
 
 ### Socket 接口的辅助函数
+
+`getaddrinfo`和 Socket 接口函数并不易于使用，我们可以使用更高级的辅助函数`open_clientfd`和`open_listenfd`包装它们。
+
+#### `open_clientfd`函数
+
+客户端调用`open_clientfd`函数与服务器建立连接：
+
+```c
+#include "csapp.h"
+int open_clientfd(char *hostname, char *port);
+// Returns: descriptor if OK, −1 on error
+```
+
+参数`hostname`是服务器所在的主机名，参数`port`是服务器监听的端口号。函数返回一个打开的 Socket 描述符，客户端可以使用 Unix I/O 函数对其读写。该函数的代码如下：
+
+```c
+int open_clientfd(char *hostname, char *port)
+{
+    int clientfd;
+    struct addrinfo hints, *listp, *p;
+
+    /* Get a list of potential server addresses */
+    memset(&hints, 0, sizeof(struct addrinfo));
+    hints.ai_socktype = SOCK_STREAM; /* Open a connection */
+    hints.ai_flags = AI_NUMERICSERV; /* ... using a numeric port arg. */
+    hints.ai_flags |= AI_ADDRCONFIG; /* Recommended for connections */
+    getaddrinfo(hostname, port, &hints, &listp);
+
+    /* Walk the list for one that we can successfully connect to */
+    for (p = listp; p; p = p->ai_next)
+    {
+        /* Create a socket descriptor */
+        if ((clientfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) < 0)
+            continue; /* Socket failed, try the next */
+        /* Connect to the server */
+        if (connect(clientfd, p->ai_addr, p->ai_addrlen) != -1)
+            break;       /* Success */
+        Close(clientfd); /* Connect failed, try another */
+    }
+
+    /* Clean up */
+    freeaddrinfo(listp);
+    if (!p) /* All connects failed */
+        return -1;
+    else    /* The last connect succeeded */
+        return clientfd;
+}
+```
+
+`open_clientfd`中不存在任何依赖于特定版本协议的代码，调用`socket`和`connect`时使用的参数是由`getaddrinfo`自动生成的，因此该函数干净且可移植。
+
+#### `open_listenfd`函数
+
+服务器调用`open_listenfd`函数创建一个能够接受连接请求的监听描述符：
+
+```c
+#include "csapp.h"
+int open_listenfd(char *port);
+// Returns: descriptor if OK, −1 on error
+```
+
+参数`port`是服务器监听的端口号。该函数的代码如下：
+
+```c
+int open_listenfd(char *port)
+{
+    struct addrinfo hints, *listp, *p;
+    int listenfd, optval = 1;
+
+    /* Get a list of potential server addresses */
+    memset(&hints, 0, sizeof(struct addrinfo));
+    hints.ai_socktype = SOCK_STREAM;             /* Accept connections */
+    hints.ai_flags = AI_PASSIVE | AI_ADDRCONFIG; /* ... on any IP address */
+    hints.ai_flags |= AI_NUMERICSERV;            /* ... using port number */
+    getaddrinfo(NULL, port, &hints, &listp);
+
+    /* Walk the list for one that we can bind to */
+    for (p = listp; p; p = p->ai_next)
+    {
+        /* Create a socket descriptor */
+        if ((listenfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) < 0)
+            continue; /* Socket failed, try the next */
+        /* Eliminates "Address already in use" error from bind */
+        Setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR,
+                   (const void *)&optval, sizeof(int));
+        /* Bind the descriptor to the address */
+        if (bind(listenfd, p->ai_addr, p->ai_addrlen) == 0)
+            break;       /* Success */
+        Close(listenfd); /* Bind failed, try the next */
+    }
+    /* Clean up */
+    freeaddrinfo(listp);
+    if (!p) /* No address worked */
+        return -1;
+    /* Make it a listening socket ready to accept connection requests */
+    if (listen(listenfd, LISTENQ) < 0)
+    {
+        Close(listenfd);
+        return -1;
+    }
+    return listenfd;
+}
+```
+
+在第 20 行中我们使用`Setsockopt`函数（见 [csapp.c](<http://csapp.cs.cmu.edu/2e/ics2/code/src/csapp.c>)）配置服务器，使其能够在重新启动后立即开始接受连接请求。默认情况下，重新启动的服务器将拒绝来自客户端的连接大约 30 秒，这将严重影响调试。
+
+### 示例 Echo 客户端和服务器
+
+学习 Socket 接口函数的最佳方法便是阅读示例代码。一个简单的客户端程序如下：
+
+```c
+#include "csapp/csapp.h"
+
+int main(int argc, char **argv)
+{
+    int clientfd;
+    char *host, *port, buf[MAXLINE];
+    rio_t rio;
+
+    if (argc != 3)
+    {
+        fprintf(stderr, "usage: %s <host> <port>\n", argv[0]);
+        exit(0);
+    }
+    host = argv[1];
+    port = argv[2];
+    clientfd = Open_clientfd(host, port);
+    Rio_readinitb(&rio, clientfd);
+    while (Fgets(buf, MAXLINE, stdin) != NULL)
+    {
+        Rio_writen(clientfd, buf, strlen(buf));
+        Rio_readlineb(&rio, buf, MAXLINE);
+        Fputs(buf, stdout);
+    }
+    Close(clientfd);
+    exit(0);
+}
+```
+
+在与服务端建立连接之后，客户端进入 While 循环。它首先从标准输入中读取文本行（`Fgets`），然后将文本行发送到服务器（`Rio_writen`）。接下来再读取服务器的返回（`Rio_readlineb`），最终将结果打印到标准输出（`Fputs`）。
+
+该客户端连接的服务器代码如下：
+
+```c
+#include "csapp/csapp.h"
+
+typedef struct sockaddr SA;
+
+void echo(int connfd)
+{
+    size_t n;
+    char buf[MAXLINE];
+    rio_t rio;
+
+    Rio_readinitb(&rio, connfd);
+    while ((n = Rio_readlineb(&rio, buf, MAXLINE)) != 0)
+    {
+        printf("server received %d bytes\n", (int)n);
+        Rio_writen(connfd, buf, n);
+    }
+}
+
+int main(int argc, char **argv)
+{
+    int listenfd, connfd;
+    socklen_t clientlen;
+    struct sockaddr_storage clientaddr; /* Enough space for any address */
+    char client_hostname[MAXLINE], client_port[MAXLINE];
+    if (argc != 2)
+    {
+        fprintf(stderr, "usage: %s <port>\n", argv[0]);
+        exit(0);
+    }
+    listenfd = Open_listenfd(argv[1]);
+    while (1)
+    {
+        clientlen = sizeof(struct sockaddr_storage);
+        connfd = accept(listenfd, (SA *)&clientaddr, &clientlen);
+        getnameinfo((SA *)&clientaddr, clientlen, client_hostname, MAXLINE,
+                    client_port, MAXLINE, 0);
+        printf("Connected to (%s, %s)\n", client_hostname, client_port);
+        echo(connfd);
+        Close(connfd);
+    }
+    exit(0);
+}
+```
+
+代码第 23 行声明的变量`clientaddr`是一个`sockaddr_storage`类型的 Socket 地址结构体，`accept`函数会在返回前将客户端的 Socket 地址填入其中。我们使用`sockaddr_storage`而非`sockaddr_in`的原因在于前者足够大，可以保存任何类型的 Socket 地址，从而使代码与协议独立。
+
+服务器打开监听描述符后，进入无限循环。它将等待来自客户端的连接请求，打印客户端的主机名和端口，然后调用`echo`函数。该函数重复读取并写入文本行，直到`Rio_readlineb`遇到 EOF。对于网络连接，EOF 会在连接关闭后，一端进程试图读取流中最后一个字节时发生。一旦客户端和服务器均关闭了各自的描述符，连接就会终止。
+
+请注意，示例的简单服务器一次只能处理一个客户端的连接请求，我们称这种类型的服务器为迭代服务器（Iterative Server）。更加复杂的并发服务器（Concurrent Server）则可以同时处理多个客户端的连接请求。
+
+## Web 服务器
