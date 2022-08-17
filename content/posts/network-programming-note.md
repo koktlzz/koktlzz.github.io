@@ -221,47 +221,45 @@ int accept(int listenfd, struct sockaddr *addr, int *addrlen);
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
-int getaddrinfo(const char *host, const char *service,
-                const struct addrinfo *hints,
-                struct addrinfo **result);
-// Returns: 0 if OK, nonzero error code on error
-```
 
-参数`host`可以是域名，也可以是数字地址（如点分十进制 IP 地址）；参数`service`可以是服务名称（如 `http`），也可以是十进制端口号。如果我们不需要把主机名转换为 Socket 地址，就可以将`host`设为`NULL`。对于服务名来说也是如此，不过两者不能同时为`NULL`。
-
-剩下两个参数的类型均与`addrinfo`结构体有关，它包含的字段如下：
-
-```c
 struct addrinfo {
     int     ai_flags;           /* Hints argument flags */
     int     ai_family;          /* First arg to socket function */
     int     ai_socktype;        /* Second arg to socket function */
     char    ai_protocol;        /* Third arg to socket function  */
     char    *ai_canonname;      /* Canonical hostname */
-    size_t  ai_addrlen          /* Size of ai_addr struct */
+    size_t  ai_addrlen;         /* Size of ai_addr struct */
     struct  sockaddr *ai_addr;  /* Ptr to socket address structure */
     struct  addrinfo *ai_next;  /* Ptr to next item in linked list */      
 }
+
+int getaddrinfo(const char *host, const char *service,
+                const struct addrinfo *hints,
+                struct addrinfo **result);
+// Returns: 0 if OK, nonzero error code on error
 ```
 
-参数`result`指向一个`addrinfo`结构体的链表，其中每个结构体的`ai_addr`字段都指向一个与`host`和`service`对应的 Socket 地址：
+该函数会根据`hints`指定的规范分配并初始化一个`addrinfo`结构体链表，其中每个结构体的`ai_addr`字段都指向一个与`host`和`service`对应的 Socket 地址，`result`指向链表头部：
 
 ![20220816134619](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220816134619.png)
 
+参数`host`可以是域名，也可以是数字地址（如点分十进制 IP 地址）；参数`service`可以是服务名称（如 `http`），也可以是十进制端口号。如果我们不需要 Socket 地址中的主机名，就可以将`host`设为`NULL`。对于服务名来说也是如此，不过两者不能同时为`NULL`。
+
 客户端在调用该函数后会遍历上述链表，依次使用每个 Socket 地址作为参数调用`socket`和`connect`直至成功并建立连接；服务器在调用该函数后会遍历上述链表，依次使用每个 Socket 地址作为参数调用`socket`和`bind`直至成功且描述符被绑定到一个有效的 Socket 地址。
 
-当`hint`作为参数传递时，只有`ai_family`、`ai_socktype`、`ai_protocol`和`ai_flags`字段可以被设置，其他字段必须为 0 或`NULL`。在实际使用中，我们使用 [`memset`](https://pubs.opengroup.org/onlinepubs/7908799/xsh/memset.html) 函数将整个结构体归零，然后设置以下字段：
+细心的读者可能会疑惑为什么`getaddrinfo`会为同一个`host`和`service`初始化多个`addrinfo`结构体，这是因为：主机可能是多宿主的（Multihomed），可以通过多种协议（如 IPv4 和 IPv6）访问；客户端可以通过不同的 Socket 类型（如`SOCK_STREAM`和`SOCK_DGRAM`）访问相同的服务。因此通常我们会根据需求设置`hints`参数，以使函数生成我们期望的 Socket 地址。
 
-- `ai_family`为`AF_INET`时，该函数将生成 IPv4 Socket地址；`ai_family`为`AF_INET6`时，该函数将生成 IPv6 Socket地址;
-- 对于网络应用程序，`ai_socktype`应当设为`SOCK_STREAM`；
+当`hints`作为参数传递时，只有`ai_family`、`ai_socktype`、`ai_protocol`和`ai_flags`字段可以被设置，其他字段必须为 0 或`NULL`。在实际使用中，我们调用 [`memset`](https://pubs.opengroup.org/onlinepubs/7908799/xsh/memset.html) 函数将`hints`归零，然后设置以下字段：
+
+- `ai_family`为`AF_INET`时，该函数将生成 IPv4 Socket地址；`ai_family`为`AF_INET6`时，该函数将生成 IPv6 Socket地址；
+- 对于面向连接的网络应用程序，`ai_socktype`应当设为`SOCK_STREAM`；
 - `ai_flags`是能够修改函数默认行为的位掩码，主要包括：
   - `AI_ADDRCONFIG`：仅当本地主机使用 IPv4 时生成 IPv4 Socket 地址；
-  - `AI_CANONNAME`：默认情况下，`addrinfo`结构体内的`ai_canonname`字段为`NULL`。若设置该掩码，它会指示函数将链表中第一个`addrinfo`结构体内的`ai_canonname`字段指向主机的规范（官方）名称（如上图所示）;
+  - `AI_CANONNAME`：默认情况下，`addrinfo`结构体内的`ai_canonname`字段为`NULL`。若设置该掩码，函数会将链表中第一个`addrinfo`结构体内的`ai_canonname`字段指向主机的规范（官方）名称（如上图所示）；
   - `AI_NUMERICSERV`：强制参数`service`使用端口号；
-  - `AI_PASSIVE`：服务器可以使用该函数生成的 Socket 地址创建监听描述符。在这种情况下，参数`host`应当为`NULL`，表示服务器 Socket 中的 IP 地址为 127.0.0.1；
+  - `AI_PASSIVE`：服务器可以使用该函数生成的 Socket 地址创建监听描述符。在这种情况下，参数`host`应当设为`NULL`，表示服务器的所有 IP 地址均可用于连接（即`INADDR_ANY`或 0.0.0.0）；
 
-当 getaddrinfo 在输出列表中创建 addrinfo 结构时，它会填充除 ai_flags 之外的每个字段。 ai_addr 字段指向一个套接字地址结构，ai_addrlen 字段给出这个套接字地址结构的大小，ai_next 字段指向列表中的下一个 addrinfo 结构。其他字段描述套接字地址的各种属性。
-getaddrinfo 的优点之一是 addrinfo 结构中的字段是不透明的，因为它们可以直接传递给套接字接口中的函数，而无需应用程序代码进行任何进一步的操作。例如，ai_family、ai_socktype 和 ai_protocol 可以直接传递给 socket。同理，ai_addr 和 ai_addrlen 可以直接传递给连接和绑定。这个强大的属性使我们能够编写独立于任何特定版本的 IP 协议的客户端和服务器。
+当`getaddrinfo`初始化`addrinfo`结构体链表时，它会填充除`ai_flags`之外的所有字段。`ai_family`、`ai_socktype`和`ai_protocol`可以直接传递给`socket`函数，`ai_addr`和`ai_addrlen`可以直接传递给`connect`和`bind`函数。因此我们能够使用它编写适用于任何版本 IP 协议的客户端和服务器。
 
 为了避免内存泄漏，应用程序最终必须调用`freeaddrinfo`函数释放链表：
 
@@ -279,7 +277,27 @@ const char *gai_strerror(int errcode);
 
 #### `getnameinfo`函数
 
-### Socket 接口的辅助函数
+`getnameinfo`函数是`getaddrinfo`的逆函数，它将 Socket 地址结构体转换为对应的主机名和服务名：
+
+```c
+#include <sys/socket.h>
+#include <netdb.h>
+int getnameinfo(const struct sockaddr *sa, socklen_t salen,
+                char *host, size_t hostlen,
+                char *service, size_t servlen, int flags);
+// Returns: 0 if OK, nonzero error code on error
+```
+
+参数`sa`指向一个大小为`salen`字节的 Socket 地址结构体，`host`指向一个大小为`hostlen`字节的缓冲区，而`service`则指向一个大小为`servlen`字节的缓冲区。该函数将`sa`转换为主机名和服务名字符串，然后将它们复制到`host`和`service`指向的缓冲区。如果该函数返回非零错误代码，应用程序可以调用`gai_strerror`将其转换为字符串。
+
+如果我们不需要主机名，就可以将`host`设为`NULL`。对于服务名来说也是如此，不过两者不能同时为`NULL`。
+
+参数`flags`是修改函数默认行为的位掩码，包括：
+
+- `NI_NUMERICHOST`：默认情况下，函数会在`host`指向的缓冲区中生成一个域名。若设置该掩码，函数会生成一个数字地址字符串；
+- `NI_NUMERICSERV`：默认情况下，函数将在`/etc/services`文件中查找并生成服务名。若设置该掩码，函数会跳过查找并生成端口号。
+
+如下示例程序使用`getaddrinfo`和`getnameinfo`函数实现域名解析：
 
 ```c
 #include "csapp.h"
@@ -314,6 +332,7 @@ int main(int argc, char **argv)
     /* Clean up */
     freeaddrinfo(listp);
     exit(0);
-
 }
 ```
+
+### Socket 接口的辅助函数
