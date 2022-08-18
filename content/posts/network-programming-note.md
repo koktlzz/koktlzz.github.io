@@ -288,13 +288,13 @@ int getnameinfo(const struct sockaddr *sa, socklen_t salen,
 // Returns: 0 if OK, nonzero error code on error
 ```
 
-参数`sa`指向一个大小为`salen`字节的 Socket 地址结构体，`host`指向一个大小为`hostlen`字节的缓冲区，而`service`则指向一个大小为`servlen`字节的缓冲区。该函数将`sa`转换为主机名和服务名字符串，然后将它们复制到`host`和`service`指向的缓冲区。如果该函数返回非零错误代码，应用程序可以调用`gai_strerror`将其转换为字符串。
+参数`sa`指向一个大小为`salen`字节的 Socket 地址结构体，`host`指向一个大小为`hostlen`字节的缓冲区，而`service`则指向一个大小为`servlen`字节的缓冲区。该函数将`sa`转换为主机名和服务名字符串，然后将它们复制到`host`和`service`指向的缓冲区。如果该函数返回非零错误代码，应用程序可以调用`gai_strerror`将其转换为消息字符串。
 
 如果我们不需要主机名，就可以将`host`设为`NULL`。对于服务名来说也是如此，不过两者不能同时为`NULL`。
 
 参数`flags`是修改函数默认行为的位掩码，包括：
 
-- `NI_NUMERICHOST`：默认情况下，函数会在`host`指向的缓冲区中生成一个域名。若设置该掩码，函数会生成一个数字地址字符串；
+- `NI_NUMERICHOST`：默认情况下，函数将在`host`指向的缓冲区中生成一个域名。若设置该掩码，函数会生成一个数字地址字符串；
 - `NI_NUMERICSERV`：默认情况下，函数将在`/etc/services`文件中查找并生成服务名。若设置该掩码，函数会跳过查找并生成端口号。
 
 如下示例程序使用`getaddrinfo`和`getnameinfo`函数实现域名解析：
@@ -440,7 +440,7 @@ int open_listenfd(char *port)
 }
 ```
 
-在第 20 行中我们使用`Setsockopt`函数（见 [csapp.c](<http://csapp.cs.cmu.edu/2e/ics2/code/src/csapp.c>)）配置服务器，使其能够在重新启动后立即开始接受连接请求。默认情况下，重新启动的服务器将拒绝来自客户端的连接大约 30 秒，这将严重影响调试。
+在第 20 行中我们使用`Setsockopt`函数（见 [csapp.c](<http://csapp.cs.cmu.edu/2e/ics2/code/src/csapp.c>)）配置服务器，使其能够在重新启动后立即开始接受连接请求。默认情况下，重新启动的服务器会在大约 30 秒内拒绝来自客户端的连接，这将严重影响调试。
 
 ### 示例 Echo 客户端和服务器
 
@@ -475,7 +475,7 @@ int main(int argc, char **argv)
 }
 ```
 
-在与服务端建立连接之后，客户端进入 While 循环。它首先从标准输入中读取文本行（`Fgets`），然后将文本行发送到服务器（`Rio_writen`）。接下来再读取服务器的返回（`Rio_readlineb`），最终将结果打印到标准输出（`Fputs`）。
+在与服务器建立连接之后，客户端进入 While 循环。它不断从标准输入中读取文本行（`Fgets`），然后将文本行发送到服务器（`Rio_writen`）。接下来再读取服务器的返回（`Rio_readlineb`），最终将结果打印到标准输出（`Fputs`）。当用户键入 Ctrl+D 时，循环中止，客户端随后关闭描述符`clientfd`。
 
 该客户端连接的服务器代码如下：
 
@@ -524,10 +524,29 @@ int main(int argc, char **argv)
 }
 ```
 
-代码第 23 行声明的变量`clientaddr`是一个`sockaddr_storage`类型的 Socket 地址结构体，`accept`函数会在返回前将客户端的 Socket 地址填入其中。我们使用`sockaddr_storage`而非`sockaddr_in`的原因在于前者足够大，可以保存任何类型的 Socket 地址，从而使代码与协议独立。
+代码第 23 行声明的变量`clientaddr`是一个`sockaddr_storage`类型的 Socket 地址结构体，`accept`函数会在返回前将客户端的 Socket 地址填入其中。我们使用`sockaddr_storage`而非`sockaddr_in`的原因在于前者足够大，可以保存任何类型的 Socket 地址，从而使代码与协议独立（详见：[Reasoning behind C sockets sockaddr and sockaddr_storage](https://stackoverflow.com/questions/16010622/reasoning-behind-c-sockets-sockaddr-and-sockaddr-storage)）。
 
-服务器打开监听描述符后，进入无限循环。它将等待来自客户端的连接请求，打印客户端的主机名和端口，然后调用`echo`函数。该函数重复读取并写入文本行，直到`Rio_readlineb`遇到 EOF。对于网络连接，EOF 会在连接关闭后，一端进程试图读取流中最后一个字节时发生。一旦客户端和服务器均关闭了各自的描述符，连接就会终止。
+服务器打开监听描述符后进入无限循环。它等待来自客户端的连接请求，打印客户端的主机名和端口，然后调用`echo`函数。该函数重复读取并写入文本行，直到`Rio_readlineb`遇到 EOF（对于网络连接，当一端的进程关闭连接，另一端的进程尝试读取流中的最后一个字节时将检测到 EOF）。一旦客户端和服务器均关闭了各自的描述符，连接便会终止。
 
 请注意，示例的简单服务器一次只能处理一个客户端的连接请求，我们称这种类型的服务器为迭代服务器（Iterative Server）。更加复杂的并发服务器（Concurrent Server）则可以同时处理多个客户端的连接请求。
 
 ## Web 服务器
+
+### Web 内容
+
+对于 Web 客户端和服务器，内容（Content）是与某种 MIME（Multipurpose Internet Mail Extensions）类型关联的字节序列：
+
+![20220818151918](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220818151918.png)
+
+Web 服务器通过两种不同方式向客户端提供内容：
+
+- 获取磁盘文件（静态内容）并将其返回给客户端；
+- 运行一个可执行文件并将其输出结果（动态内容）返回给客户端。
+
+Web 服务器返回的每条内容都与其管理的某个文件相关联，每个文件都有一个唯一的名称，即 URL（Universal Resource Locator）。
+
+### HTTP 事务
+
+我们可以使用`telnet`命令与互联网上任意 Web 服务器建立事务：
+
+![20220818153525](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220818153525.png)
