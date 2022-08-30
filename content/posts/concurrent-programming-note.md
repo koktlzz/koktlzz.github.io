@@ -78,14 +78,28 @@ int main(int argc, char **argv)
 }
 ```
 
-由于服务器将运行很长时间，我们必须安装一个 SIGCHLD 信号处理程序来回收子进程（第 4～9 行），详见 [正确的信号处理](/posts/exception-control-flow-note/#正确的信号处理)。
+考虑到服务器将运行很长时间，我们需要安装一个 SIGCHLD 信号处理程序来回收子进程（第 4～9 行），详见 [正确的信号处理](/posts/exception-control-flow-note/#正确的信号处理)。
 
-父进程必须关闭`connfd`（第 36 行），否则连接描述符指向的 [打开文件表条目](/posts/system-level-io-note/#共享文件) 永远不会被释放，从而导致内存泄漏。子进程则不需要关闭`connfd`（第 33 行可以省略），因为内核会在它退出时自动关闭其所有的打开描述符。
+父进程必须关闭`connfd`（第 36 行），否则连接描述符指向的 [打开文件表条目](/posts/system-level-io-note/#共享文件) 永远不会被释放，从而导致内存泄漏。子进程则不需要关闭`connfd`（第 33 行可以省略），因为它会在子进程退出时由内核自动关闭。
 
 ### 进程的优缺点
 
-父子进程共享打开文件表，但并不共享用户地址空间（虚拟内存），进程之间必须显式地使用 IPC（Interprocess Communications）机制来共享状态信息。由于进程控制和 IPC 的开销很高，基于进程的并发程序往往很慢。
+父子进程共享打开文件表，但并不共享用户地址空间（虚拟内存），因此进程之间必须显式地使用 IPC（Interprocess Communications）机制来共享状态信息。由于进程控制和 IPC 的开销很高，基于进程的并发程序往往很慢。
 
 ## 使用 I/O 多路复用实现并发
+
+I/O 多路复用技术的基本思想是调用`select`函数要求内核暂停进程，仅当发生一个或多个 I/O 事件后再将控制权返回给应用程序。该函数十分复杂并有许多不同的使用场景，我们只讨论等待一组描述符准备好读取的情况：
+
+```c
+#include <sys/select.h>
+int select(int n, fd_set *fdset, NULL, NULL, NULL);
+// Returns: nonzero count of ready descriptors, −1 on error
+
+// Macros for manipulating descriptor sets
+FD_ZERO(fd_set *fdset);          /* Clear all bits in fdset */
+FD_CLR(int fd, fd_set *fdset);   /* Clear bit fd in fdset */
+FD_SET(int fd, fd_set *fdset);   /* Turn on bit fd in fdset */
+FD_ISSET(int fd, fd_set *fdset); /* Is bit fd in fdset on? */
+```
 
 ## 使用线程实现并发
