@@ -4,10 +4,10 @@ date: 2022-08-25T15:31:42+01:00
 draft: true
 series: ["CSAPP 读书笔记"]
 tags: ["OS"]
-summary: "正如我们在第八章介绍的，两个在时间上重叠的逻辑控制流是并发的。硬件异常处理程序、进程和 Linux 信号处理程序等都是计算机系统在不同层级上对并发的应用 ..."
+summary: "根据第八章介绍的内容，两个在时间上重叠的逻辑控制流是并发的。硬件异常处理程序、进程和 Linux 信号处理程序等都是计算机系统在不同层级上对并发的应用。现代操作系统为构建并发程序提供了三种基本方法 ..."
 ---
 
-正如我们在 [第八章](/posts/exception-control-flow-note/#并发流) 介绍的，两个在时间上重叠的逻辑控制流是并发的。硬件异常处理程序、进程和 Linux 信号处理程序等都是计算机系统在不同层级上对并发的应用。现代操作系统为构建并发程序提供了三种基本方法：
+根据 [第八章](/posts/exception-control-flow-note/#并发流) 介绍的内容，两个在时间上重叠的逻辑控制流是并发的。硬件异常处理程序、进程和 Linux 信号处理程序等都是计算机系统在不同层级上对并发的应用。现代操作系统为构建并发程序提供了三种基本方法：
 
 - 进程
 - I/O 多路复用（Multiplexing）
@@ -33,9 +33,9 @@ summary: "正如我们在第八章介绍的，两个在时间上重叠的逻辑�
 
 ![20220829222709](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220829222709.png)
 
-### 一个基于进程的并发服务器
+### 基于进程的并发服务器
 
-一个基于进程的并发服务器代码如下，其中第 32 行调用的`echo`函数来自 [echo.c](http://csapp.cs.cmu.edu/2e/ics2/code/netp/echo.c)：
+一个基于进程的并发服务器代码如下，其中第 32 行调用的`echo`函数来自于上一章介绍的 [echo.c](http://csapp.cs.cmu.edu/2e/ics2/code/netp/echo.c)：
 
 ```c
 #include "csapp.h"
@@ -88,7 +88,7 @@ int main(int argc, char **argv)
 
 ## 使用 I/O 多路复用实现并发
 
-I/O 多路复用技术的基本思想是调用`select`函数要求内核暂停进程，仅当发生一个或多个 I/O 事件后再将控制权返回给应用程序。该函数十分复杂并有许多不同的使用场景，我们只讨论等待一组描述符准备好读取的情况：
+I/O 多路复用技术的基本思想是应用程序调用`select`函数来监视多个文件描述符，等待一个或多个描述符准备好用于某种 I/O 操作。该函数十分复杂并有多种使用场景，这里我们只讨论 I/O 操作为读取的情况：
 
 ```c
 #include <sys/select.h>
@@ -101,5 +101,81 @@ FD_CLR(int fd, fd_set *fdset);   /* Clear bit fd in fdset */
 FD_SET(int fd, fd_set *fdset);   /* Turn on bit fd in fdset */
 FD_ISSET(int fd, fd_set *fdset); /* Is bit fd in fdset on? */
 ```
+
+参数`fd_set`是一个描述符集，它在逻辑上是一个位向量（固定长度的 0，1 序列）：
+
+$$b_{n - 1},..., b_1, b_0$$
+
+其中的每个位 $b_k$ 都对应了一个描述符 $k$。当且仅当 $b_k$ 等于 1 时，描述符 $k$ 属于该描述符集。
+
+在我们的应用场景中，参数`fd_set`是读取描述符集（Read Set），参数`n`是读取集的基数（Cardinality）。`select`函数会一直阻塞，直到读取集中至少有一个描述符准备好被读取（即从该描述符读取 1 个字节的请求不会阻塞）。该函数还会将参数`fdset`修改为由读取集中已准备好读取的描述符组成的集合（即就绪集，Ready Set），并返回就绪集的基数。因此，我们在每次调用`select`函数前都应当先更新读取集。
+
+示例代码展示了一个使用`select`函数实现的迭代服务器：
+
+```c
+#include "csapp.h"
+void echo(int connfd);
+void command(void);
+
+int main(int argc, char **argv)
+{
+    int listenfd, connfd;
+    socklen_t clientlen;
+    struct sockaddr_storage clientaddr;
+    fd_set read_set, ready_set;
+
+    if (argc != 2)
+    {
+        fprintf(stderr, "usage: %s <port>\n", argv[0]);
+        exit(0);
+    }
+    listenfd = Open_listenfd(argv[1]);
+
+    FD_ZERO(&read_set);              /* Clear read set */
+    FD_SET(STDIN_FILENO, &read_set); /* Add stdin to read set */
+    FD_SET(listenfd, &read_set);     /* Add listenfd to read set */
+
+    while (1)
+    {
+        ready_set = read_set;
+        Select(listenfd + 1, &ready_set, NULL, NULL, NULL);
+        if (FD_ISSET(STDIN_FILENO, &ready_set))
+            command(); /* Read command line from stdin */
+        if (FD_ISSET(listenfd, &ready_set))
+        {
+            clientlen = sizeof(struct sockaddr_storage);
+            connfd = Accept(listenfd, (SA *)&clientaddr, &clientlen);
+            echo(connfd); /* Echo client input until EOF */
+            Close(connfd);
+        }
+    }
+}
+
+void command(void)
+{
+    char buf[MAXLINE];
+    if (!Fgets(buf, MAXLINE, stdin))
+        exit(0);       /* EOF */
+    printf("%s", buf); /* Process the input command */
+}
+```
+
+该程序首先打开一个监听描述符（第 16 行），然后使用宏`FD_ZERO`创建一个空的读取集（第 19 行）：
+
+![20220830233911](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220830233911.png)
+
+然后代码第 20 行和第 21 行分别将描述符 0（标准输入）和描述符 3（监听描述符）加入读取集：
+
+![20220830234609](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220830234609.png)
+
+此时，典型的服务器循环开始。不过我们调用`select`而非`accept`函数来等待监听描述符或标准输入准备好被读取（第 26 行）。例如，如果用户按下回车键，则`select`函数将修改`ready_set`的值：
+
+![20220830235034](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220830235034.png)
+
+一旦 select 返回，我们使用 FD_ISSET 宏来确定哪些描述符可以读取。 如果标准输入准备好（第 25 行），我们调用命令函数，它在返回主程序之前读取、解析和响应命令。 如果监听描述符准备好了（第 27 行），我们调用 accept 来获取一个连接的描述符，然后调用图 11.22 中的 echo 函数，它会回显来自客户端的每一行，直到客户端关闭其连接端。
+
+### 基于 I/O 多路复用的并发服务器
+
+### I/O 多路复用的优缺点
 
 ## 使用线程实现并发
