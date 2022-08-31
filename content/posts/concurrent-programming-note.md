@@ -1,7 +1,7 @@
 ---
 title: "CSAPP 读书笔记：并发编程"
 date: 2022-08-25T15:31:42+01:00
-draft: true
+draft: false
 series: ["CSAPP 读书笔记"]
 tags: ["OS"]
 summary: "根据第八章介绍的内容，两个在时间上重叠的逻辑控制流是并发的。硬件异常处理程序、进程和 Linux 信号处理程序等都是计算机系统在不同层级上对并发的应用。现代操作系统为构建并发程序提供了三种基本方法 ..."
@@ -108,73 +108,9 @@ $$b_{n - 1},..., b_1, b_0$$
 
 其中的每个位 $b_k$ 都对应了一个描述符 $k$。当且仅当 $b_k$ 等于 1 时，描述符 $k$ 属于该描述符集。
 
-在我们的应用场景中，参数`fd_set`是读取描述符集（Read Set），参数`n`是读取集的基数（Cardinality）。程序调用`select`函数后会一直阻塞，直到读取集中至少有一个描述符准备好被读取（即从该描述符读取一字节的请求不会阻塞）。
+在我们的应用场景中，参数`fd_set`是读取描述符集（Read Set），参数`n`是读取集的基数（Cardinality）。程序调用`select`函数后会一直阻塞，直到读取集中至少有一个描述符准备好被读取（即从该描述符中读取一个字节的请求不会阻塞）。
 
-该函数还会将参数`fdset`修改为由读取集中已准备好被读取的描述符组成的就绪集（Ready Set），并返回就绪集的基数。因此，我们在每次调用`select`函数前都应当先更新读取集。
-
-示例代码展示了一个使用`select`函数实现的迭代服务器：
-
-```c
-#include "csapp.h"
-void echo(int connfd);
-void command(void);
-
-int main(int argc, char **argv)
-{
-    int listenfd, connfd;
-    socklen_t clientlen;
-    struct sockaddr_storage clientaddr;
-    fd_set read_set, ready_set;
-
-    if (argc != 2)
-    {
-        fprintf(stderr, "usage: %s <port>\n", argv[0]);
-        exit(0);
-    }
-    listenfd = Open_listenfd(argv[1]);
-
-    FD_ZERO(&read_set);              /* Clear read set */
-    FD_SET(STDIN_FILENO, &read_set); /* Add stdin to read set */
-    FD_SET(listenfd, &read_set);     /* Add listenfd to read set */
-
-    while (1)
-    {
-        ready_set = read_set;
-        Select(listenfd + 1, &ready_set, NULL, NULL, NULL);
-        if (FD_ISSET(STDIN_FILENO, &ready_set))
-            command(); /* Read command line from stdin */
-        if (FD_ISSET(listenfd, &ready_set))
-        {
-            clientlen = sizeof(struct sockaddr_storage);
-            connfd = Accept(listenfd, (SA *)&clientaddr, &clientlen);
-            echo(connfd); /* Echo client input until EOF */
-            Close(connfd);
-        }
-    }
-}
-
-void command(void)
-{
-    char buf[MAXLINE];
-    if (!Fgets(buf, MAXLINE, stdin))
-        exit(0);       /* EOF */
-    printf("%s", buf); /* Process the input command */
-}
-```
-
-该程序首先打开一个监听描述符（第 16 行），然后使用宏`FD_ZERO`创建一个空的读取集（第 19 行）：
-
-![20220830233911](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220830233911.png)
-
-然后代码第 20 行和第 21 行分别将描述符 0（标准输入）和描述符 3（监听描述符）加入读取集：
-
-![20220830234609](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220830234609.png)
-
-此时，典型的服务器循环开始。不过我们调用`select`而非`accept`函数来等待监听描述符或标准输入准备好被读取（第 26 行）。例如，如果用户按下回车键，则`select`函数将修改`ready_set`的值：
-
-![20220830235034](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220830235034.png)
-
-一旦 select 返回，我们使用 FD_ISSET 宏来确定哪些描述符可以读取。 如果标准输入准备好（第 25 行），我们调用命令函数，它在返回主程序之前读取、解析和响应命令。 如果监听描述符准备好了（第 27 行），我们调用 accept 来获取一个连接的描述符，然后调用图 11.22 中的 echo 函数，它会回显来自客户端的每一行，直到客户端关闭其连接端。
+我们将读取集中已准备好被读取的描述符集合称为就绪集（Ready Set）。`select`函数会将`fdset`修改为就绪集，并返回就绪集的基数。因此，我们在每次调用该函数前都应当先更新读取集。
 
 ### 基于 I/O 多路复用的并发服务器
 
@@ -231,7 +167,7 @@ int main(int argc, char **argv)
 }
 ```
 
-该程序使用一个`pool`类型的结构体（第 3～12 行）保存活跃的客户端，并调用`init_pool`函数初始化客户端池（第 29 行）。在无限循环的每次迭代中，服务器调用`select`函数检测两种不同类型的输入事件：来自新客户端的连接请求；为现有客户端提供服务的连接描述符已准备好被读取。当连接请求到达时（第 38 行），服务器打开连接（第 41 行）并将新客户端加入到客户端池中（第 42 行）。最后，服务器调用`check_clients`函数从每个已连接的描述符中写入单个文本行（第 46 行）。
+该程序使用`pool`类型的结构体（第 3～12 行）保存活跃的客户端，并使用`init_pool`函数初始化客户端池（第 29 行）。在无限循环的每次迭代中，服务器调用`select`函数检测两种不同类型的输入事件：来自新客户端的连接请求；为现有客户端提供服务的连接描述符已准备好被读取。当连接请求到达时（第 38 行），服务器打开连接（第 41 行）并将新客户端加入到客户端池中（第 42 行）。最后，服务器调用`check_clients`函数向每个已连接的描述符写入文本行（第 46 行）。
 
 ```c
 void init_pool(int listenfd, pool *p)
@@ -249,7 +185,7 @@ void init_pool(int listenfd, pool *p)
 }
 ```
 
-`init_pool`函数初始化客户端池，`clientfd`数组包含所有已连接的描述符。最初我们使用 -1 填充该数组（第 5～7 行），参数`listenfd`是读取集中唯一的描述符（第 10～12 行）。
+`init_pool`函数初始化客户端池。`p->clientfd`数组包含了所有已连接的描述符，一开始我们使用 -1 填充它（第 5～7 行）。此时`listenfd`是读取集`p->read_set`中唯一的描述符（第 10～12 行）。
 
 ```c
 void add_client(int connfd, pool *p)
@@ -278,7 +214,7 @@ void add_client(int connfd, pool *p)
 }
 ```
 
-`add_client`函数将一个新客户端添加到活跃客户端池中。如果`clientfd`数组中有空位（第 6 行），函数就将连接描述符`connfd`添加到该数组中并初始化一个 $R_{io}$ 读取缓冲区以调用`Rio_readinitb`（第 9～10 行）。随后函数将连接描述符添加到读取集（第 13 行），并更新客户端池中的一些属性：`maxfd`变量跟踪选择的最大文件描述符；`maxi`变量跟踪`clientfd`数组的最大索引。这样`check_clients`函数就不需要遍历整个数组。
+`add_client`函数将一个新客户端添加到活跃客户端池中。如果`p->clientfd`数组中还有空位（第 6 行），该函数就将连接描述符`connfd`添加到该数组并初始化一个读取缓冲区以调用 [`rio_readlineb`](/posts/system-level-io-note/#有缓冲的输入函数)（第 9～10 行）。随后函数将连接描述符`connfd`添加到读取集（第 13 行），并更新客户端池的一些属性：变量`maxfd`代表`select`函数监视的最大文件描述符；变量`maxi`代表`p->clientfd`数组的最大索引（这样`check_clients`函数就不需要遍历整个数组）。
 
 ```c
 void check_clients(pool *p)
@@ -316,8 +252,20 @@ void check_clients(pool *p)
 }
 ```
 
-`check_clients`函数从每个连接描述符中回显一个文本行。如果我们成功地从描述符中读取了文本行，那么我们将该行回显给客户端（第 18-21 行）。 请注意，在第 15 行，我们正在维护从所有客户端接收到的总字节数的累积计数。如果我们检测到 EOF 是因为客户端已经关闭了它的连接端，那么我们关闭连接端（第 27 行）并从池中删除描述符（第 28-29 行）。
+`check_clients`函数遍历客户端池中所有已就绪的连接描述符，如果从描述符中读取文本行成功（第 16 行），就将该行返回给客户端（第 18-21 行）。一旦客户端关闭连接且服务器检测到 EOF，服务器便关闭连接描述符（第 27 行）并将该描述符从读取集和客户端池中删除（第 28-29 行）。
+
+I/O 多路复用的本质是将逻辑控制流建模为状态机（State Machines）：
+
+![20220831234213](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220831234213.png)
+
+如上图所示，基于 I/O 多路复用的并发服务器为每个新客户端 $k$ 创建一个状态机 $s_k$ 并将其与连接描述符 $d_k$ 关联。每个状态机都有一个状态（等待描述符 $d_k$ 准备好被读取），一个输入事件（描述符 $d_k$ 已准备好被读取）和一个转换（从描述符 $d_k$ 中读取文本行）。
+
+在示例的并发服务器中，`select`函数检测输入事件，`add_client`函数创建新的逻辑控制流（状态机）。`check_clients`函数通过读写文本行来执行状态转换，并在客户端发送完文本行后删除状态机。
 
 ### I/O 多路复用的优缺点
+
+基于 I/O 多路复用的应用程序运行在单个进程的上下文中，因此每个逻辑控制流都可以访问整个进程的地址空间，这使得控制流之间共享数据变得非常容易。由于它不需要通过上下文切换创建新进程，程序的运行效率较高。像 Node.js、Nginx 和 Tornado 等现代高性能服务器均使用 I/O 多路复用实现。
+
+I/O 多路复用的缺点是编码十分复杂，以及无法充分利用多核处理器。
 
 ## 使用线程实现并发
