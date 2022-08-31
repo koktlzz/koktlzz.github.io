@@ -447,7 +447,7 @@ int open_listenfd(char *port)
 学习 Socket 接口函数的最佳方法便是阅读示例代码。一个简单的客户端程序如下：
 
 ```c
-#include "csapp/csapp.h"
+#include "csapp.h"
 
 int main(int argc, char **argv)
 {
@@ -480,7 +480,7 @@ int main(int argc, char **argv)
 该客户端连接的服务器代码如下：
 
 ```c
-#include "csapp/csapp.h"
+#include "csapp.h"
 
 typedef struct sockaddr SA;
 
