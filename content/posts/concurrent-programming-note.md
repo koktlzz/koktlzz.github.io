@@ -269,3 +269,90 @@ I/O 多路复用的本质是将逻辑控制流建模为状态机（State Machine
 I/O 多路复用的缺点是编码十分复杂，并且无法充分利用多核处理器。
 
 ## 使用线程实现并发
+
+线程是在进程上下文中运行的逻辑控制流，它由内核自动调度。每个线程都有自己的线程上下文，包括一个唯一的线程 ID（TID）、栈、栈指针、程序计数器、通用寄存器和条件码。在同一个进程内运行的所有线程共享该进程全部的虚拟地址空间。
+
+### 线程执行模型
+
+线程的执行模型与进程类似：
+
+![20220907221941](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220907221941.png)
+
+如上图所示，主线程（Main Thread）是进程生命周期的开始，它在某一时刻创建了一个对等线程（Peer Thread）。两线程同时运行，控制权通过上下文切换传递。
+
+线程执行与进程的区别在于：
+
+- 线程上下文比进程上下文小得多，因此线程上下文切换比进程快；
+- 与进程相关的线程构成了一个对等池，它们没有父子层级结构。线程可以杀死任何对等线程或等待任何对等线程终止；
+- 每个对等线程都可以读写相同的共享数据。
+
+### Posix 线程
+
+Posix 线程（Pthread）是 C 程序操作线程的标准接口。它定义了大约六十个函数，允许程序创建线程、终止线程、回收线程、与对等线程安全地共享数据以及通知对等线程系统状态的变化等。
+
+```c
+#include "csapp/csapp.h"
+void *thread(void *vargp) /* thread routine */
+{
+  printf("Hello, world!\n");
+  return NULL;
+}
+
+int main() {
+  pthread_t tid;
+  Pthread_create(&tid, NULL, thread, NULL);
+  Pthread_join(tid, NULL);
+  exit(0);
+}
+
+```
+
+示例程序中，主线程创建了一个对等线程并等待它终止，对等线程在打印`Hello, world!\n`后返回。
+
+线程的代码和局部数据封装在线程例程（Thread Routine）中，它将通用指针`void *`作为输入并返回另一个通用指针（第 2 行）。如果需要向线程例程传递多个参数，则应将它们放入一个结构体中并传递指向该结构体的指针。同样，如果想让线程例程返回多个参数，则应返回一个指向包含多个参数的结构体指针。
+
+### 创建线程
+
+线程调用函数`pthread_create`创建新线程：
+
+```c
+#include <pthread.h>
+typedef void *(func)(void *);
+int pthread_create(pthread_t *tid, pthread_attr_t *attr,
+                   func *f, void *arg);
+// Returns: 0 if OK, nonzero on error
+```
+
+参数`f`是新线程在其上下文中运行的例程，参数`arg`是该例程的输入参数。参数`attr`可用于更改新线程的默认属性，一般设为`NULL`。该函数返回时，参数`tid`将包含新线程的线程 ID。新线程还可以调用`pthread_self`函数确认自己的线程 ID：
+
+```c
+#include <pthread.h>
+pthread_t pthread_self(void);
+//Returns: thread ID of caller
+```
+
+### 终止线程
+
+线程终止的方式包括：
+
+- 线程会在其例程返回时隐式终止；
+- 线程调用函数`pthread_exit`显式终止。如果主线程调用该函数，它会等待所有对等线程终止，然后再终止主线程和整个进程。参数`thread_return`用于函数 [`pthread_join`](/posts/concurrent-programming-note/#回收线程)：
+
+```c
+#include <pthread.h>
+void pthread_exit(void *thread_return);
+// Never returns
+```
+
+- 线程调用 Linux 函数`exit`终止进程以及与该进程关联的所有线程；
+- 线程调用函数`pthread_cancel`终止另一个线程 ID 为`tid`的对等线程：
+
+```c
+#include <pthread.h>
+int pthread_cancel(pthread_t tid);
+// Returns: 0 if OK, nonzero on error
+```
+
+### 回收线程
+
+### 分离线程
