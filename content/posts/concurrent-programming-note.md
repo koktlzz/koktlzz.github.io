@@ -355,4 +355,119 @@ int pthread_cancel(pthread_t tid);
 
 ### 回收线程
 
+线程调用`pthread_join`函数等待另一个线程`tid`终止：
+
+```c
+#include <pthread.h>
+int pthread_join(pthread_t tid, void **thread_return);
+// Returns: 0 if OK, nonzero on error
+```
+
+线程`tid`终止后，该函数将线程例程返回的通用指针分配到`thread_return`指向的位置，然后回收终止线程持有的所有内存资源。与  [`waitpid`](/posts/exception-control-flow-note/#回收子进程) 不同，`pthread_join`只能等待某个特定线程终止。
+
 ### 分离线程
+
+在任意时刻，线程都是可连接的（Joinable）或分离的（Detached）。一个可连接的线程可以被其他线程回收或杀死，其内存资源（如栈）在它被另一个线程回收之前不会释放；相反，一个分离的线程无法被其他线程回收或杀死，其内存资源将在它终止时由系统自动释放。
+
+默认情况下，线程是可连接的。为了避免内存泄漏，每个可连接的线程都应当被另一个线程显式地回收，或者调用`pthread_detach`函数成为一个分离的线程：
+
+```c
+#include <pthread.h>
+int pthread_detach(pthread_t tid);
+// Returns: 0 if OK, nonzero on error
+```
+
+参数`tid`是被分离的线程 ID，线程可以将其设为`pthread_self()`来分离自己。
+
+### 初始化线程
+
+线程调用`pthread_once`函数初始化与线程例程关联的状态：
+
+```c
+#include <pthread.h>
+pthread_once_t once_control = PTHREAD_ONCE_INIT;
+int pthread_once(pthread_once_t *once_control,
+                 void (*init_routine)(void));
+// Always returns 0
+```
+
+参数`once_control`是一个全局变量或静态变量，它始终被初始化为`PTHREAD_ONCE_INIT`。该函数第一次被调用时会直接调用`init_routine`，随后使用相同`once_control`参数的调用不会起任何作用。如下示例程序将输出 1：
+
+```c
+#include <pthread.h>
+#include <stdio.h>
+pthread_once_t once_control = PTHREAD_ONCE_INIT;
+int cnt;
+
+void init_routine(void) { cnt++; }
+
+int main()
+{
+    pthread_once(&once_control, *init_routine);
+    pthread_once(&once_control, *init_routine);
+    printf("%d", cnt);
+}
+```
+
+当我们需要动态初始化多个线程共享的全局变量时，该函数十分有用。
+
+### 基于线程的并发服务器
+
+一个基于线程的并发服务器代码如下：
+
+```c
+#include "csapp.h"
+
+void echo(int connfd);
+/* thread routine */
+void *thread(void *vargp)
+{
+    int connfd = *((int *)vargp);
+    Pthread_detach(pthread_self());
+    Free(vargp);
+    echo(connfd);
+    Close(connfd);
+    return NULL;
+}
+
+int main(int argc, char **argv)
+{
+    int listenfd, *connfdp;
+    socklen_t clientlen;
+    struct sockaddr_storage clientaddr;
+    pthread_t tid;
+
+    if (argc != 2)
+    {
+        fprintf(stderr, "usage: %s <port>\n", argv[0]);
+        exit(0);
+    }
+    listenfd = Open_listenfd(argv[1]);
+
+    while (1)
+    {
+        clientlen = sizeof(struct sockaddr_storage);
+        connfdp = Malloc(sizeof(int));
+        *connfdp = Accept(listenfd, (SA *)&clientaddr, &clientlen);
+        Pthread_create(&tid, NULL, thread, connfdp);
+    }
+}
+```
+
+程序的整体结构与基于进程的并发服务器类似，主线程反复等待客户端连接，然后创建对等线程处理请求。值得注意的是，该程序调用`Malloc`函数创建指向连接描述符的指针`connfdp`并将其传递给对等线程（第 32～34 行）。这是因为如果我们直接传递指针，如：
+
+```c
+connfd = Accept(listenfd, (SA *) &clientaddr, &clientlen);
+Pthread_create(&tid, NULL, thread, &connfd);
+
+void *thread(void *vargp) {
+    int connfd = *((int *)vargp);
+    . . .
+}
+```
+
+就会导致对等线程中的赋值语句与主线程中的`Accpet`调用产生竞争：若新客户端在赋值语句执行完毕前与服务器建立连接，则对等线程中的局部变量`connfd`将变为新客户端的连接描述符。由于`Malloc`将连接描述符动态分配到不同的堆内存 Block 中，这一问题得到了解决。
+
+为了避免内存泄漏，我们必须分离每个线程（第 8 行）并释放主线程分配的堆内存（第 9 行）。进程中的所有线程共享描述符表，连接描述符的`rfcnt`始终为 1。因此我们只需在对等线程中关闭连接描述符，而不应像基于进程的并发服务器那样在主线程进行相同的操作。
+
+## 线程程序中的共享变量
