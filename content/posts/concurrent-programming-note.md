@@ -399,7 +399,10 @@ int pthread_once(pthread_once_t *once_control,
 pthread_once_t once_control = PTHREAD_ONCE_INIT;
 int cnt;
 
-void init_routine(void) { cnt++; }
+void init_routine(void)
+{
+    cnt++;
+}
 
 int main()
 {
