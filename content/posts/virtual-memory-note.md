@@ -202,6 +202,8 @@ $$n=32, P=4K=2^{12}, n(PTE)=2^{n-p}=2^{20}=1M$$
 
 ![20220610173011](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220610173011.png)
 
+> 注：每个进程地址空间里的内核部分都是相同的，因此上图中的“Different for each process”有误。
+
 Linux 将虚拟内存划分为多个区域或段（Area 或 Segment），每个区域都是一些已分配且在某些方面相关的连续页面。例如，代码段、数据段、堆、共享库段和用户栈分别是不同的区域。每个已分配的页面都属于某个区域，因此不属于任何区域的页面不存在也无法被进程引用。区域概念的引入使得 Linux 允许虚拟地址空间存在间隙。
 
 ![20220610175658](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220610175658.png)
