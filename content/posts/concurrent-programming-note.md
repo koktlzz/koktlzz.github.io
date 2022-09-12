@@ -3,7 +3,7 @@ title: "CSAPP 读书笔记：并发编程"
 date: 2022-08-25T15:31:42+01:00
 draft: false
 series: ["CSAPP 读书笔记"]
-tags: ["OS"]
+tags: ["OS", " Concurrent"]
 summary: "根据第八章介绍的内容，两个在时间上重叠的逻辑控制流是并发的。硬件异常处理程序、进程和 Linux 信号处理程序等都是计算机系统在不同层级上对并发的应用。现代操作系统为构建并发程序提供了三种基本方法 ..."
 ---
 
@@ -336,7 +336,7 @@ pthread_t pthread_self(void);
 线程终止的方式包括：
 
 - 线程会在其例程返回时隐式终止；
-- 线程调用函数`pthread_exit`显式终止。如果主线程调用该函数，它会等待所有对等线程终止，然后再终止主线程和整个进程。参数`thread_return`用于函数 [`pthread_join`](/posts/concurrent-programming-note/#回收线程)：
+- 线程调用函数`pthread_exit`显式终止，参数`thread_return`用于函数 [`pthread_join`](/posts/concurrent-programming-note/#回收线程)：
 
 ```c
 #include <pthread.h>
@@ -469,8 +469,150 @@ void *thread(void *vargp) {
 }
 ```
 
-就会导致对等线程中的赋值语句与主线程中的`Accpet`调用产生竞争：若新客户端在赋值语句执行完毕前与服务器建立连接，则对等线程中的局部变量`connfd`将变为新客户端的连接描述符。由于`Malloc`可以将连接描述符动态分配到不同的堆内存 Block 中，这一问题便得到了解决。
+就会导致对等线程中的赋值语句与主线程中的`Accpet`调用产生竞争：若新客户端在赋值语句执行完毕前与服务器建立连接，则对等线程中的局部变量`connfd`会变成新客户端的连接描述符。由于`Malloc`可以将`connfd`动态分配到不同的堆内存 Block，这一问题便得到了解决。
 
 为了避免内存泄漏，我们必须分离每个线程（第 8 行）并释放主线程分配的堆内存（第 9 行）。进程中的所有线程共享描述符表，连接描述符的`rfcnt`始终为 1。因此我们只需在对等线程中关闭连接描述符，而不必像基于进程的并发服务器那样在主线程进行同样的操作。
 
 ## 线程程序中的共享变量
+
+在程序员看来，线程的最大优势在于多个线程可以轻松地共享相同的程序变量。然而，这种便利可能会带来一些问题。为了正确地编写线程程序，我们以如下程序为例说明共享变量的含义及工作原理：
+
+```c
+#include "csapp.h"
+#define N 2
+void *thread(void *vargp);
+
+char **ptr; /* global variable */
+
+int main()
+{
+    int i;
+    pthread_t tid;
+    char *msgs[N] = {
+        "Hello from foo",
+        "Hello from bar"};
+
+    ptr = msgs;
+    for (i = 0; i < N; i++)
+        Pthread_create(&tid, NULL, thread, (void *)i);
+    Pthread_exit(NULL);
+}
+
+void *thread(void *vargp)
+{
+    int myid = (int)vargp;
+    static int cnt = 0;                                    
+    printf("[%d]: %s (cnt=%d)\n", myid, ptr[myid], ++cnt); 
+    return NULL;
+}
+```
+
+### 线程内存模型
+
+每个线程都有自己独立的线程上下文，因此多个线程之间共享同一进程上下文中的其余部分。它们包括：只读文本（代码）段、可读写数据段、堆、共享库和打开文件描述符等。
+
+线程无法读取或写入另一个线程的寄存器，但任何线程都能够访问共享虚拟内存中的任何位置。尽管栈属于线程上下文的一部分，但线程可以使用指针对另一个线程的栈内容读取和写入。示例程序第 25 行，对等线程通过全局变量`ptr`间接引用了主线程栈中的数组`msgs[N]`。
+
+### 将变量映射到内存
+
+C 线程程序根据变量的存储类型将其映射到虚拟内存：
+
+- 全局变量：全局变量的唯一实例在运行时位于 [可读写段](/posts/linking-note/#加载可执行目标文件)，它可以被任意线程引用。示例程序第 5 行声明的全局变量`ptr`便是如此；
+- 局部自动变量：局部自动变量在运行时位于每个线程的栈中，如示例程序中的变量`tid`和`myid`。为了区分不同线程中的相同变量，我们将它们分别表示为`tid.m`、`myid.p0`和`myid.p1`；
+- 局部静态变量：与全局变量一样，局部静态变量的唯一实例在运行时位于可读写段。即使示例程序中的每个对等线程都声明了局部静态变量`cnt`（第 24 行），在运行时虚拟内存中也只有一个`cnt`实例。
+
+### 共享变量
+
+当一个变量的实例被多个线程引用时，我们就称它为共享的。在示例程序中，变量`cnt`是共享的，而`myid`则不是。对等线程均通过`ptr`间接引用了局部变量`msgs`，因此它也是共享的。
+
+## 使用信号量同步线程
+
+如下程序创建了两个对等线程，每个线程都会将全局共享变量`cnt`递增`niters`次：
+
+```c
+#include "csapp.h"
+
+void *thread(void *vargp); /* Thread routine prototype */
+
+/* Global shared variable */
+volatile long cnt = 0; /* Counter */
+
+int main(int argc, char **argv)
+{
+    long niters;
+    pthread_t tid1, tid2;
+
+    /* Check input argument */
+    if (argc != 2)
+    {
+        printf("usage: %s <niters>\n", argv[0]);
+        exit(0);
+    }
+    niters = atoi(argv[1]);
+
+    /* Create threads and wait for them to finish */
+    Pthread_create(&tid1, NULL, thread, &niters);
+    Pthread_create(&tid2, NULL, thread, &niters);
+    Pthread_join(tid1, NULL);
+    Pthread_join(tid2, NULL);
+
+    /* Check result */
+    if (cnt != (2 * niters))
+        printf("BOOM! cnt=%d\n", cnt);
+    else
+        printf("OK cnt=%d\n", cnt);
+    exit(0);
+}
+
+/* Thread routine */
+void *thread(void *vargp)
+{
+    long i, niters = *((long *)vargp);
+
+    for (i = 0; i < niters; i++)
+        cnt++;
+    return NULL;
+}
+```
+
+理论上，该程序的输出结果应为`2 * niters`。然而当它在 Linux 系统上运行时，我们不但会得到错误的答案，并且每次的结果还不同：
+
+```shell
+linux> ./badcnt 1000000 BOOM! cnt=1445085
+linux> ./badcnt 1000000 BOOM! cnt=1915220
+linux> ./badcnt 1000000 BOOM! cnt=1404746
+```
+
+为了清楚地理解这一问题，我们需要研究一下计数器循环（第 40～41 行）的汇编代码：
+
+```nasm
+; i in %rax, niters in %rcx, cnt in %rdx
+    movq  (%rdi), %rcx
+    testq %rcx, %rcx
+    jle   .L2
+    movl  $0, %eax
+.L3:
+    movq  cnt(%rip), %rdx
+    addq  $1, %rdx
+    movq  movq %rdx, cnt(%rip)
+    addq  $1, %rax
+    cmpq  %rcx, %rax
+    jne   .L3
+.L2:
+```
+
+该代码可以分为以下五个部分：
+
+- $H_i$：循环头部的指令块（第 2～5 行）；
+- $L_i$：将变量`cnt`加载到寄存器 %$rdx_i$（第 7 行）；
+- $U_i$：将 %$rdx_i$ 加一（第 8 行）；
+- $S_i$：将 %$rdx_i$ 更新后的值存回变量`cnt`（第 9 行）；
+- $T_i$：循环尾部的指令块（第 10～13行）。
+
+上述指令在单核处理器上以某种顺序一个接一个地执行，不同的执行顺序将导致不同的结果。我们以第一次循环为例：
+
+![20220912235213](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220912235213.png)
+
+如图（b）所示，线程 2 在第五步将变量`cnt`加载到 %$rdx_2$。此时线程 1 已经在第三步更新了 %$rdx_1$ 的值，但还未把它存回`cnt`。因此 %$rdx_2$ 的初始值为 0，线程 2 无法像图（a）那样将`cnt`从 1 递增到 2。
+
+### 进程图
