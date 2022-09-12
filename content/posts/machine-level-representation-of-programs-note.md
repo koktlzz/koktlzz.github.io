@@ -172,9 +172,9 @@ movq $-1, %rax                               %rax = FFFFFFFFFFFFFFFF
 
 ![20211007174503](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20211007174503.png)
 
-两者不同的是，`movz`指令将目的寄存器的剩余字节均填充为 0（零扩展），`movs`指令则将其填充为源操作数的最高有效位（符号扩展）。相比于符号扩展，零扩展缺少了指令`movzlq`。这是因为上文提到，使用`movl`指令移动数据到寄存器时，会将高位全部置为 0，其效果与零扩展无异。另外，符号扩展还多了一个指令`cltq`。它没有操作数，且实际上等效于`movslq %eax, %rax`。
+两者不同的是，`movz`指令将目的寄存器的剩余字节均填充为 0（零扩展），`movs`指令则将其填充为源操作数的最高有效位（符号扩展）。相比于符号扩展，零扩展缺少了指令`movzlq`。这是因为上文提到，使用`movl`指令移动数据到寄存器时，会将高位全部置为 0，其效果与零扩展无异。另外，符号扩展还多了一个指令`cltq`。它没有操作数，实际上等效于`movslq %eax, %rax`。
 
-在 C 中，引用指针（Dereference Pointer，`*p`）会将指针拷贝到寄存器中，然后将该寄存器作为内存地址的引用。如下面的一个简单的 C 程序：
+在 C 中，对指针解引用（Dereference Pointer，`*p`）会将指针拷贝到寄存器中，然后将该寄存器作为内存地址的引用。一个简单的 C 程序如下：
 
 ```c
 long exchange(long *xp, long y)
@@ -185,7 +185,7 @@ long exchange(long *xp, long y)
 }
 ```
 
-与之等效的汇编代码如下：
+与之等效的汇编代码为：
 
 ```nasm
 ; xp in %rdi, y in %rsi
@@ -299,7 +299,7 @@ store_uprod
 
 ![20211011225955](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20211011225955.png)
 
-示例 C 程序首先比较了变量`a`和`b`的大小，然后根据结果把寄存器 %eax 的最低字节（即寄存器 %al）置为 0 或 1。最后一条指令的作用是将寄存器 %eax 的高位三个字节以及寄存器 %rax 的高位四个字节全部清零：
+如下汇编代码首先比较了变量`a`和`b`的大小，然后根据结果把寄存器 %eax 的最低字节（即寄存器 %al）置为 0 或 1。`movzbl`指令的作用是将寄存器 %eax 的高位三个字节以及寄存器 %rax 的高位四个字节全部清零：
 
 ```nasm
 ; int comp(data_t a, data_t b)
@@ -1137,8 +1137,8 @@ struct S1
 - 指针不是机器代码的一部分，而是 C 提供的一种用来帮助程序员避免寻址错误的抽象；
 - 每个指针都有一个关联的类型。特殊的指针类型`void *`代表通用（范型）指针，可以显式或隐式地转换为有关联类型的指针；
 - 每个指针都有一个值，其值为指定类型的某个对象的地址。若指针的值为`NULL`(0)，则代表它没有指向任何地方；
-- 指针是用操作符`&`创建的，在机器代码中常用`leaq`指令实现；
-- 使用操作符`*`来引用指针；
+- 指针是操作符`&`创建的，在机器代码中常用`leaq`指令实现；
+- 使用操作符`*`来对指针解引用；
 - 数组和指针之间关系密切；
 - 指针可以被强制类型转换，但不会改变其值；
 - 指针也可以指向函数，使程序可以在其他地方调用代码，其值为函数的机器代码中第一条指令的地址。
@@ -1197,7 +1197,7 @@ void echo()
 | Character Typed | Additional Corrupted State |
 | --------------- | -------------------------- |
 | 0-7             | None                       |
-| 9-23            | Unused Stack Space         |
+| 8-23            | Unused Stack Space         |
 | 24-31           | Return Address             |
 | 32+             | Saved State in Caller      |
 
@@ -1357,10 +1357,10 @@ vcvtpd2psx %xmm0, %xmm0
 
 AVX 2 为浮点数值的比较运算提供两种操作指令：
 
-| Instruction          | Based on    | Description              |
-| -------------------- | ----------- | ------------------------ |
-| ucomiss $S_1$, $S_2$ | $S_2 - S_1$ | Compare Single Precision |
-| ucomisd $S_1$, $S_2$ | $S_2 - S_1$ | Compare Double Precision |
+| Instruction           | Based on    | Description              |
+| --------------------- | ----------- | ------------------------ |
+| vucomiss $S_1$, $S_2$ | $S_2 - S_1$ | Compare Single Precision |
+| vucomisd $S_1$, $S_2$ | $S_2 - S_1$ | Compare Double Precision |
 
 上述指令与 [条件码](/posts/machine-level-representation-of-programs-note/#条件码) 中介绍的 CMP 指令类相似。参数 $S_2$ 必须是 XMM 寄存器，而参数 $S_1$ 则既可以是 XMM 寄存器，又可以是内存中的位置。
 
