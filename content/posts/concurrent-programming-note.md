@@ -527,7 +527,7 @@ C 线程程序根据变量的存储类型将其映射到虚拟内存：
 
 ## 使用信号量同步线程
 
-如下程序创建了两个对等线程，每个线程都会将全局共享变量`cnt`递增`niters`次：
+程序`badcnt.c`创建了两个对等线程，每个线程都会将全局共享变量`cnt`递增`niters`次：
 
 ```c
 #include "csapp.h"
@@ -615,4 +615,87 @@ linux> ./badcnt 1000000 BOOM! cnt=1404746
 
 如图（b）所示，线程 2 在第五步将变量`cnt`加载到 %$rdx_2$。此时线程 1 已经在第三步更新了 %$rdx_1$ 的值，但还未把它存回`cnt`。因此 %$rdx_2$ 的初始值为 0，线程 2 无法像图（a）那样将`cnt`从 1 递增到 2。
 
-### 进程图
+### 进度图
+
+我们将 n 个并发线程建模为 n 维笛卡尔空间中的轨迹（Trajectory），即进度图（Progress Graph）。其中，每个坐标轴对应线程 $k$ 的进度，每个点代表线程 $k$ 已完成指令 $I_k$ 的状态。程序`badcnt.c`第一次循环的进度图如下，点 $(L_1, S_2)$ 代表线程 1 已完成 $L_1$，线程 2 则已完成 $S_2$：
+
+![20220913221845](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220913221845.png)
+
+程序的执行历史可以用进度图中的轨迹表示。假设该程序第一次循环的指令执行顺序为：
+
+$$H_1, L_1, U_1, H_2, L_2, S_1, T_1, U_2, S_2, T_2$$
+
+则进度图轨迹为：
+
+![20220913224057](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220913224057.png)
+
+对于线程 $i$，操作共享变量`cnt`的指令 $(L_i, U_i, S_i)$ 构成了一个临界区（Critical Section），它不应当与其他线程的临界区相交。在进度图上，两线程临界区的交集构成了不安全区（Unsafe Region）：
+
+![20220913224916](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220913224916.png)
+
+不安全区不包括其边缘，例如状态 $(H_1, H_2)$ 和 $(S_1, U_2)$ 均不属于该区域。绕过不安全区的轨迹被称为安全轨迹，而触及了不安全区中任何部分的轨迹都是不安全的。
+
+### 信号量
+
+信号量（Semaphore）`s`是一个具有非负整数值的全局变量，我们只能对它进行两种操作：
+
+- `P(s)`：若`s`非零，则将其减一并立即返回；若`s`为零，则将线程暂停。当`s`变为非零且线程由`V`操作重启后，`P`再将`s`减一并把控制权返回给调用者；
+- `P(s)`：将`s`加一。如果存在任何被`P`操作阻塞的线程，则随机重启它们中的一个。
+
+`P(s)`和`V(s)`不可分割（具有原子性），因此它们不会被中断。操作的定义保证了正确初始化的信号量永远不会变为负值，我们将这种属性称为信号量的不变性（Semaphore Invariant）。
+
+Posix 标准定义了多种操作信号量的函数：
+
+```c
+#include <semaphore.h>
+int sem_init(sem_t *sem, int pshared, unsigned int value);
+int sem_wait(sem_t *s);   /* P(s) */
+int sem_post(sem_t *s);   /* V(s) */
+// Returns: 0 if OK, −1 on error
+```
+
+每个信号量都必须在使用前初始化，`sem_init`函数则将信号量`sem`初始化为参数`value`。在我们的应用场景中，参数`pshared`始终为 0。线程分别调用`sem_wait`和`sem_post`函数来执行`P(s)`和`V(s)`操作。为了简洁起见，我们使用以下等效的包装函数代替：
+
+```c
+#include "csapp.h"
+void P(sem_t *s);   /* Wrapper function for sem_wait */
+void V(sem_t *s);   /* Wrapper function for sem_post */
+Returns: nothing
+```
+
+### 使用信号量实现互斥
+
+信号量提供了一种便捷的方法来确保线程对共享变量的访问互斥（Mutually Exclusive ）：将一个初始值为 1 的信号量与每个共享变量相关联，然后使用`P(s)`和`V(s)`操作包围临界区。
+
+在这种情况下，信号量的值始终为 0 或 1，因此我们将它称为二进制信号量。用于实现互斥的二进制信号量通常被称为互斥锁（Mutex），对其进行`P(s)`和`V(s)`操作则分别被称为加锁和解锁。一个已被锁定但互斥锁还未被解锁的线程被称为持有互斥锁。
+
+如下进度图展示了我们如何使用二进制信号量正确同步程序`badcnt.c`，其中的每个状态都标注了该状态下信号量的值：
+
+![20220914000230](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220914000230.png)
+
+图中信号量为 -1 的状态共同构成了禁止区（Forbidden Region）。由于信号量的不变性，任何可行的轨迹都无法进入该区域。禁止区完全包围了不安全区，因此轨迹也不会触及不安全区的任何部分。每条可行的轨迹都是安全的，无论运行时指令执行的顺序如何，程序都会正确地递增`cnt`。
+
+综上，为了使用信号量实现互斥，我们首先需要声明一个信号量`mutex`：
+
+```c
+volatile long cnt = 0; /* Counter */
+sem_t mutex;           /* Semaphore that protects counter */
+```
+
+然后在主线程中将其初始化：
+
+```c
+Sem_init(&mutex, 0, 1); /* mutex = 1 */
+```
+
+最终在对等线程中调用`P(s)`和`V(s)`包围对共享变量`cnt`的更新操作：
+
+```c
+for (i = 0; i < niters; i++) {
+    P(&mutex);
+    cnt++;
+    V(&mutex); 
+}
+```
+
+### 使用信号量调度共享资源
