@@ -289,7 +289,7 @@ $$\begin{split} x +_w^ty &=U2T_w(T2U_w(x) +_w^uT2U_w(y))\cr
 $$x + _w^ty = \begin{cases}
    x + y + 2^w &\text x + y < -2^{w-1} &\text \space \space \space Negative \space \space Overflow \cr
    x + y  &\text -2^{w-1} \leq x + y < 2^{w-1} &\text Normal \cr
-   x + y - 2^w &\text x + y \geq 2^{w-1} &\text \space \space \space Postive \space \space Overflow
+   x + y - 2^w &\text x + y \geq 2^{w-1} &\text \space \space \space Positive \space \space Overflow
 \end{cases}$$
 
 因此，若 $x>0, y>0, x+_w^ty\leq 0$，那么结果便出现了正溢出；若 $x<0, y<0, x+_w^ty\geq 0$，结果便出现了负溢出。
