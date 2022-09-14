@@ -105,7 +105,7 @@ L1 级别的 Caches 位于 CPU 芯片之上，容量为上万字节并且拥有�
 ![20211103235153](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20211103235153.png)
 
 - 程序代码和数据：所有进程的代码都始于相同的固定地址，随后则是与全局变量相关的数据区。它们的大小在进程开始运行时固定；
-- 堆（Heap）：调用 [`malloc`或`free`](/posts/virtual-memory-note/#contents:malloc-和-free-函数) 这样的 C 标准库函数的结果，其大小可以在程序运行时动态扩缩容；
+- 堆（Heap）：调用 [`malloc`或`free`](/posts/virtual-memory-note/#malloc-和-free-函数) 这样的 C 标准库函数的结果，其大小可以在程序运行时动态扩缩容；
 - 共享库（Share Libraries）：存放如 C 标准库、数学库这样的共享库的代码和数据的区域；
 - 栈（Stack）：编译器实现函数调用的区域，其大小同样可以在运行时动态扩缩容。如果我们调用一个函数，栈就会增长。而每当一个函数返回时，栈便会缩小；
 - 内核虚拟内存：为内核预留的内存空间。
