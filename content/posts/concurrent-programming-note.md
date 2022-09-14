@@ -699,3 +699,142 @@ for (i = 0; i < niters; i++) {
 ```
 
 ### 使用信号量调度共享资源
+
+除了实现互斥之外，信号量的另一个重要作用是调度对共享资源的访问。在这种情况下，线程使用信号量与其他线程通信。让我们来看看两个经典案例：生产者-消费者（Producer-Consumer）问题和读取者-写入者（Readers-Writers）问题。
+
+#### 生产者-消费者问题
+
+![20220914223735](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220914223735.png)
+
+如上图所示，生产者和消费者线程共享一个有界缓冲区。生产者线程重复生成新项目并将它们插入缓冲区，消费者线程则不断从缓冲区中删除项目，然后消费（使用）它们。
+
+由于插入和删除项目涉及到更新共享变量，我们必须保证线程对缓冲区的访问是互斥的。但仅仅保证互斥是不够的，我们还需要调度线程对缓冲区的访问：若缓冲区已满（没有空位），则生产者必须等待空位；若缓冲区为空（没有可用的项目），则消费者必须等待项目可用。
+
+我们开发了一个名为 $S_{buf}$ 的简单包，它可以操作`sbuf_t`类型的缓冲区：
+
+```c
+typedef struct {
+    int *buf;          /* Buffer array */         
+    int n;             /* Maximum number of slots */
+    int front;         /* buf[(front+1)%n] is first item */
+    int rear;          /* buf[rear%n] is last item */
+    sem_t mutex;       /* Protects accesses to buf */
+    sem_t slots;       /* Counts available slots */
+    sem_t items;       /* Counts available items */
+} sbuf_t;
+```
+
+所有项目均存储在一个动态分配且包含 `n` 个空位的整型数组`buf`中，`front`和`rear`用于记录数组中的第一个项目和最后一个项目。信号量`mutex`实现了对缓冲区访问的互斥，`slots`和`items`则分别计算缓冲区中的空位和可用项目的数量。
+
+$S_{buf}$ 包的实现如下：
+
+```c
+#include "csapp.h"
+#include "sbuf.h"
+
+/* Create an empty, bounded, shared FIFO buffer with n slots */
+void sbuf_init(sbuf_t *sp, int n)
+{
+    sp->buf = Calloc(n, sizeof(int)); 
+    sp->n = n;                       /* Buffer holds max of n items */
+    sp->front = sp->rear = 0;        /* Empty buffer iff front == rear */
+    Sem_init(&sp->mutex, 0, 1);      /* Binary semaphore for locking */
+    Sem_init(&sp->slots, 0, n);      /* Initially, buf has n empty slots */
+    Sem_init(&sp->items, 0, 0);      /* Initially, buf has zero data items */
+}
+
+/* Clean up buffer sp */
+void sbuf_deinit(sbuf_t *sp)
+{
+    Free(sp->buf);
+}
+
+/* Insert item onto the rear of shared buffer sp */
+void sbuf_insert(sbuf_t *sp, int item)
+{
+    P(&sp->slots);                          /* Wait for available slot */
+    P(&sp->mutex);                          /* Lock the buffer */
+    sp->buf[(++sp->rear)%(sp->n)] = item;   /* Insert the item */
+    V(&sp->mutex);                          /* Unlock the buffer */
+    V(&sp->items);                          /* Announce available item */
+}
+
+/* Remove and return the first item from buffer sp */
+int sbuf_remove(sbuf_t *sp)
+{
+    int item;
+    P(&sp->items);                          /* Wait for available item */
+    P(&sp->mutex);                          /* Lock the buffer */
+    item = sp->buf[(++sp->front)%(sp->n)];  /* Remove the item */
+    V(&sp->mutex);                          /* Unlock the buffer */
+    V(&sp->slots);                          /* Announce available slot */
+    return item;
+}
+```
+
+`sbuf_init`函数为缓冲区分配堆内存，将`front`和`rear`设为 0，并为三个信号量分配初始值。`sbuf_deinit`函数在程序使用完缓冲区后释放它。`sbuf_insert`函数等待一个可用的空位，然后锁定`mutex`，将项目添加到缓冲区尾部并解锁`mutex`，最后通知消费者线程新项目可用。`sbuf_remove`函数与之对称：当缓冲区中有项目可用时，它锁定`mutex`，然后移除缓冲区头部的项目并解锁`mutex`，最后通知生产者有新的空位。
+
+#### 读取者-写入者问题
+
+读取者-写入者问题是互斥问题的一般化。假设并发线程集合正在访问一个共享对象，如主存中的数据结构或磁盘上的数据库。写入者必须拥有对该对象的独占访问权，但读取者却可以与其他读取者共享。
+
+我们可以根据读取者和写入者的优先级将这一问题分为两种情况：
+
+- 读取者优先：读取者不会因写入者在等待而等待；
+- 写入者优先：一旦写入者准备好写入就尽快执行写入。
+
+示例程序展示了一个读取者优先的解决方案：
+
+```c
+/* Global variables */
+int readcnt;    /* Initially = 0 */
+sem_t mutex, w; /* Both initially = 1 */
+
+void reader(void)
+{
+    while (1)
+    {
+        P(&mutex);
+        readcnt++;
+        if (readcnt == 1) /* First in */
+            P(&w);
+        V(&mutex);
+
+        /* Critical section */
+        /* Reading happens  */
+        
+        P(&mutex);
+        readcnt--;
+        if (readcnt == 0) /* Last out */
+            V(&w);
+        V(&mutex);
+    }
+}
+
+void writer(void)
+{
+    while (1)
+    {
+        P(&w);
+
+        /* Critical section */
+        /* Writing happens  */
+
+        V(&w);
+    }
+}
+```
+
+信号量`w`实现了对共享对象访问的互斥，`mutex`则保护了对共享变量`readcnt`（表示当前处于临界区的读取者数量）的访问。写入者每次进入临界区时都会锁定`w`并在离开时对其解锁。但只有第一个进入临界区的读取者需要锁定`w`，只有最后一个离开临界区的读者需要解锁它。因此只要有一个读取者持有`w`（位于临界区），其他读取者就都可以畅通无阻地访问共享对象。
+
+任何此类问题的解决方案都会面临饥饿（Starvation），即线程被阻塞并无法取得进展。例如在上述程序中，当读取者线程批量到达时，写入者只能无限期等待。
+
+### 基于预线程的并发服务器
+
+前文介绍的 [基于线程的并发服务器](/posts/concurrent-programming-note/#基于线程的并发服务器) 需要为每个客户端创建一个新线程，因此其成本较高。基于预线程（Prethreading）的并发服务器可以通过生产者-消费者模型减少这一开销：
+
+![20220915001107](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220915001107.png)
+
+如上图所示，主线程不断地接受来自客户端连接请求并在有界缓冲区中插入连接描述符。每个工作线程重复地从缓冲区中移除一个描述符并为客户端提供服务，然后等待下一个描述符。
+
+## 使用线程实现并行
