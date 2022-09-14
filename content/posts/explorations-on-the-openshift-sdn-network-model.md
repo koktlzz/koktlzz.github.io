@@ -134,7 +134,7 @@ table80 比较寄存器 0 和寄存器 1 中保存的源/目的 VNID。若二者
 
 table90 根据目的 IP 的所属网段 10.131.8.0/23 判断其位于 Node2 上，于是将 Node2 IP 10.122.28.8 设置为`tun_dst`。并且从寄存器 0 中取出 VNID 的值，从 1 号端口`vxlan0`输出。
 
-`vxlan0`作为一个 VTEP 设备（参见 [Overlay Network](/posts/kubernetes-sdn/#overlay-network)），将根据 table90 发来的信息，对数据包进行一层封装：
+`vxlan0`作为一个 VTEP 设备（参见 [Overlay Network](/posts/how-kubernetes-pods-communicate-across-nodes/#overlay-network)），将根据 table90 发来的信息，对数据包进行一层封装：
 
 - 目的地址（dst IP） --> `tun_dst` --> 10.122.28.8
 - 源地址（src IP） --> Node1 IP --> 10.122.28.7
