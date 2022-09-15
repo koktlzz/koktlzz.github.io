@@ -837,4 +837,118 @@ void writer(void)
 
 如上图所示，主线程不断地接受来自客户端连接请求并在有界缓冲区中插入连接描述符。每个工作线程重复地从缓冲区中移除一个描述符并为客户端提供服务，然后等待下一个描述符。
 
+我们使用 $S_{buf}$ 包实现这一模型：
+
+```c
+#include "csapp.h"
+#include "sbuf.h"
+#define NTHREADS 4
+#define SBUFSIZE 16
+
+void echo_cnt(int connfd);
+void *thread(void *vargp);
+
+sbuf_t sbuf; /* shared buffer of connected descriptors */
+
+int main(int argc, char **argv)
+{
+    int i, listenfd, connfd;
+    socklen_t clientlen;
+    struct sockaddr_storage clientaddr;
+    pthread_t tid;
+
+    if (argc != 2)
+    {
+        fprintf(stderr, "usage: %s <port>\n", argv[0]);
+        exit(0);
+    }
+    listenfd = Open_listenfd(argv[1]);
+
+    sbuf_init(&sbuf, SBUFSIZE);
+    for (i = 0; i < NTHREADS; i++) /* Create worker threads */
+        Pthread_create(&tid, NULL, thread, NULL);
+
+    while (1)
+    {
+        clientlen = sizeof(struct sockaddr_storage);
+        connfd = Accept(listenfd, (SA *)&clientaddr, &clientlen);
+        sbuf_insert(&sbuf, connfd); /* Insert connfd in buffer */
+    }
+}
+
+void *thread(void *vargp)
+{
+    Pthread_detach(pthread_self());
+    while (1)
+    {
+        int connfd = sbuf_remove(&sbuf);/* Remove connfd from buffer */ 
+        echo_cnt(connfd);               /* Service client */
+        Close(connfd);
+    }
+}
+```
+
+在初始化缓冲区`sbuf`（第 25 行）之后，主线程创建了一组工作线程（第 26～27 行）。它进入无限循环，接受连接请求并将连接描述符插入到`sbuf`中。工作线程等待连接描述符可用后便将其从缓冲区中移除（第 42 行），然后调用`echo_cnt`函数为客户端提供服务。
+
+`echo_cnt`是上文提到的`echo`函数的变体，它将服务器接收到的字节数记录在全局变量`byte_cnt`中：
+
+```c
+#include "csapp.h"
+
+static int byte_cnt; /* byte counter */
+static sem_t mutex;  /* and the mutex that protects it */
+
+static void init_echo_cnt(void)
+{
+    Sem_init(&mutex, 0, 1);
+    byte_cnt = 0;
+}
+
+void echo_cnt(int connfd)
+{
+    int n;
+    char buf[MAXLINE];
+    rio_t rio;
+    static pthread_once_t once = PTHREAD_ONCE_INIT;
+
+    Pthread_once(&once, init_echo_cnt); 
+    Rio_readinitb(&rio, connfd);        
+    while ((n = Rio_readlineb(&rio, buf, MAXLINE)) != 0)
+    {
+        P(&mutex);
+        byte_cnt += n; 
+        printf("server received %d (%d total) bytes on fd %d\n",
+                n, byte_cnt, connfd);
+        V(&mutex);
+        Rio_writen(connfd, buf, n);
+    }
+}
+```
+
+该函数使用`Pthread_once`（第 19 行）初始化信号量`mutex`和`byte_cnt`，于是我们便不必在主线程进行同样的操作了。这种方法使包更加易于使用，不过同时也增加了许多无用的工作（只有第一次调用`Pthread_once`是有意义的）。
+
 ## 使用线程实现并行
+
+到目前为止，我们对并发的研究仅仅局限于单核处理器。实际上并发程序往往在拥有多核处理器的机器上运行得更快，这是因为操作系统内核可以在多个 CPU 核心上并行调度线程。
+
+![20220915230021](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220915230021.png)
+
+编写并行程序十分棘手，看似很小的代码更改却会对程序性能产生重大的影响。并行程序同步线程的开销非常高，因此我们需要尽量避免它，否则就可能出现线程数增加程序性能反而降低的问题。如果同步操作不可避免，则应当尽可能地增加有用计算以分摊其开销。
+
+由于在同一个核心上切换多个线程的上下文会产生额外的开销，并行程序的线程数通常与机器的 CPU 核心数相同。
+
+### 并行程序的性能指标
+
+加速比（Speedup）被定义为：
+
+$$S_p = \cfrac{T_1}{T_p}$$
+
+其中，$p$ 是处理器核心的数量，$T_k$ 是程序在 $k$ 个核心上运行的时间。这个公式也被称为强缩放（Strong Scaling）。当 $T_1$ 是并行程序的顺序执行版本的运行时间时，$S_p$ 被称为绝对加速比；当 $T_1$ 是并行程序在一个核心上的运行时间时，$S_p$ 被称为相对加速比。绝对加速比比相对加速比更能真实地反映程序的性能，然而它也更难测量。尤其是一些复杂的并行程序，为其创建一个顺序执行的版本非常困难。
+
+效率（Efficiency）被定义为：
+
+$$E_p = \cfrac{S_p}{p} = \cfrac{T_1}{pT_p}$$
+
+该指标能够衡量程序并行化的开销，效率高的程序用于线程同步和通信的时间较少。
+
+## 其他并发问题
