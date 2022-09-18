@@ -665,9 +665,9 @@ Returns: nothing
 
 ### 使用信号量实现互斥
 
-信号量提供了一种便捷的方法来确保线程对共享变量的访问互斥（Mutually Exclusive ）：将一个初始值为 1 的信号量与每个共享变量相关联，然后使用`P(s)`和`V(s)`操作包围临界区。
+信号量提供了一种便捷的方法来确保线程对共享变量的访问互斥（Mutually Exclusive ）：将一个初始值为 1 的信号量与每个共享变量相关联，然后使用`P`和`V`操作包围临界区。
 
-在这种情况下，信号量的值始终为 0 或 1，因此我们将它称为二进制信号量。用于实现互斥的二进制信号量通常被称为互斥锁（Mutex），对其进行`P(s)`和`V(s)`操作则分别被称为加锁和解锁。一个已被锁定但互斥锁还未被解锁的线程被称为持有互斥锁。
+在这种情况下，信号量的值始终为 0 或 1，因此我们将它称为二进制信号量。用于实现互斥的二进制信号量通常被称为互斥锁（Mutex），对其进行`P`和`V`操作则分别被称为加锁和解锁。一个已被锁定但互斥锁还未被解锁的线程被称为持有互斥锁。
 
 如下进度图展示了我们如何使用二进制信号量正确同步程序`badcnt.c`，其中的每个状态都标注了该状态下信号量的值：
 
@@ -688,7 +688,7 @@ sem_t mutex;           /* Semaphore that protects counter */
 Sem_init(&mutex, 0, 1); /* mutex = 1 */
 ```
 
-最终在对等线程中调用`P(s)`和`V(s)`包围对共享变量`cnt`的更新操作：
+最终在对等线程中调用`P`和`V`包围对共享变量`cnt`的更新操作：
 
 ```c
 for (i = 0; i < niters; i++) {
@@ -952,3 +952,140 @@ $$E_p = \cfrac{S_p}{p} = \cfrac{T_1}{pT_p}$$
 该指标能够衡量程序并行化的开销，效率高的程序用于线程同步和通信的时间较少。
 
 ## 其他并发问题
+
+### 线程安全
+
+若一个函数被多个并发线程重复调用时总能生成正确的结果，我们就称它为线程安全的（Thread-safe）。反之，则为线程不安全函数。线程不安全函数可以分为以下四类：
+
+- 不保护共享变量的函数：上文提到的 [`badcnt`](/posts/concurrent-programming-note/#使用信号量同步线程) 函数便属于此类。我们只需使用`P`和`V`等同步操作保护共享变量便可使函数线程安全，但同时也会增加程序的运行时间；
+- 在多次调用中保持状态的函数：如伪随机数生成函数`rand`，其当前调用的结果取决于上次迭代的中间结果。因此如果多个线程调用该函数，我们就无法确定返回的随机数序列顺序。修改此类函数唯一的方法便是重写它们，使其不依赖任何`static`数据并让调用者通过参数来传递状态信息；
+
+```c
+unsigned int next_seed = 1;
+
+/* rand - return pseudo-random integer on 0..32767 */
+int rand(void)
+{
+    next_seed = next_seed*1103515245 + 12345;
+    return (unsigned int)(next_seed/65536) % 32768;
+}
+
+/* srand - set seed for rand() */
+void srand(unsigned int new_seed)
+{
+    next_seed = new_seed;
+} 
+```
+
+- 返回指向`static`变量指针的函数：一些函数，如`ctime`和`gethostbyname`，在`static`变量中计算结果并返回指向该变量的指针。如果并发线程调用此类函数，一个线程正在使用的结果就有可能被另一个线程覆盖。我们可以直接重写它们，但也可以在源码不可用或难以修改时使用锁定和复制（Lock-and-Copy）技术来解决线程不安全问题；
+
+```c
+char *ctime_ts(const time_t *timep, char *privatep)
+{
+    char *sharedp; 
+
+    P(&mutex);
+    sharedp = ctime(timep);
+    strcpy(privatep, sharedp); /* Copy string from shared to private */
+    V(&mutex);
+    return privatep;
+}
+```
+
+- 调用线程不安全函数的函数：如果函数`f`调用了第二类线程不安全函数`g`，那么`f`也是线程不安全的并且只能重写`g`；如果`g`是第一类或第三类函数，我们就可以使用互斥锁保护调用点和所有生成的共享数据以使`f`线程安全。在上面的例子中，虽然函数`ctime_ts`调用了线程不安全函数`ctime`，但它却是线程安全的。
+
+### 可重入
+
+可重入（Reentrant）函数是一种特殊的线程安全函数，它在被多个线程调用时不会引用任何共享数据。
+
+![20220918212928](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220918212928.png)
+
+可重入函数不需要进行同步操作，因此通常比不可重入函数更高效。将第二类线程不安全函数重写为可重入函数是使其线程安全的唯一方法。我们可以将上节提到的函数`rand`修改为：
+
+```c
+#include <stdio.h>
+#include <stdlib.h>
+
+/* rand_r - a reentrant pseudo-random integer on 0..32767 */
+int rand_r(unsigned int *nextp)
+{
+    *nextp = *nextp * 1103515245 + 12345;
+    return (unsigned int)(*nextp / 65536) % 32768;
+}
+```
+
+其关键思想在于，`rand_r`使用被调用者传入的指针`nextp`代替了静态变量`next_seed`。
+
+如果函数的所有参数都按值传递且所有的数据引用都指向局部自动变量，那么我们就称该函数是显式可重入的。无论该函数被调用的方式如何，其可重入性都不变；如果函数的某些参数通过引用（指针）传递且调用者线程小心地将非共享数据传递给指针，那么我们就称该函数是隐式可重入的，函数`rand_r`便是如此。
+
+### 竞争
+
+当多个线程的执行顺序会影响程序的正确性时就会发生竞争，如：
+
+```c
+#include "csapp.h"
+#define N 4
+
+void *thread(void *vargp);
+
+int main() 
+{
+    pthread_t tid[N];
+    int i;
+
+    for (i = 0; i < N; i++) 
+        Pthread_create(&tid[i], NULL, thread, &i); 
+    for (i = 0; i < N; i++) 
+        Pthread_join(tid[i], NULL);
+    exit(0);
+}
+
+/* thread routine */
+void *thread(void *vargp) 
+{
+    int myid = *((int *)vargp);
+    printf("Hello from thread %d\n", myid);
+    return NULL;
+}
+```
+
+示例程序中，主线程创建了四个对等线程并将指向了唯一整数 ID 的指针`&i`传递给它们。对等线程将参数传递的 ID 复制到局部变量（第 21 行），然后打印包含 ID 的消息。该程序看似简单，然而却输出了错误的结果：
+
+```c
+linux> ./race
+Hello from thread 1 
+Hello from thread 3 
+Hello from thread 2 
+Hello from thread 3
+```
+
+出现这一问题的原因在于，主线程循环中变量`i`的自增（第 12 行）与对等线程中对参数的解引用和赋值（第 21 行）之间产生了竞争。如果对等线程在主线程变量`i`自增之后才执行第 22 行的代码，那么变量`myid`就变成了其他线程的 ID。
+
+为了消除竞争，我们需要为每个 ID 动态分配一个堆内存 Block，并向线程传递指向该 Block 的指针。实际上，前文介绍的 [基于线程的并发服务器](/posts/concurrent-programming-note/#基于线程的并发服务器) 便使用了这一方法。
+
+另一种方法是主线程直接向对等线程传递`i`而非其指针：
+
+```c
+for (i = 0; i < N; i++) 
+    Pthread_create(&tid[i], NULL, thread, (void *) i); 
+```
+
+对等线程则将参数转换回`int`类型并赋给变量`myid`：
+
+```c
+int myid = (int)vargp;
+```
+
+相比于第一种方法，这种方法的好处是减少了调用`malloc`和`free`带来的开销。但在类型转换中，它假设指针至少与整型一样大，可能不适用于某些操作系统。
+
+### 死锁
+
+信号量的引入可能会导致线程被永远阻塞，我们将这种运行时错误称为死锁（Deadlock）。进度图是理解死锁的重要工具：
+
+![20220918230933](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220918230933.png)
+
+上图中的两个线程使用信号量`s`和`t`实现互斥，但程序员错误地对`P`和`V`操作排序。一旦某个轨迹进入了死锁状态`d`，两信号量重叠的禁止区域便阻止了它所有的可行路线。换言之，由于每个线程都在等待另一个线程执行永远无法发生的`V`操作，程序发生死锁。
+
+死锁是一个非常棘手的问题，因为它难以预测。程序可能正确地运行了上千次，但下一次便会出现死锁。更糟糕的是，程序每次执行的轨迹都有所不同，因此死锁还难以复现。
+
+对于二进制信号量，我们可以使用互斥锁排序规则来防止死锁：若每个线程以相同的顺序加锁（如上图中两线程均先执行`P(s)`，再执行`P(t)`），则程序无死锁。解锁的顺序并不重要，因为`V`操作不会阻塞线程。
