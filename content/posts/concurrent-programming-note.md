@@ -1002,9 +1002,6 @@ char *ctime_ts(const time_t *timep, char *privatep)
 可重入函数不需要进行同步操作，因此通常比不可重入函数更高效。将第二类线程不安全函数重写为可重入函数是使其线程安全的唯一方法。我们可以将上节提到的函数`rand`修改为：
 
 ```c
-#include <stdio.h>
-#include <stdlib.h>
-
 /* rand_r - a reentrant pseudo-random integer on 0..32767 */
 int rand_r(unsigned int *nextp)
 {
