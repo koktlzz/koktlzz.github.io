@@ -338,7 +338,7 @@ comp:
   sarq %rax
 .L2
   testq %rax, %rax
-  jq .L3
+  jg .L3
   rep; ret
 ```
 
