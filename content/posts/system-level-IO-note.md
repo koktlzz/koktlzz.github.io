@@ -356,7 +356,7 @@ int closedir(DIR *dirp);
 
 - 描述符表（Descriptor Table）：每个进程都有一个独立的描述符表，每个条目均指向打开文件表中的条目，其索引是进程打开的文件描述符；
 - 打开文件表（Open File Table）：所有进程共享一个打开文件表，它表示了打开文件的集合。每个文件表条目由当前文件位置（下图中的“File pos”）、当前指向它的描述符表条目数量（下图中的“refcnt”）和一个指向 v-node 表条目的指针。只有当`refcnt`为 0 时，内核才会删除对应的文件表条目；
-- v-node 表（V-node Table）：与打开文件表一样，v-node 表由所有进程共享。每个条目都包含了`stat`结构体中的大部分信息，如`st_mode`和`st_size`等。
+- v-node 表（V-node Table）：与打开文件表一样，v-node 表由所有进程共享。其中的每个条目都包含了`stat`结构体中的大部分信息，如`st_mode`和`st_size`等。v-node 与 i-node 的区别详见：[Inode vs Vnode Difference](https://stackoverflow.com/a/27476572)。
 
 ![20220808234547](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220808234547.png)
 
