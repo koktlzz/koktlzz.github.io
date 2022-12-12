@@ -681,7 +681,7 @@ uglyURLs = false
     # Note: https://valine.js.org/
 
     ## Utterances
-    enableUtterances = true
+    enableUtterances = false
     utterancesRepo = "koktlzz/koktlzz.github.io"
     utterancesIssueTerm = "pathname"
     utterancesTheme = "github-light"
