@@ -17,8 +17,8 @@ summary: "在《Kubernetes Pod 是如何跨节点通信的？》中，我们简�
 OVS 在每个 Openshift 节点上都创建了如下网络接口：
 
 - `br0`：OpenShift 创建和管理的 OVS 网桥，它会使用 OpenFlow 流表来实现数据包的转发和隔离；
-- `vxlan0`：VxLAN 隧道端点，即 VTEP（Virtual Tunnel End Point），用于集群内部 Pod 之间的通信；
-- `tun0`：节点上所有 Pod 的默认网关，用于 Pod 与集群外部和 Pod 与 Service 之间的通信；
+- `vxlan0`：VxLAN 隧道端点，即 VTEP（Virtual Tunnel End Point）。用于集群内部的 Pod 跨节点通信；
+- `tun0`：节点上所有 Pod 的默认网关，用于 Pod 与集群外部以及 Pod 与 Service 之间的通信；
 - `veth`：Pod 通过`veth-pair`连接到`br0`网桥的端点。
 
 使用以下命令可以查看`br0`上的所有端口及其编号：
@@ -57,7 +57,7 @@ OFPT_GET_CONFIG_REPLY (OF1.3) (xid=0x5): frags=nx-match miss_send_len=0
 - Pod 访问 Service：Pod to Service
 - Pod 与集群外部互访：Pod to External
 
-由于 3.11 以上版本的 Openshift 不再以守护进程而是以 Pod 的形式部署 OVS 组件，不方便对 [OpenFlow](https://en.wikipedia.org/wiki/OpenFlow) 流表进行查看，因此本文选用的集群版本为 3.6：
+由于 3.11 以上版本的 Openshift 不再以守护进程而是以 Pod 的形式部署 OVS 组件，不方便对 [OpenFlow](https://en.wikipedia.org/wiki/OpenFlow) 流表进行查看，本文选用的集群版本为 3.6：
 
 ```bash
 [root@node1 ~]# oc version 
@@ -82,7 +82,7 @@ kubernetes v1.6.1+5115d708d7
 - `table=0, n_packets=1081527047094, n_bytes=296066911370148, priority=200,ip,in_port=2 actions=goto_table:30`
 - `table=0, n_packets=833353346930, n_bytes=329854403266173, priority=100,ip actions=goto_table:20`
   
-table0 中关于 IP 数据包的规则主要有三条，其中前两条分别对应流入端口`in_port`为 1 号端口`vxlan0`和 2 号端口`tun0`的数据包。这两条规则的优先级`priority`都是 200，因此只有在两者均不符合情况下，才会匹配第三条规则。由于本地 Pod 发出的数据包是由`veth`端口进入的，因此将转到 table20；
+table0 中关于 IP 数据包的规则主要有三条，其中前两条分别对应流入端口`in_port`为 1 号端口`vxlan0`和 2 号端口`tun0`的数据包。这两条规则的优先级`priority`都是 200，因此只有在两者均不符合情况下，才会匹配第三条规则。本地 Pod 发出的数据包是由`veth`端口进入的，因此将转到 table20；
 
 - `table=20, n_packets=607178746, n_bytes=218036511085, priority=100,ip,in_port=8422,nw_src=10.130.9.154 actions=load:0->NXM_NX_REG0[],goto_table:21`
 - `table=21, n_packets=833757781068, n_bytes=329871389393381, priority=0 actions=goto_table:30`
@@ -94,7 +94,7 @@ table20 会匹配源地址`nw_src`为 10.130.9.154 且流入端口`in_port`为 8
 - `table=30, n_packets=21061319859, n_bytes=29568807363654, priority=100,ip,nw_dst=172.30.0.0/16 actions=goto_table:60`
 - `table=30, n_packets=759636044089, n_bytes=280576476818108, priority=0,ip actions=goto_table:100`
   
-table30 中匹配数据包目的地址`nw_dst`的规则有四条，前三条分别对应本节点内 Pod 的 CIDR 网段 10.130.8.0/23、集群内 Pod 的 CIDR 网段 10.128.0.0/14 和 Service 的 ClusterIP 网段 172.30.0.0/16。第四条优先级最低，用于 Pod 对集群外部的访问。由于数据包的目的地址 10.130.9.158 符合第一条规则，且第一条规则的优先级最高，因此将转到 table70；
+table30 中匹配数据包目的地址`nw_dst`的规则有四条，前三条分别对应本节点内 Pod 的 CIDR 网段 10.130.8.0/23、集群内 Pod 的 CIDR 网段 10.128.0.0/14 和 Service 的 ClusterIP 网段 172.30.0.0/16。第四条优先级最低，用于 Pod 对集群外部的访问。数据包的目的地址 10.130.9.158 符合第一条规则，且第一条规则的优先级最高，因此将转到 table70；
 
 - `table=70, n_packets=597219981, n_bytes=243824445346, priority=100,ip,nw_dst=10.130.9.158 actions=load:0->NXM_NX_REG1[],load:0x20ea->NXM_NX_REG2[],goto_table:80`
   
@@ -140,7 +140,7 @@ table90 根据目的 IP 的所属网段 10.131.8.0/23 判断其位于 Node2 上�
 - 源地址（src IP） --> Node1 IP --> 10.122.28.7
 - 源 VNID --> `NXM_NX_TUN_ID[0..31]` --> 0
 
-由于封装后的数据包源/目的地址均为节点 IP，因此从 Node1 的网卡流出后，可以通过物理网络设备转发到 Node2 上。
+封装后的数据包源/目的地址均为节点 IP，因此从 Node1 的网卡流出后，可以通过物理网络设备转发到 Node2 上。
 
 ### Packet in Remote Pod
 
@@ -193,13 +193,11 @@ table60 匹配目的地址`nw_dst`为 172.30.107.57 且目的端口为 8080 的�
 
 - `table=80, n_packets=1113435014018, n_bytes=294106102133061, priority=200 actions=output:NXM_NX_REG2[]`
   
-table80 首先检查目的 Service 的 VNID 是否与寄存器 1 中的 VNID 一致，然后根据寄存器 2 中的数字将数据包从 2 号端口`tun0`送出，最后进入节点的 iptables 规则中。
-
-iptables 对数据包的处理流程如下图所示：
+table80 根据寄存器 2 中的数字将数据包从 2 号端口`tun0`传出，随后进入节点的 iptables 处理流中：
 
 ![20210516142844](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20210516142844.png)
 
-由于 Service 的实现依赖于 NAT（上图中的紫色方框），因此我们可以在 NAT 表中查看到与之相关的规则：
+由于 Service 的实现依赖于 NAT（上图中的紫色方框），我们可以在 NAT 表中看到与之相关的规则：
 
 ```bash
 [root@node1 ~]# iptables -t nat -nvL
@@ -212,7 +210,7 @@ Chain KUBE-SERVICES (2 references)
     4   240 KUBE-SVC-QYWOVDCBPMWAGC37  tcp  --  *      *       0.0.0.0/0            172.30.107.57        /* demo/myService:8080-8080 cluster IP */ tcp dpt:8080
 ```
 
-本机产生的数据包（Locally-generated Packet）首先进入`OUTPUT`链，然后匹配到自定义链`KUBE-SERVICES`。由于其目的地址为 Service 的 ClusterIP 172.30.107.57，因此将再次跳转到对应的`KUBE-SVC-QYWOVDCBPMWAGC37`链：
+本机产生的数据包（Locally-generated Packet）首先进入`OUTPUT`链，然后匹配到自定义链`KUBE-SERVICES`。其目的地址为 Service 的 ClusterIP 172.30.107.57，因此将再次跳转到对应的`KUBE-SVC-QYWOVDCBPMWAGC37`链：
 
 ```bash
 Chain KUBE-SVC-QYWOVDCBPMWAGC37 (1 references)
@@ -233,7 +231,7 @@ Chain KUBE-SEP-AF5DIL6JV3XLLV6G (1 references)
 
 `KUBE-SVC-QYWOVDCBPMWAGC37`链下有两条完全相同的匹配规则，对应了该 Service 后端的两个 Pod。`KUBE-SEP-ADAJHSV7RYS5DUBX`链和 `KUBE-SEP-AF5DIL6JV3XLLV6G`链能够执行 DNAT 操作，分别将数据包的目的地址转化为 Pod IP 10.131.8.206 和 10.128.10.57。在一次通信中只会有一条链生效，这体现了 Service 的负载均衡能力。
 
-完成`OUTPUT`DNAT 的数据包将进入节点的路由判断（Routing Decision）。由于当前目的地址已经属于集群内 Pod 的 CIDR 网段 10.128.0.0/14，因此将再次从`tun0`端口再次进入 OVS 网桥`br0`中。
+完成`OUTPUT`DNAT 的数据包将进入节点的路由判断（Routing Decision）。由于当前目的地址已经属于集群内 Pod 的 CIDR 网段 10.128.0.0/14，数据包将从`tun0`端口再次进入 OVS 网桥`br0`中。
 
 ```bash
 [rootnode1 ~]# route -n
@@ -247,7 +245,7 @@ Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
 172.30.0.0      0.0.0.0         255.255.0.0     U     0      0        0 tun0
 ```
 
-不过数据包在进入`br0`之前，还需要经过 iptables 中的`POSTROUTING`链，完成一次 MASQUERADE 操作：数据包的源地址转换为其流出端口的 IP，即`tun0`的 IP 10.130.8.1。
+不过数据包在进入`br0`之前，还需要经过 iptables 中的`POSTROUTING`链，完成一次`MASQUERADE`：数据包的源地址转换为其传出端口的 IP，即`tun0`的 IP 10.130.8.1。
 
 ```bash
 [root@node1 ~]# iptables -t nat -nvL 
@@ -278,7 +276,7 @@ Pod2 返回的数据包在到达 Node1 后将被`vxlan0`解封装，然后根据
 - `table=0, n_packets=1084362760247, n_bytes=297224518823222, priority=200,ip,in_port=2 actions=goto_table:30`
 - `table=30, n_packets=20784385211, n_bytes=4742514750371, priority=300,ip,nw_dst=10.130.8.1 actions=output:2`
 
-数据包从 2 号端口`tun0`流出后进入节点的 iptables 规则，随后将触发 iptables 的 [Connection Tracking](https://superuser.com/questions/1269859/linux-netfilter-how-does-connection-tracking-track-connections-changed-by-nat) 操作：根据 /proc/net/nf_conntrack 文件中的记录进行“DeNAT”。返回数据包的源/目的地址从 Pod2 IP 10.131.8.206 和 tun0 IP 10.130.8.1，变回 Service 的 ClusterIP 172.30.107.57 和 Pod1 IP 10.130.9.154。
+数据包从 2 号端口`tun0`送出后进入节点的 iptables 处理流，随后将触发 [Connection Tracking](https://superuser.com/questions/1269859/linux-netfilter-how-does-connection-tracking-track-connections-changed-by-nat)：根据`/proc/net/nf_conntrack`文件中的记录进行“DeNAT”。返回数据包的源/目的地址从 Pod2 IP 10.131.8.206 和 tun0 IP 10.130.8.1，变回 Service 的 ClusterIP 172.30.107.57 和 Pod1 IP 10.130.9.154。
 
 ```bash
 [root@node1 ~]# cat /proc/net/nf_conntrack | grep -E "src=10.130.9.154.*dst=172.30.107.57.*dport=8080.*src=10.131.8.206"
@@ -295,7 +293,7 @@ ipv4     2 tcp      6 431986 ESTABLISHED src=10.130.9.154 dst=172.30.107.57 spor
 - `table=30, n_packets=759636044089, n_bytes=280576476818108, priority=0,ip actions=goto_table:100`
 - `table=100, n_packets=761732023982, n_bytes=282091648536325, priority=0 actions=output:2`
 
-数据包从`tun0`端口流出后进入节点的路由表及 iptables 规则：
+数据包从`tun0`端口传出后进入节点的路由表及 iptables 处理流：
 
 ```bash
 Chain POSTROUTING (policy ACCEPT 2910 packets, 299K bytes)
@@ -315,7 +313,7 @@ Chain OPENSHIFT-MASQUERADE (1 references)
 ## Future Work
 
 - 本文并未涉及 External to Pod 的场景，它是如何实现的？我们都知道 Openshift 是通过 Router（HAProxy）来暴露集群内部服务的，那么数据包在传输过程中的 NAT 操作是怎样进行的？
-- 除了本文提到的几种网络接口外，Openshift 节点上还存在着`ovs-system`和`vxlan_sys_4789`。它们的作用是什么？
+- ~~除了本文提到的几种网络接口外，Openshift 节点上还存在着`ovs-system`和`vxlan_sys_4789`。它们的作用是什么？~~ **更新**：`vxlan_sys_4789`就是上文提到的端口`vxlan0`，而`ovs-system`是一个历史遗留问题，没有任何作用；
 - Openshift 4.X 版本的网络模型与本文实验用的 3.6 版本相比有那些变化？
 
 ## 参考文献
