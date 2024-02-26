@@ -336,13 +336,11 @@ $$Ingested \space samples/second$$
 
 ## 总结
 
-对于 Prometheus 来说，处理高基数（High Cardinality）的 Series 和独立样本的吞吐量是一项颇为艰巨的任务。不过，新的存储系统似乎已经准备好应对未来的挑战。
+对于 Prometheus 来说，处理大规模 Series（即 High Cardinality）和独立样本的吞吐量是一项颇为艰巨的任务。不过，新的存储系统似乎已经准备好应对未来的挑战。
 
 使用 V3 存储系统的 Prometheus 2.0 的第一个 [Alpha 版本](https://prometheus.io/blog/2017/04/10/promehteus-20-sneak-peak/) 已经可供测试，预计会出现一些崩溃、死锁和其他 Bug。
 
 存储系统自身的代码可以在一个独立的 [项目](https://github.com/prometheus-junkyard/tsdb) 中找到。它其实与 Prometheus 无关，因此可以广泛用于其他需要高效本地存储的时序数据库应用中。
-
-> 译者注：上述项目已于 2019 年合并到 Prometheus 主仓库中，原因详见：[https://github.com/prometheus/prometheus/pull/5805](https://github.com/prometheus/prometheus/pull/5805)
 
 > 译者注：本文从宏观的角度介绍了 Prometheus 需要解决的问题，以及 1.X 版本（V2 存储系统）和 2.X 版本（V3 存储系统）的设计理念。想要了解其实现细节，除了阅读源码外还可以参考以下内容：
 >
