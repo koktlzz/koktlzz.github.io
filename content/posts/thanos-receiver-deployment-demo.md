@@ -147,15 +147,15 @@ spec:
 
 ### Receiver 的可扩展性和高可用性
 
-假设 Kazusa 集群中的工作负载比较多，其指标数据量也比较大。为了防止接收 Kazusa 集群指标数据的 Receiver 发生 OOM，我们增加其 Statefulset 的 [副本数](https://github.com/koktlzz/thanos-k8s-demo/blob/82b720a87aa6a2bf7500c8087822227c646a046d/base/receiver/receiver-kazusa.yaml#L11)。
+假设 Kazusa 集群中的工作负载比较多，其指标数据量也比较大。为了防止接收 Kazusa 集群指标数据的 Receiver 发生 OOM，我们增加其 Statefulset 的 [副本数](https://github.com/koktlzz/thanos-k8s-demo/blob/main/base/receiver/receiver-kazusa.yaml#L11)。
 
-上一节提到，指标数据是软租户 Receiver 根据 Hashring 配置分发到硬租户 Receiver 的。这意味着即使我们将 Kazusa 的 Receiver 扩展到三个，数据也不会在某台 Receiver 宕机后分发到其他可用的 Receiver 中。因此我们还要为数据设置 [副本](https://github.com/koktlzz/thanos-k8s-demo/blob/82b720a87aa6a2bf7500c8087822227c646a046d/base/receiver/receiver-kazusa.yaml#L35)，从而实现高可用。Receiver 的副本包含 [receiver_replica](https://github.com/koktlzz/thanos-k8s-demo/blob/82b720a87aa6a2bf7500c8087822227c646a046d/base/receiver/receiver-kazusa.yaml#L32) 标签，Query 可以根据它来对数据 [去重](https://github.com/koktlzz/thanos-k8s-demo/blob/82b720a87aa6a2bf7500c8087822227c646a046d/base/querier.yaml#L24)。
+上一节提到，指标数据是软租户 Receiver 根据 Hashring 配置分发到硬租户 Receiver 的。这意味着即使我们将 Kazusa 的 Receiver 扩展到三个，数据也不会在某台 Receiver 宕机后分发到其他可用的 Receiver 中。因此我们还要为数据设置 [副本](https://github.com/koktlzz/thanos-k8s-demo/blob/main/base/receiver/receiver-kazusa.yaml#L35)，从而实现高可用。Receiver 的副本包含 [receiver_replica](https://github.com/koktlzz/thanos-k8s-demo/blob/main/base/receiver/receiver-kazusa.yaml#L32) 标签，Query 可以根据它来对数据 [去重](https://github.com/koktlzz/thanos-k8s-demo/blob/main/base/querier.yaml#L24)。
 
 > 关于 Receiver 的可扩展性和高可用性，详见 [Turn It Up to a Million: Ingesting Millions of Metrics with Thanos Receive.](https://www.youtube.com/watch?v=5MJqdJq41Ms)
 
 ### Headless Service
 
-我们为每个租户的 Receiver 都创建了各自的 [Headless Service](https://github.com/koktlzz/thanos-k8s-demo/blob/82b720a87aa6a2bf7500c8087822227c646a046d/base/receiver/receiver-default.yaml#L97)，这样 Query 就可以通过 DNS 的 SRV 记录动态发现所有的 Receiver 实例：
+我们为每个租户的 Receiver 都创建了各自的 [Headless Service](https://github.com/koktlzz/thanos-k8s-demo/blob/main/base/receiver/receiver-default.yaml#L97)，这样 Query 就可以通过 DNS 的 SRV 记录动态发现所有的 Receiver 实例：
 
 ```yaml
 - --store=dnssrv+_grpc._tcp.thanos-receiver-default.thanos.svc.cluster.local
@@ -163,11 +163,11 @@ spec:
 - --store=dnssrv+_grpc._tcp.thanos-receiver-setsuna.thanos.svc.cluster.local
 ```
 
-如果将其改为 ClusterIP 类型，Store API 的 grpc 请求将通过轮询发往其中一台 Receiver 实例。这样在 Query UI 中就只能看到一台 Kazusa Receiver：
+如果将其改为 ClusterIP 类型，Store API 的 grpc 请求将通过轮询发往其中一台 Receiver 实例。因此，同一时间内只有一台 Kazusa Receiver 可以被 Query 发现：
 
 ![20220214141150](https://cdn.jsdelivr.net/gh/koktlzz/NoteImg@main/20220214141150.png)
 
-值得注意的是，用于处理指标数据的写入请求的 [Service](https://github.com/koktlzz/thanos-k8s-demo/blob/82b720a87aa6a2bf7500c8087822227c646a046d/base/receiver/receiver-default.yaml#L144) 是 ClusterIP 类型的。
+值得注意的是，用于处理指标数据的写入请求的 [Service](https://github.com/koktlzz/thanos-k8s-demo/blob/main/base/receiver/receiver-default.yaml#L144) 是 ClusterIP 类型的。
 
 ## Future Work
 
