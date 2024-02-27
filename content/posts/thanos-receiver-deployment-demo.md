@@ -174,7 +174,7 @@ spec:
 本文介绍的 Demo 仅供读者参考，若想要将其投入生产使用，还需要考虑以下方面：
 
 - 为软租户 Receiver 向集群外部暴露的 Ingress 配置 TLS 证书校验；
-- 上文提到，开启远程写入将增加 Prometheus 的内存使用，我们应当根据 [文档](https://prometheus.io/docs/practices/remote_write/) 中的建议对其参数进行调优；
+- 上文提到，开启远程写入将增加 Prometheus 的内存使用，我们应当根据 [Remote Write Tuning](https://prometheus.io/docs/practices/remote_write/) 和 [How to troubleshoot remote write issues in Prometheus](https://grafana.com/blog/2021/04/12/how-to-troubleshoot-remote-write-issues-in-prometheus/) 中的建议对其参数进行调优；
 - 持久化 Compactor 和 Storegateway 的数据目录可以减少其重启时间，存储空间的大小可以参考 Slack 中的 [讨论](https://cloud-native.slack.com/archives/CK5RSSC10/p1643129956242100)；
 - 部署前根据指标数据量评估 Receiver 的 Request、Limit 以及副本数，防止其因数据量过大而导致 OOM；
 - 此 Demo 使用 Ruler 进行全局告警，可能因查询超时而发生 [报警失效](https://thanos.io/tip/components/rule.md/#risk)。
