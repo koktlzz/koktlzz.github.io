@@ -262,4 +262,5 @@ Go 语言源代码的 [`src/cmd/compile/internal`](https://github.com/golang/go
 
 ## 推荐阅读
 
+- [Lexical Scanning in Go - Rob Pike](https://www.youtube.com/watch?v=HxaD_trXwRE)
 - [Go: Overview of the Compiler](https://medium.com/a-journey-with-go/go-overview-of-the-compiler-4e5a153ca889)
