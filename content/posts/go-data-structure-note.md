@@ -120,7 +120,7 @@ type SliceHeader struct {
 
 ![[Pasted image 20221201224650.png]]
 
-> 由于大量开发者使用`reflect.StringHeader`和`reflect.SliceHeader`实现零拷贝的字符串/字节数组转换而产生诸多内存泄露问题，两者在 Go 1.20版本中被弃用，详见：[unsafe: add StringData, String, SliceData](https://github.com/golang/go/issues/53003)。切片和字符串的运行时表示目前为：[`unsafeheader.Slice`](https://github.com/golang/go/blob/071b8d51c1a70fa6b12f0bed2e93370e193333fd/src/internal/unsafeheader/unsafeheader.go#L22) 和 [`unsafeheader.String`](https://github.com/golang/go/blob/071b8d51c1a70fa6b12f0bed2e93370e193333fd/src/internal/unsafeheader/unsafeheader.go#L34)，区别在于`Data`字段的类型由`uintptr`改为`unsafe.Pointer`。
+> 由于大量开发者使用`reflect.StringHeader`和`reflect.SliceHeader`实现零拷贝的字符串/字节数组转换而产生诸多内存泄露问题，两者在 Go 1.20 版本中被弃用，详见：[unsafe: add StringData, String, SliceData](https://github.com/golang/go/issues/53003)。切片和字符串的运行时表示目前为：[`unsafeheader.Slice`](https://github.com/golang/go/blob/071b8d51c1a70fa6b12f0bed2e93370e193333fd/src/internal/unsafeheader/unsafeheader.go#L22) 和 [`unsafeheader.String`](https://github.com/golang/go/blob/071b8d51c1a70fa6b12f0bed2e93370e193333fd/src/internal/unsafeheader/unsafeheader.go#L34)，区别在于`Data`字段的类型由`uintptr`改为`unsafe.Pointer`。
 
 ### 初始化
 
@@ -170,7 +170,7 @@ var arr [4]int
 n := arr[:3]
 ```
 
-当切片发生逃逸或者非常大时，运行时需要 [`runtime.makeslice`](https://github.com/golang/go/blob/3b2a578166bdedd94110698c971ba8990771eb89/src/runtime/slice.go#L83) 在堆上初始化切片:
+当切片发生逃逸或者非常大时，运行时需要 [`runtime.makeslice`](https://github.com/golang/go/blob/3b2a578166bdedd94110698c971ba8990771eb89/src/runtime/slice.go#L83) 在堆上初始化切片：
 
 ```go
 func makeslice(et *_type, len, cap int) unsafe.Pointer {
@@ -289,7 +289,7 @@ index := hash("Key3") % array.len
 
 ![[Pasted image 20221204223840.png]]
 
-开放寻址法中对性能影响最大的是装载因子，它是数组中元素的数量与数组大小的比值。随着装载因子的增加，线性探测的平均用时就会逐渐增加，这会影响哈希表的读写性能。当装载率超过 70% 之后，哈希表的性能就会急剧下降，而一旦装载率达到 100%，整个哈希表就会完全失效，这时查找和插入任意元素的时间复杂度都是 𝑂(𝑛)的，即需要遍历数组中的全部元素。
+开放寻址法中对性能影响最大的是装载因子，它是数组中元素的数量与数组大小的比值。随着装载因子的增加，线性探测的平均用时就会逐渐增加，这会影响哈希表的读写性能。当装载率超过 70% 之后，哈希表的性能就会急剧下降，而一旦装载率达到 100%，整个哈希表就会完全失效，这时查找和插入任意元素的时间复杂度都是 𝑂(𝑛) 的，即需要遍历数组中的全部元素。
 
 #### 拉链法
 
@@ -761,7 +761,7 @@ func growWork(t *maptype, h *hmap, bucket uintptr) {
 
 #### 删除
 
-`delete`关键字可以删除哈希表中某一个键对应的元素，它会在编译时被转换为 [`runtime.mapdelete`](https://github.com/golang/go/blob/36f30ba289e31df033d100b2adb4eaf557f05a34/src/runtime/map.go#L685) 函数簇中的一个。用于处理删除逻辑的函数与 [`runtime.mapassign`](https://github.com/golang/go/blob/ac0ba6707c1655ea4316b41d06571a0303cc60eb/src/runtime/map.go#L571)几乎完全相同，不太需要刻意关注。
+`delete`关键字可以删除哈希表中某一个键对应的元素，它会在编译时被转换为 [`runtime.mapdelete`](https://github.com/golang/go/blob/36f30ba289e31df033d100b2adb4eaf557f05a34/src/runtime/map.go#L685) 函数簇中的一个。用于处理删除逻辑的函数与 [`runtime.mapassign`](https://github.com/golang/go/blob/ac0ba6707c1655ea4316b41d06571a0303cc60eb/src/runtime/map.go#L571) 几乎完全相同，不太需要刻意关注。
 
 ## 字符串
 
