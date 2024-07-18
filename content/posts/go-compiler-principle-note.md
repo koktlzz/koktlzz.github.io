@@ -121,39 +121,75 @@ Go 语言的编译器不仅使用静态类型检查来保证程序运行的类�
 编译器类型检查的主要逻辑都在 [`cmd/compile/internal/typecheck/typecheck.typecheck`](https://github.com/golang/go/blob/4e548f2c8e489a408033c8aab336077b16bc8cf7/src/cmd/compile/internal/typecheck/typecheck.go#L150) 和 [`cmd/compile/internal/typecheck/typecheck.typecheck1`](https://github.com/golang/go/blob/4e548f2c8e489a408033c8aab336077b16bc8cf7/src/cmd/compile/internal/typecheck/typecheck.go#L218) 中，后者是类型检查的核心。该函数根据传入 [节点](https://github.com/golang/go/blob/4b27560db937aa104753a96bf011d7f13c4aedc3/src/cmd/compile/internal/ir/node.go#L20) 的操作类型进入不同分支：
 
 ```go
-func typecheck1(n *Node, top int) (res *Node) {
+func typecheck1(n ir.Node, top int) ir.Node {
     switch n.Op {
-    case OTARRAY:
-        // 确定数组长度，对元素类型进行检查
-        ...
-    case OTMAP:
-        // 检查键值类型的合法性
-        ...
-    case OTCHAN:
-        ...
-    case OMAKE:
-        // 验证 make 参数的合法性
-        // 修改当前节点的 Op 类型
-        ...
-        case TSLICE:
-            ...
-            n.Op = OMAKESLICE
-
-        case TMAP:
-            ...
-            n.Op = OMAKEMAP
-
-        case TCHAN:
-            ...
-            n.Op = OMAKECHAN
-    }
     ...
-
-    return n
+    // type or expr
+    case ir.ODEREF:
+        n := n.(*ir.StarExpr)
+        return tcStar(n, top)
+        ...
+    case ir.OMAKE:  
+        n := n.(*ir.CallExpr)  
+        return tcMake(n)
+    case ir.ONEW:
+        n := n.(*ir.UnaryExpr)
+        return tcNew(n)
+    ...
+    }
 }
 ```
 
-由此可知，在类型检查的过程中，无论`make`的第一个参数是什么类型，都会对当前节点的操作类型进行修改并且对传入参数的合法性进行一定的验证。
+以`OMAKE`节点为例，[`cmd/compile/internal/typecheck/typecheck.tcMake`](https://github.com/golang/go/blob/4c50f9162cafaccc1ab1bc26b0dea18f124b536d/src/cmd/compile/internal/typecheck/func.go#L514) 会对传入`make`的参数进行合法性检查，并根据第一个参数修改节点的操作类型：
+
+```go
+func tcMake(n *ir.CallExpr) ir.Node {
+    args := n.Args
+    if len(args) == 0 {
+        base.Errorf("missing argument to make")
+        n.SetType(nil)
+        return n
+    }
+
+    n.Args = nil
+    l := args[0]
+    l = typecheck(l, ctxType)
+    t := l.Type()
+    if t == nil {
+        n.SetType(nil)
+        return n
+    }
+    // i 代表参数的最小个数
+    i := 1
+    var nn ir.Node
+    switch t.Kind() {
+    ...
+    case types.TSLICE:
+        ...
+        // 节点的操作类型变为 OMAKESLICE
+        nn = ir.NewMakeExpr(n.Pos(), ir.OMAKESLICE, l, r)
+
+    case types.TMAP:
+        ...
+        // 节点的操作类型变为 OMAKEMAP
+        nn = ir.NewMakeExpr(n.Pos(), ir.OMAKEMAP, l, nil)
+
+    case types.TCHAN:
+        ...
+        // 节点的操作类型变为 OMAKECHAN
+        nn = ir.NewMakeExpr(n.Pos(), ir.OMAKECHAN, l, nil)
+
+    }
+    if i < len(args) {
+        base.Errorf("too many arguments to make(%v)", t)
+        n.SetType(nil)
+        return n
+    }
+
+    nn.SetType(t)
+    return nn
+}
+```
 
 ### 中间代码生成
 
