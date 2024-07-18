@@ -273,7 +273,9 @@ func walkSwitch(sw *ir.SwitchStmt) {}
 
 ![20240717234418](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20240717234418.png)
 
-因此，关键字和内置函数的功能是由编译器和运行时共同完成的。
+因此，关键字和内置函数的功能是由编译器和运行时共同完成的：
+
+![20240719002739](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20240719002739.png)
 
 #### SSA 生成
 
