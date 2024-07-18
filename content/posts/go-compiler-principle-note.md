@@ -263,7 +263,8 @@ func InitConfig() {
 ```go
 func Walk(fn *ir.Func) {}
 func walkAppend(n *ir.CallExpr, init *ir.Nodes, dst ir.Node) ir.Node {}
-func walkRange(nrange *ir.RangeStmt) ir.Node {}
+func walkMakeMap(n *ir.MakeExpr, init *ir.Nodes) ir.Node {}
+func walkMakeSlice(n *ir.MakeExpr, init *ir.Nodes) ir.Node {}
 func walkSelect(sel *ir.SelectStmt) {}
 func walkSwitch(sw *ir.SwitchStmt) {}
 ...
