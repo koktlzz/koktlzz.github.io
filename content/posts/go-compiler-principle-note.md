@@ -261,7 +261,7 @@ func InitConfig() {
 在生成中间代码之前，编译器还需要替换抽象语法树中节点的一些元素，这是通过 [cmd/compile/internal/walk](https://github.com/golang/go/tree/4b27560db937aa104753a96bf011d7f13c4aedc3/src/cmd/compile/internal/walk) 包中的相关函数实现的：
 
 ```go
-func Walk(fn *ir.Func) {}
+func walkExpr1(n ir.Node, init *ir.Nodes) ir.Node {}
 func walkAppend(n *ir.CallExpr, init *ir.Nodes, dst ir.Node) ir.Node {}
 func walkMakeMap(n *ir.MakeExpr, init *ir.Nodes) ir.Node {}
 func walkMakeSlice(n *ir.MakeExpr, init *ir.Nodes) ir.Node {}
