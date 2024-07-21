@@ -22,7 +22,7 @@ type Array struct {
 
 Go 语言数组在初始化之后大小就无法改变。存储元素类型相同、但大小不同的数组类型在 Go 语言看来也是完全不同的，只有两个条件都相同才是同一类型。
 
-编译期间的数组类型是由 [`cmd/compile/internal/types.NewArray`](https://github.com/golang/go/blob/da54dfb6a1f3bef827b9ec3780c98fde77a97d11/src/cmd/compile/internal/types/type.go#L482) 函数生成的：
+编译期间的数组类型是由 [cmd/compile/internal/types.NewArray](https://github.com/golang/go/blob/da54dfb6a1f3bef827b9ec3780c98fde77a97d11/src/cmd/compile/internal/types/type.go#L482) 函数生成的：
 
 ```go
 // NewArray returns a new fixed-length array Type.
@@ -49,7 +49,7 @@ arr2 := [...]int{1, 2, 3}
 
 不过第一种方式声明的数组的大小在 [[编译原理#类型检查|类型检查]] 阶段就会被提取出来，而第二种方式则需要编译器通过遍历元素来计算。因此，`[...]T` 这种初始化方式其实是 Go 语言为我们提供的一种语法糖。
 
-对于一个由字面量（Literal）组成的数组，根据数组元素数量的不同，编译器会在负责初始化字面量的 [`cmd/compile/internal/gc.anylit`](https://github.com/golang/go/blob/da54dfb6a1f3bef827b9ec3780c98fde77a97d11/src/cmd/compile/internal/gc/sinit.go#L860) 函数中做两种不同的优化：
+对于一个由字面量（Literal）组成的数组，根据数组元素数量的不同，编译器会在负责初始化字面量的 [cmd/compile/internal/gc.anylit](https://github.com/golang/go/blob/da54dfb6a1f3bef827b9ec3780c98fde77a97d11/src/cmd/compile/internal/gc/sinit.go#L860) 函数中做两种不同的优化：
 
 1. 当元素数量小于或者等于 4 个时，会直接将数组中的元素放置在栈上；
 2. 当元素数量大于 4 个时，会将数组中的元素放置到静态区并在运行时复制到栈中。
@@ -98,7 +98,7 @@ arr[i]: panic: runtime error: index out of range [4] with length 3
 []interface{}
 ```
 
-编译期间的切片是 [`cmd/compile/internal/types.Slice`](https://github.com/golang/go/blob/3b2a578166bdedd94110698c971ba8990771eb89/src/cmd/compile/internal/types/type.go#L346) 类型的，只确定了元素的类型：
+编译期间的切片是 [cmd/compile/internal/types.Slice](https://github.com/golang/go/blob/3b2a578166bdedd94110698c971ba8990771eb89/src/cmd/compile/internal/types/type.go#L346) 类型的，只确定了元素的类型：
 
 ```go
 type Slice struct {
@@ -106,7 +106,7 @@ type Slice struct {
 }
 ```
 
-在运行时则由 [`reflect.SliceHeader`](https://github.com/golang/go/blob/41d8e61a6b9d8f9db912626eb2bbc535e929fefc/src/reflect/value.go#L1994) 结构体表示：
+在运行时则由 [reflect.SliceHeader](https://github.com/golang/go/blob/41d8e61a6b9d8f9db912626eb2bbc535e929fefc/src/reflect/value.go#L1994) 结构体表示：
 
 ```go
 type SliceHeader struct {
@@ -120,7 +120,7 @@ type SliceHeader struct {
 
 ![[Pasted image 20221201224650.png]]
 
-> 由于大量开发者使用`reflect.StringHeader`和`reflect.SliceHeader`实现零拷贝的字符串/字节数组转换而产生诸多内存泄露问题，两者在 Go 1.20 版本中被弃用，详见：[unsafe: add StringData, String, SliceData](https://github.com/golang/go/issues/53003)。切片和字符串的运行时表示目前为：[`unsafeheader.Slice`](https://github.com/golang/go/blob/071b8d51c1a70fa6b12f0bed2e93370e193333fd/src/internal/unsafeheader/unsafeheader.go#L22) 和 [`unsafeheader.String`](https://github.com/golang/go/blob/071b8d51c1a70fa6b12f0bed2e93370e193333fd/src/internal/unsafeheader/unsafeheader.go#L34)，区别在于`Data`字段的类型由`uintptr`改为`unsafe.Pointer`。
+> 由于大量开发者使用`reflect.StringHeader`和`reflect.SliceHeader`实现零拷贝的字符串/字节数组转换而产生诸多内存泄露问题，两者在 Go 1.20 版本中被弃用，详见：[unsafe: add StringData, String, SliceData](https://github.com/golang/go/issues/53003)。切片和字符串的运行时表示目前为：[unsafeheader.Slice](https://github.com/golang/go/blob/071b8d51c1a70fa6b12f0bed2e93370e193333fd/src/internal/unsafeheader/unsafeheader.go#L22) 和 [unsafeheader.String](https://github.com/golang/go/blob/071b8d51c1a70fa6b12f0bed2e93370e193333fd/src/internal/unsafeheader/unsafeheader.go#L34)，区别在于`Data`字段的类型由`uintptr`改为`unsafe.Pointer`。
 
 ### 初始化
 
@@ -138,7 +138,7 @@ slice := make([]int, 10) // 使用关键字 make 创建切片
 
 #### 使用字面量
 
-当我们使用字面量`[]int{1, 2, 3}`创建新的切片时，[`cmd/compile/internal/gc.slicelit`](https://github.com/golang/go/blob/3b2a578166bdedd94110698c971ba8990771eb89/src/cmd/compile/internal/gc/sinit.go#L590) 函数会在编译期间将它展开成如下所示的代码片段：
+当我们使用字面量`[]int{1, 2, 3}`创建新的切片时，[cmd/compile/internal/gc.slicelit](https://github.com/golang/go/blob/3b2a578166bdedd94110698c971ba8990771eb89/src/cmd/compile/internal/gc/sinit.go#L590) 函数会在编译期间将它展开成如下所示的代码片段：
 
 ```go
 // 根据切片元素数量创建底层数组
@@ -161,16 +161,16 @@ slice := vauto[:]
 
 #### 使用 make
 
-与其他两种方法相比，使用`make`关键字创建切片时，很多工作需要运行时的参与。类型检查期间的 [`cmd/compile/internal/gc.typecheck1`](https://github.com/golang/go/blob/da54dfb6a1f3bef827b9ec3780c98fde77a97d11/src/cmd/compile/internal/gc/typecheck.go#L326) 函数会校验`len`是否传入，以及`cap`是否大于或等于`len`。
+与其他两种方法相比，使用`make`关键字创建切片时，很多工作需要运行时的参与。类型检查期间的 [cmd/compile/internal/gc.typecheck1](https://github.com/golang/go/blob/da54dfb6a1f3bef827b9ec3780c98fde77a97d11/src/cmd/compile/internal/gc/typecheck.go#L326) 函数会校验`len`是否传入，以及`cap`是否大于或等于`len`。
 
-如果当前的切片不会发生逃逸并且切片非常小的时候，`make([]int, 3, 4)` 会被 [`OMAKESLICE`](https://github.com/golang/go/blob/3b2a578166bdedd94110698c971ba8990771eb89/src/cmd/compile/internal/gc/walk.go#L1312) 操作直接转换成如下所示的代码，后者会在编译阶段完成：
+如果当前的切片不会发生逃逸并且切片非常小的时候，`make([]int, 3, 4)` 会被 [OMAKESLICE](https://github.com/golang/go/blob/3b2a578166bdedd94110698c971ba8990771eb89/src/cmd/compile/internal/gc/walk.go#L1312) 操作直接转换成如下所示的代码，后者会在编译阶段完成：
 
 ```go
 var arr [4]int
 n := arr[:3]
 ```
 
-当切片发生逃逸或者非常大时，运行时需要 [`runtime.makeslice`](https://github.com/golang/go/blob/3b2a578166bdedd94110698c971ba8990771eb89/src/runtime/slice.go#L83) 在堆上初始化切片：
+当切片发生逃逸或者非常大时，运行时需要 [runtime.makeslice](https://github.com/golang/go/blob/3b2a578166bdedd94110698c971ba8990771eb89/src/runtime/slice.go#L83) 在堆上初始化切片：
 
 ```go
 func makeslice(et *_type, len, cap int) unsafe.Pointer {
@@ -191,7 +191,7 @@ func makeslice(et *_type, len, cap int) unsafe.Pointer {
 }
 ```
 
-注意到，该函数仅返回指向底层数组的指针。在之前版本的 Go 语言中，数组指针、长度和容量会被合成一个 [`runtime.slice`](https://github.com/golang/go/blob/3b2a578166bdedd94110698c971ba8990771eb89/src/runtime/slice.go#L13)，但是从 [cmd/compile: move slice construction to callers of makeslice](https://github.com/golang/go/commit/020a18c545bf49ffc087ca93cd238195d8dcc411#diff-d9238ca551e72b3a80da9e0da10586a4) 提交之后，这项工作就交给了 [`runtime.makeslice`](https://github.com/golang/go/blob/3b2a578166bdedd94110698c971ba8990771eb89/src/runtime/slice.go#L83) 的调用方。后者会在编译期间构建切片结构体，见 [`OSLICEHEADER`](https://github.com/golang/go/blob/da54dfb6a1f3bef827b9ec3780c98fde77a97d11/src/cmd/compile/internal/gc/typecheck.go#L1120)。
+注意到，该函数仅返回指向底层数组的指针。在之前版本的 Go 语言中，数组指针、长度和容量会被合成一个 [runtime.slice](https://github.com/golang/go/blob/3b2a578166bdedd94110698c971ba8990771eb89/src/runtime/slice.go#L13)，但是从 [cmd/compile: move slice construction to callers of makeslice](https://github.com/golang/go/commit/020a18c545bf49ffc087ca93cd238195d8dcc411#diff-d9238ca551e72b3a80da9e0da10586a4) 提交之后，这项工作就交给了 [runtime.makeslice](https://github.com/golang/go/blob/3b2a578166bdedd94110698c971ba8990771eb89/src/runtime/slice.go#L83) 的调用方。后者会在编译期间构建切片结构体，见 [OSLICEHEADER](https://github.com/golang/go/blob/da54dfb6a1f3bef827b9ec3780c98fde77a97d11/src/cmd/compile/internal/gc/typecheck.go#L1120)。
 
 ### 访问元素
 
@@ -199,7 +199,7 @@ func makeslice(et *_type, len, cap int) unsafe.Pointer {
 
 ### 追加和扩容
 
-如果 [`append`](https://github.com/golang/go/blob/071b8d51c1a70fa6b12f0bed2e93370e193333fd/src/cmd/compile/internal/ssagen/ssa.go#L3531) 返回的新切片不会覆盖原切片（示例代码基于 Go 1.22，下同）：
+如果 [append](https://github.com/golang/go/blob/071b8d51c1a70fa6b12f0bed2e93370e193333fd/src/cmd/compile/internal/ssagen/ssa.go#L3531) 返回的新切片不会覆盖原切片（示例代码基于 Go 1.22，下同）：
 
 ```go
 // new_slice := append(s, 1, 2, 3)
@@ -240,7 +240,7 @@ if uint(len) > uint(cap) {
 
 ![[Pasted image 20240715171701.png]]
 
-扩容是为切片分配新的内存空间并拷贝原切片中元素的过程，[`runtime.growslice`](https://github.com/golang/go/blob/ac0ba6707c1655ea4316b41d06571a0303cc60eb/src/runtime/slice.go#L125) 函数最终会返回一个新的切片，其中包含了新的数组指针、大小和容量。运行时根据切片的当前容量选择不同的策略进行扩容：
+扩容是为切片分配新的内存空间并拷贝原切片中元素的过程，[runtime.growslice](https://github.com/golang/go/blob/ac0ba6707c1655ea4316b41d06571a0303cc60eb/src/runtime/slice.go#L125) 函数最终会返回一个新的切片，其中包含了新的数组指针、大小和容量。运行时根据切片的当前容量选择不同的策略进行扩容：
 
 - 如果期望容量大于当前容量的两倍就会使用期望容量；
 - 否则：
@@ -253,13 +253,13 @@ var arr []int64
 arr = append(arr, 1, 2, 3, 4, 5)
 ```
 
-当我们执行上述代码时，会触发 [`runtime.growslice`](https://github.com/golang/go/blob/ac0ba6707c1655ea4316b41d06571a0303cc60eb/src/runtime/slice.go#L125) 函数扩容`arr`切片并传入期望的新容量 5，这时期望分配的内存大小为 40 字节；不过因为切片中的元素大小等于`sys.PtrSize`，所以运行时会调用 [`runtime.roundupsize`](https://github.com/golang/go/blob/ac0ba6707c1655ea4316b41d06571a0303cc60eb/src/runtime/msize.go#L13) 向上取整内存的大小到 48 字节，所以新切片的容量为 48 / 8 = 6。
+当我们执行上述代码时，会触发 [runtime.growslice](https://github.com/golang/go/blob/ac0ba6707c1655ea4316b41d06571a0303cc60eb/src/runtime/slice.go#L125) 函数扩容`arr`切片并传入期望的新容量 5，这时期望分配的内存大小为 40 字节；不过因为切片中的元素大小等于`sys.PtrSize`，所以运行时会调用 [runtime.roundupsize](https://github.com/golang/go/blob/ac0ba6707c1655ea4316b41d06571a0303cc60eb/src/runtime/msize.go#L13) 向上取整内存的大小到 48 字节，所以新切片的容量为 48 / 8 = 6。
 
 > Go 语言最新版本的切片扩容算法已经发生了变化：[runtime: make slice growth formula a bit smoother](https://github.com/golang/go/commit/2dda92ff6f9f07eeb110ecbf0fc2d7a0ddd27f9d)
 
 ### 复制切片
 
-无论是编译期间拷贝还是运行时拷贝，两种拷贝方式都会通过 [`runtime.memmove`](https://github.com/golang/go/blob/41d8e61a6b9d8f9db912626eb2bbc535e929fefc/src/runtime/memmove_386.s#L34) 将整块内存的内容拷贝到目标的内存区域中：
+无论是编译期间拷贝还是运行时拷贝，两种拷贝方式都会通过 [runtime.memmove](https://github.com/golang/go/blob/41d8e61a6b9d8f9db912626eb2bbc535e929fefc/src/runtime/memmove_386.s#L34) 将整块内存的内容拷贝到目标的内存区域中：
 
 ![[Pasted image 20221204214706.png]]
 
@@ -312,7 +312,7 @@ index := hash("Key6") % array.len
 
 ### 数据结构
 
-Go 语言运行时同时使用了多个数据结构组合表示哈希表，其中 [`runtime.hmap`](https://github.com/golang/go/blob/41d8e61a6b9d8f9db912626eb2bbc535e929fefc/src/runtime/map.go#L115) 是最核心的结构体：
+Go 语言运行时同时使用了多个数据结构组合表示哈希表，其中 [runtime.hmap](https://github.com/golang/go/blob/41d8e61a6b9d8f9db912626eb2bbc535e929fefc/src/runtime/map.go#L115) 是最核心的结构体：
 
 ```go
 type hmap struct {
@@ -338,15 +338,15 @@ type mapextra struct {
 
 ![[Pasted image 20221204231720.png]]
 
-如上图所示哈希表 [`runtime.hmap`](https://github.com/golang/go/blob/41d8e61a6b9d8f9db912626eb2bbc535e929fefc/src/runtime/map.go#L115) 的桶是 [`runtime.bmap`](https://github.com/golang/go/blob/ac0ba6707c1655ea4316b41d06571a0303cc60eb/src/runtime/map.go#L149)，后者能存储 8 个键值对。当哈希表中存储的数据过多，单个桶已经装满时就会使用`extra.nextOverflow`中的桶存储溢出的数据。
+如上图所示哈希表 [runtime.hmap](https://github.com/golang/go/blob/41d8e61a6b9d8f9db912626eb2bbc535e929fefc/src/runtime/map.go#L115) 的桶是 [runtime.bmap](https://github.com/golang/go/blob/ac0ba6707c1655ea4316b41d06571a0303cc60eb/src/runtime/map.go#L149)，后者能存储 8 个键值对。当哈希表中存储的数据过多，单个桶已经装满时就会使用`extra.nextOverflow`中的桶存储溢出的数据。
 
-上述两种不同的桶在内存中是连续存储的，我们在这里将它们分别称为正常桶和溢出桶，上图中黄色的 [`runtime.bmap`](https://github.com/golang/go/blob/ac0ba6707c1655ea4316b41d06571a0303cc60eb/src/runtime/map.go#L149) 就是正常桶，绿色的 [`runtime.bmap`](https://github.com/golang/go/blob/ac0ba6707c1655ea4316b41d06571a0303cc60eb/src/runtime/map.go#L149) 是溢出桶。
+上述两种不同的桶在内存中是连续存储的，我们在这里将它们分别称为正常桶和溢出桶，上图中黄色的 [runtime.bmap](https://github.com/golang/go/blob/ac0ba6707c1655ea4316b41d06571a0303cc60eb/src/runtime/map.go#L149) 就是正常桶，绿色的 [runtime.bmap](https://github.com/golang/go/blob/ac0ba6707c1655ea4316b41d06571a0303cc60eb/src/runtime/map.go#L149) 是溢出桶。
 
-> 当 map 中找不到可用的溢出桶时，[`runtime.newoverflow`](https://github.com/golang/go/blob/dcd3b2c173b77d93be1c391e3b5f932e0779fb1f/src/runtime/map.go#L245) 会通过`newobject`新建溢出桶，此时正常桶和溢出桶在内存中的存储空间就不再连续了。
+> 当 map 中找不到可用的溢出桶时，[runtime.newoverflow](https://github.com/golang/go/blob/dcd3b2c173b77d93be1c391e3b5f932e0779fb1f/src/runtime/map.go#L245) 会通过`newobject`新建溢出桶，此时正常桶和溢出桶在内存中的存储空间就不再连续了。
 
-桶的结构体 [`runtime.bmap`](https://github.com/golang/go/blob/ac0ba6707c1655ea4316b41d06571a0303cc60eb/src/runtime/map.go#L149) 在 Go 语言源代码中的定义只包含一个简单的`tophash`字段，它存储了键的哈希值的高 8 位。通过比较`tophash`可以减少访问键值对的次数以提高性能。
+桶的结构体 [runtime.bmap](https://github.com/golang/go/blob/ac0ba6707c1655ea4316b41d06571a0303cc60eb/src/runtime/map.go#L149) 在 Go 语言源代码中的定义只包含一个简单的`tophash`字段，它存储了键的哈希值的高 8 位。通过比较`tophash`可以减少访问键值对的次数以提高性能。
 
-在运行期间，该结构体其实不止包含`tophash`字段，我们可以根据编译期间的 [`cmd/compile/internal/gc.bmap`](https://github.com/golang/go/blob/ac0ba6707c1655ea4316b41d06571a0303cc60eb/src/cmd/compile/internal/gc/reflect.go#L83) 函数重建它的结构：
+在运行期间，该结构体其实不止包含`tophash`字段，我们可以根据编译期间的 [cmd/compile/internal/gc.bmap](https://github.com/golang/go/blob/ac0ba6707c1655ea4316b41d06571a0303cc60eb/src/cmd/compile/internal/gc/reflect.go#L83) 函数重建它的结构：
 
 ```go
 type bmap struct {
@@ -388,7 +388,7 @@ for i := 0; i < len(vstak); i++ {
 
 #### 运行时
 
-当创建的哈希被分配到栈上并且其容量小于`BUCKETSIZE = 8`时，Go 语言在编译阶段会使用 [`OMAKEMAP`](https://github.com/golang/go/blob/3b2a578166bdedd94110698c971ba8990771eb89/src/cmd/compile/internal/gc/walk.go#L1201) 操作快速初始化哈希，这也是编译器对小容量的哈希做的优化：
+当创建的哈希被分配到栈上并且其容量小于`BUCKETSIZE = 8`时，Go 语言在编译阶段会使用 [OMAKEMAP](https://github.com/golang/go/blob/3b2a578166bdedd94110698c971ba8990771eb89/src/cmd/compile/internal/gc/walk.go#L1201) 操作快速初始化哈希，这也是编译器对小容量的哈希做的优化：
 
 ```go
 var h *hmap
@@ -403,7 +403,7 @@ if hint <= BUCKETSIZE {
 }
 ```
 
-除此之外，Go 语言编译器都会在 [[编译原理#类型检查|类型检查]] 期间将它们转换成 [`runtime.makemap`](https://github.com/golang/go/blob/ac0ba6707c1655ea4316b41d06571a0303cc60eb/src/runtime/map.go#L303)：
+除此之外，Go 语言编译器都会在 [[编译原理#类型检查|类型检查]] 期间将它们转换成 [runtime.makemap](https://github.com/golang/go/blob/ac0ba6707c1655ea4316b41d06571a0303cc60eb/src/runtime/map.go#L303)：
 
 ```go
 func makemap(t *maptype, hint int, h *hmap) *hmap {
@@ -439,7 +439,7 @@ func makemap(t *maptype, hint int, h *hmap) *hmap {
 }
 ```
 
-[`runtime.makeBucketArray`](https://github.com/golang/go/blob/ac0ba6707c1655ea4316b41d06571a0303cc60eb/src/runtime/map.go#L344) 会根据`B`计算出需要创建的桶数并在内存中分配一片连续的空间用于存储数据：
+[runtime.makeBucketArray](https://github.com/golang/go/blob/ac0ba6707c1655ea4316b41d06571a0303cc60eb/src/runtime/map.go#L344) 会根据`B`计算出需要创建的桶数并在内存中分配一片连续的空间用于存储数据：
 
 - 当桶的数量小于 $2^4$ 时，由于数据较少、使用溢出桶的可能性较低，会省略创建的过程以减少额外开销；
 - 当桶的数量大于 $2^4$  时，会额外创建 $2^{B-4}$ 个溢出桶。
@@ -448,7 +448,7 @@ func makemap(t *maptype, hint int, h *hmap) *hmap {
 
 #### 访问
 
-`v := hash[key]` 操作会先被转化为 [`runtime.mapaccess1`](https://github.com/golang/go/blob/ac0ba6707c1655ea4316b41d06571a0303cc60eb/src/runtime/map.go#L394)：
+`v := hash[key]` 操作会先被转化为 [runtime.mapaccess1](https://github.com/golang/go/blob/ac0ba6707c1655ea4316b41d06571a0303cc60eb/src/runtime/map.go#L394)：
 
 ```go
 func mapaccess1(t *maptype, h *hmap, key unsafe.Pointer) unsafe.Pointer {
@@ -491,17 +491,17 @@ bucketloop:
 }
 ```
 
-如下图所示，正是因为每个桶都是一片连续的内存空间，我们才能通过 [`runtime.add`](https://github.com/golang/go/blob/ac0ba6707c1655ea4316b41d06571a0303cc60eb/src/runtime/stubs.go#L11) 操作指针以访问桶中存储的键。
+如下图所示，正是因为每个桶都是一片连续的内存空间，我们才能通过 [runtime.add](https://github.com/golang/go/blob/ac0ba6707c1655ea4316b41d06571a0303cc60eb/src/runtime/stubs.go#L11) 操作指针以访问桶中存储的键。
 
 ![[Pasted image 20221205221842.png]]
 
 另外，选择桶序号时用的是键的哈希值的最低几位（`hash&m`），而加速访问用的是键的哈希值的高 8 位，这种设计能够减少同一个桶中有大量相等`tophash`的概率以免影响性能。
 
-`v, ok := hash[key]`操作则会被转化为 [`runtime.mapaccess2`](https://github.com/golang/go/blob/ac0ba6707c1655ea4316b41d06571a0303cc60eb/src/runtime/map.go#L452)，它在此基础之上多返回了一个标识键值对是否存在的布尔值。我们能够通过这个布尔值更准确地知道：当`v == nil`时，`v` 到底是哈希中存储的元素还是表示该键对应的元素不存在。因此我们在访问哈希表时更推荐使用这种方式判断元素是否存在。
+`v, ok := hash[key]`操作则会被转化为 [runtime.mapaccess2](https://github.com/golang/go/blob/ac0ba6707c1655ea4316b41d06571a0303cc60eb/src/runtime/map.go#L452)，它在此基础之上多返回了一个标识键值对是否存在的布尔值。我们能够通过这个布尔值更准确地知道：当`v == nil`时，`v` 到底是哈希中存储的元素还是表示该键对应的元素不存在。因此我们在访问哈希表时更推荐使用这种方式判断元素是否存在。
 
 #### 写入
 
-`hash[k] = v`操作会在编译期间被转换成 [`runtime.mapassign`](https://github.com/golang/go/blob/ac0ba6707c1655ea4316b41d06571a0303cc60eb/src/runtime/map.go#L571)，该函数需要兼顾以下三种情况：
+`hash[k] = v`操作会在编译期间被转换成 [runtime.mapassign](https://github.com/golang/go/blob/ac0ba6707c1655ea4316b41d06571a0303cc60eb/src/runtime/map.go#L571)，该函数需要兼顾以下三种情况：
 
 - `k`在桶中存在，返回`v`在桶中的地址；
 - `k`在桶中不存在且桶中有空位，返回`k`和`v`应当插入的地址；
@@ -588,7 +588,7 @@ done:
 }
 ```
 
-由此可见，[`runtime.mapassign`](https://github.com/golang/go/blob/ac0ba6707c1655ea4316b41d06571a0303cc60eb/src/runtime/map.go#L571) 并不会将值拷贝到桶中，真正的赋值操作是在编译期间插入的：
+由此可见，[runtime.mapassign](https://github.com/golang/go/blob/ac0ba6707c1655ea4316b41d06571a0303cc60eb/src/runtime/map.go#L571) 并不会将值拷贝到桶中，真正的赋值操作是在编译期间插入的：
 
 ```go
 00018 (+5) CALL runtime.mapassign_fast64(SB)
@@ -597,7 +597,7 @@ done:
 00027 (5) MOVQ AX, (DI)                 ;; *DI = AX
 ```
 
-[`runtime.mapassign_fast64`](https://github.com/golang/go/blob/ac0ba6707c1655ea4316b41d06571a0303cc60eb/src/runtime/map_fast64.go#L92) 与 [`runtime.mapassign`](https://github.com/golang/go/blob/ac0ba6707c1655ea4316b41d06571a0303cc60eb/src/runtime/map.go#L571) 函数的逻辑差不多，我们需要关注的是后面的三行代码。其中`24(SP)`是该函数返回的值地址，我们通过`LEAQ`指令将字符串的地址存储到寄存器`AX`中，`MOVQ` 指令将字符串`"88"`存储到了目标地址上从而完成了这次哈希的写入。
+[runtime.mapassign_fast64](https://github.com/golang/go/blob/ac0ba6707c1655ea4316b41d06571a0303cc60eb/src/runtime/map_fast64.go#L92) 与 [runtime.mapassign](https://github.com/golang/go/blob/ac0ba6707c1655ea4316b41d06571a0303cc60eb/src/runtime/map.go#L571) 函数的逻辑差不多，我们需要关注的是后面的三行代码。其中`24(SP)`是该函数返回的值地址，我们通过`LEAQ`指令将字符串的地址存储到寄存器`AX`中，`MOVQ` 指令将字符串`"88"`存储到了目标地址上从而完成了这次哈希的写入。
 
 #### 扩容
 
@@ -624,7 +624,7 @@ func mapassign(t *maptype, h *hmap, key unsafe.Pointer) unsafe.Pointer {
 - 装载因子超过 6.5：哈希的空间使用率过高，哈希冲突的概率较大；
 - 溢出桶过多：如果我们持续向哈希中插入数据并将它们全部删除，那么即使哈希表中的装载因子没有超过阈值，溢出桶的数量也会越来越多从而造成缓慢的 [内存泄漏](https://github.com/golang/go/issues/16070)。
 
-[`runtime.hashGrow`](https://github.com/golang/go/blob/ac0ba6707c1655ea4316b41d06571a0303cc60eb/src/runtime/map.go#L1026) 会根据具体情况采取不同的扩容策略：
+[runtime.hashGrow](https://github.com/golang/go/blob/ac0ba6707c1655ea4316b41d06571a0303cc60eb/src/runtime/map.go#L1026) 会根据具体情况采取不同的扩容策略：
 
 ```go
 func hashGrow(t *maptype, h *hmap) {
@@ -658,7 +658,7 @@ func hashGrow(t *maptype, h *hmap) {
 
 ![[Pasted image 20221206234604.png]]
 
-我们可以看出，等量扩容创建的新桶数量和旧桶一样，而增量扩容创建的新桶则为原来的两倍。`hashGrow`只是创建了新桶，并没有对数据进行复制和转移。哈希表的数据迁移是由 [`runtime.evacuate`](https://github.com/golang/go/blob/ac0ba6707c1655ea4316b41d06571a0303cc60eb/src/runtime/map.go#L1137) 完成的，它会对桶中的元素分流：
+我们可以看出，等量扩容创建的新桶数量和旧桶一样，而增量扩容创建的新桶则为原来的两倍。`hashGrow`只是创建了新桶，并没有对数据进行复制和转移。哈希表的数据迁移是由 [runtime.evacuate](https://github.com/golang/go/blob/ac0ba6707c1655ea4316b41d06571a0303cc60eb/src/runtime/map.go#L1137) 完成的，它会对桶中的元素分流：
 
 ```go
 func evacuate(t *maptype, h *hmap, oldbucket uintptr) {
@@ -733,7 +733,7 @@ func evacuate(t *maptype, h *hmap, oldbucket uintptr) {
 
 之前在分析访问哈希表时其实省略了扩容期间获取键值对的逻辑，当哈希表的`oldbuckets`存在时，会先定位到旧桶并在该桶没有被迁移时从中获取键值对。
 
-而当哈希表正在处于扩容状态时，只有向哈希表写入值时才会触发 [`runtime.growWork`](https://github.com/golang/go/blob/ac0ba6707c1655ea4316b41d06571a0303cc60eb/src/runtime/map.go#L1113) 增量拷贝哈希表中的内容。先迁移旧桶，再完成写入：
+而当哈希表正在处于扩容状态时，只有向哈希表写入值时才会触发 [runtime.growWork](https://github.com/golang/go/blob/ac0ba6707c1655ea4316b41d06571a0303cc60eb/src/runtime/map.go#L1113) 增量拷贝哈希表中的内容。先迁移旧桶，再完成写入：
 
 ```go
 func mapassign(t *maptype, h *hmap, key unsafe.Pointer) unsafe.Pointer {
@@ -761,7 +761,7 @@ func growWork(t *maptype, h *hmap, bucket uintptr) {
 
 #### 删除
 
-`delete`关键字可以删除哈希表中某一个键对应的元素，它会在编译时被转换为 [`runtime.mapdelete`](https://github.com/golang/go/blob/36f30ba289e31df033d100b2adb4eaf557f05a34/src/runtime/map.go#L685) 函数簇中的一个。用于处理删除逻辑的函数与 [`runtime.mapassign`](https://github.com/golang/go/blob/ac0ba6707c1655ea4316b41d06571a0303cc60eb/src/runtime/map.go#L571) 几乎完全相同，不太需要刻意关注。
+`delete`关键字可以删除哈希表中某一个键对应的元素，它会在编译时被转换为 [runtime.mapdelete](https://github.com/golang/go/blob/36f30ba289e31df033d100b2adb4eaf557f05a34/src/runtime/map.go#L685) 函数簇中的一个。用于处理删除逻辑的函数与 [runtime.mapassign](https://github.com/golang/go/blob/ac0ba6707c1655ea4316b41d06571a0303cc60eb/src/runtime/map.go#L571) 几乎完全相同，不太需要刻意关注。
 
 ## 字符串
 
@@ -786,7 +786,7 @@ json := `{"author": "draven", "tags": ["golang"]}`
 
 ### 数据结构
 
-每一个字符串在运行时都会使用如下的 [`reflect.StringHeader`](https://github.com/golang/go/blob/9c91cab0da9814a598f2c4f7568b6276ff972672/src/reflect/value.go#L1983) 表示，其中包含指向字节数组的指针和数组的大小：
+每一个字符串在运行时都会使用如下的 [reflect.StringHeader](https://github.com/golang/go/blob/9c91cab0da9814a598f2c4f7568b6276ff972672/src/reflect/value.go#L1983) 表示，其中包含指向字节数组的指针和数组的大小：
 
 ```go
 type StringHeader struct {
@@ -807,7 +807,7 @@ type StringHeader struct {
 
 ### 类型转换
 
-从字节数组`[]byte`到字符串的转换需要使用 [`runtime.slicebytetostring`](https://github.com/golang/go/blob/9c91cab0da9814a598f2c4f7568b6276ff972672/src/runtime/string.go#L80) 函数：
+从字节数组`[]byte`到字符串的转换需要使用 [runtime.slicebytetostring](https://github.com/golang/go/blob/9c91cab0da9814a598f2c4f7568b6276ff972672/src/runtime/string.go#L80) 函数：
 
 ```go
 func slicebytetostring(buf *tmpBuf, b []byte) (str string) {
@@ -839,7 +839,7 @@ func slicebytetostring(buf *tmpBuf, b []byte) (str string) {
 }
 ```
 
-当我们想要将字符串转换成`[]byte`类型时，需要使用 [`runtime.stringtoslicebyte`](https://github.com/golang/go/blob/8174f7fb2b64c221f7f80c9f7fd4d7eb317ac8bb/src/runtime/string.go#L155) 函数：
+当我们想要将字符串转换成`[]byte`类型时，需要使用 [runtime.stringtoslicebyte](https://github.com/golang/go/blob/8174f7fb2b64c221f7f80c9f7fd4d7eb317ac8bb/src/runtime/string.go#L155) 函数：
 
 ```go
 func stringtoslicebyte(buf *tmpBuf, s string) []byte {
