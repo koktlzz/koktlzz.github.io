@@ -63,7 +63,7 @@ y_1 := x_2
 
 词法分析的作用是解析源代码文件，它将文件中的字符串序列转换成 Token 序列（即分词），如`package`, `json`, `import`, ……，方便后面的处理和解析。我们一般会把执行词法分析的程序称为词法解析器（Lexer）。
 
-从 Go 语言中定义的 Token 类型，我们可以将元素分成几个不同的类别，分别是名称和字面量、操作符、分隔符和关键字。词法分析主要由 [`cmd/compile/internal/syntax.scanner`](https://github.com/golang/go/blob/4e548f2c8e489a408033c8aab336077b16bc8cf7/src/cmd/compile/internal/syntax/scanner.go#L30) 结构体的 [`next`](https://github.com/golang/go/blob/4e548f2c8e489a408033c8aab336077b16bc8cf7/src/cmd/compile/internal/syntax/scanner.go#L88) 方法驱动，该结构体会持有当前被扫描到的 Token，而该函数的主体则是一个`switch/case`结构。
+从 Go 语言中定义的 Token 类型，我们可以将元素分成几个不同的类别，分别是名称和字面量、操作符、分隔符和关键字。词法分析主要由 [cmd/compile/internal/syntax.scanner](https://github.com/golang/go/blob/4e548f2c8e489a408033c8aab336077b16bc8cf7/src/cmd/compile/internal/syntax/scanner.go#L30) 结构体的 [next](https://github.com/golang/go/blob/4e548f2c8e489a408033c8aab336077b16bc8cf7/src/cmd/compile/internal/syntax/scanner.go#L88) 方法驱动，该结构体会持有当前被扫描到的 Token，而该函数的主体则是一个`switch/case`结构。
 
 ### 语法分析
 
@@ -79,7 +79,7 @@ y_1 := x_2
 }
 ```
 
-该树的根节点 [`cmd/compile/internal/syntax.File`](https://github.com/golang/go/blob/4e548f2c8e489a408033c8aab336077b16bc8cf7/src/cmd/compile/internal/syntax/nodes.go#L38) 包含了当前文件所属的包名、定义的常量、结构体和函数等：
+该树的根节点 [cmd/compile/internal/syntax.File](https://github.com/golang/go/blob/4e548f2c8e489a408033c8aab336077b16bc8cf7/src/cmd/compile/internal/syntax/nodes.go#L38) 包含了当前文件所属的包名、定义的常量、结构体和函数等：
 
 ```go
 type File struct {
@@ -91,7 +91,7 @@ type File struct {
 }
 ```
 
-其他节点的结构体则在 [`src/cmd/compile/internal/syntax/nodes.go`](https://github.com/golang/go/blob/4e548f2c8e489a408033c8aab336077b16bc8cf7/src/cmd/compile/internal/syntax/nodes.go) 文件中定义，其中包含了全部声明类型，如函数声明：
+其他节点的结构体则在 [cmd/compile/internal/syntax/nodes.go](https://github.com/golang/go/blob/4e548f2c8e489a408033c8aab336077b16bc8cf7/src/cmd/compile/internal/syntax/nodes.go) 文件中定义，其中包含了全部声明类型，如函数声明：
 
 ```go
 type (
@@ -118,7 +118,7 @@ type (
 
 Go 语言的编译器不仅使用静态类型检查来保证程序运行的类型安全，还会在编译期间引入类型信息，让工程师能够使用反射来判断参数和变量的类型。当我们想要将 `interface{}` 转换成具体类型时会进行动态类型检查，如果无法发生转换程序就会崩溃。
 
-编译器类型检查的主要逻辑都在 [`cmd/compile/internal/typecheck/typecheck.typecheck`](https://github.com/golang/go/blob/4e548f2c8e489a408033c8aab336077b16bc8cf7/src/cmd/compile/internal/typecheck/typecheck.go#L150) 和 [`cmd/compile/internal/typecheck/typecheck.typecheck1`](https://github.com/golang/go/blob/4e548f2c8e489a408033c8aab336077b16bc8cf7/src/cmd/compile/internal/typecheck/typecheck.go#L218) 中，后者是类型检查的核心。该函数根据传入 [节点](https://github.com/golang/go/blob/4b27560db937aa104753a96bf011d7f13c4aedc3/src/cmd/compile/internal/ir/node.go#L20) 的操作类型进入不同分支：
+编译器类型检查的主要逻辑都在 [cmd/compile/internal/typecheck.typecheck](https://github.com/golang/go/blob/4e548f2c8e489a408033c8aab336077b16bc8cf7/src/cmd/compile/internal/typecheck/typecheck.go#L150) 和 [cmd/compile/internal/typecheck.typecheck1](https://github.com/golang/go/blob/4e548f2c8e489a408033c8aab336077b16bc8cf7/src/cmd/compile/internal/typecheck/typecheck.go#L218) 中，后者是类型检查的核心。该函数根据传入 [节点](https://github.com/golang/go/blob/4b27560db937aa104753a96bf011d7f13c4aedc3/src/cmd/compile/internal/ir/node.go#L20) 的操作类型进入不同分支：
 
 ```go
 func typecheck1(n ir.Node, top int) ir.Node {
@@ -140,7 +140,7 @@ func typecheck1(n ir.Node, top int) ir.Node {
 }
 ```
 
-以`OMAKE`节点为例，[`cmd/compile/internal/typecheck/typecheck.tcMake`](https://github.com/golang/go/blob/4c50f9162cafaccc1ab1bc26b0dea18f124b536d/src/cmd/compile/internal/typecheck/func.go#L514) 会对传入`make`的参数进行合法性检查，并根据第一个参数修改节点的操作类型：
+以`OMAKE`节点为例，[cmd/compile/internal/typecheck.tcMake](https://github.com/golang/go/blob/4c50f9162cafaccc1ab1bc26b0dea18f124b536d/src/cmd/compile/internal/typecheck/func.go#L514) 会对传入`make`的参数进行合法性检查，并根据第一个参数修改节点的操作类型：
 
 ```go
 func tcMake(n *ir.CallExpr) ir.Node {
@@ -195,7 +195,7 @@ func tcMake(n *ir.CallExpr) ir.Node {
 
 在编译过程中，编译器会在将源代码转换到机器码的过程中，先把源代码转换成一种中间的表示形式，即 [中间代码](https://en.wikipedia.org/wiki/Intermediate_representation)。很多编译器需要将源代码翻译成多种机器码，而直接翻译高级编程语言相对比较困难。中间代码是一种更接近机器语言的表示形式，对它的优化和分析相比直接分析高级编程语言更容易。
 
-编译阶段入口的主函数 [`cmd/compile/internal/gc.Main`](https://github.com/golang/go/blob/4e548f2c8e489a408033c8aab336077b16bc8cf7/src/cmd/compile/internal/gc/main.go#L59) 中关于中间代码生成的部分如下，主要分为配置初始化和编译函数两部分：
+编译阶段入口的主函数 [cmd/compile/internal/gc.Main](https://github.com/golang/go/blob/4e548f2c8e489a408033c8aab336077b16bc8cf7/src/cmd/compile/internal/gc/main.go#L59) 中关于中间代码生成的部分如下，主要分为配置初始化和编译函数两部分：
 
 ```go
 func Main(archInit func(*ssagen.ArchInfo)) {
@@ -217,7 +217,7 @@ func Main(archInit func(*ssagen.ArchInfo)) {
 
 #### 配置初始化
 
-[`cmd/compile/internal/ssagen.InitConfig`](https://github.com/golang/go/blob/4b27560db937aa104753a96bf011d7f13c4aedc3/src/cmd/compile/internal/ssagen/ssa.go#L71) 的执行过程可以分为三个部分，首先便是创建结构体并缓存类型信息：
+[cmd/compile/internal/ssagen.InitConfig](https://github.com/golang/go/blob/4b27560db937aa104753a96bf011d7f13c4aedc3/src/cmd/compile/internal/ssagen/ssa.go#L71) 的执行过程可以分为三个部分，首先便是创建结构体并缓存类型信息：
 
 ```go
 func InitConfig() {
@@ -258,7 +258,7 @@ func InitConfig() {
 
 #### 遍历和替换
 
-在生成中间代码之前，编译器还需要替换抽象语法树中节点的一些元素，这是通过 [`cmd/compile/internal/walk`](https://github.com/golang/go/tree/4b27560db937aa104753a96bf011d7f13c4aedc3/src/cmd/compile/internal/walk) 包中的相关函数实现的：
+在生成中间代码之前，编译器还需要替换抽象语法树中节点的一些元素，这是通过 [cmd/compile/internal/walk](https://github.com/golang/go/tree/4b27560db937aa104753a96bf011d7f13c4aedc3/src/cmd/compile/internal/walk) 包中的相关函数实现的：
 
 ```go
 func Walk(fn *ir.Func) {}
@@ -292,7 +292,7 @@ dumped SSA to ./ssa.html
 
 ### 机器码生成
 
-Go 语言源代码的 [`src/cmd/compile/internal`](https://github.com/golang/go/tree/master/src/cmd/compile/internal) 目录中包含了很多机器码生成相关的包，不同类型的 CPU 分别使用了不同的包生成机器码，其中包括 amd64、arm、arm64、mips、mips64、ppc64、s390x、x86 和 wasm。
+Go 语言源代码的 [cmd/compile/internal](https://github.com/golang/go/tree/master/src/cmd/compile/internal) 目录中包含了很多机器码生成相关的包，不同类型的 CPU 分别使用了不同的包生成机器码，其中包括 amd64、arm、arm64、mips、mips64、ppc64、s390x、x86 和 wasm。
 
 机器码的生成主要由两部分协同完成：
 
