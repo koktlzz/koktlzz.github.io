@@ -47,7 +47,7 @@ arr1 := [3]int{1, 2, 3}
 arr2 := [...]int{1, 2, 3}
 ```
 
-不过第一种方式声明的数组的大小在 [[编译原理#类型检查|类型检查]] 阶段就会被提取出来，而第二种方式则需要编译器通过遍历元素来计算。因此，`[...]T` 这种初始化方式其实是 Go 语言为我们提供的一种语法糖。
+不过第一种方式声明的数组的大小在 [类型检查](/posts/go-compiler-principle-note/#类型检查) 阶段就会被提取出来，而第二种方式则需要编译器通过遍历元素来计算。因此，`[...]T` 这种初始化方式其实是 Go 语言为我们提供的一种语法糖。
 
 对于一个由字面量（Literal）组成的数组，根据数组元素数量的不同，编译器会在负责初始化字面量的 [cmd/compile/internal/walk.anylit](https://github.com/golang/go/blob/4c50f9162cafaccc1ab1bc26b0dea18f124b536d/src/cmd/compile/internal/walk/complit.go#L527) 函数中做两种不同的优化：
 
@@ -120,7 +120,7 @@ type SliceHeader struct {
 
 因此我们可以将切片理解成一片连续的内存空间（底层数组）以及长度与容量的标识：
 
-![[Pasted image 20221201224650.png]]
+![20240721231002](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20240721231002.png)
 
 ### 初始化
 
@@ -240,7 +240,7 @@ if uint(len) > uint(cap) {
 
 两者的逻辑其实差不多，最大的区别在于得到的新切片是否会赋值回原变量。
 
-![[Pasted image 20240715171701.png]]
+![20240721231049](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20240721231049.png)
 
 扩容是为切片分配新的内存空间并复制原切片中元素的过程，[runtime.growslice](https://github.com/golang/go/blob/4c50f9162cafaccc1ab1bc26b0dea18f124b536d/src/runtime/slice.go#L155) 函数最终会返回一个新的切片，其中包含了新的数组指针、大小和容量。[runtime.nextslicecap](https://github.com/golang/go/blob/4c50f9162cafaccc1ab1bc26b0dea18f124b536d/src/runtime/slice.go#L267) 则根据切片的当前容量选择不同的策略进行扩容：
 
@@ -290,7 +290,7 @@ arr = append(arr, 1, 2, 3, 4, 5)
 
 无论是编译期间复制还是运行时复制，两种复制方式都会通过 [runtime.memmove](https://github.com/golang/go/blob/4c50f9162cafaccc1ab1bc26b0dea18f124b536d/src/runtime/memmove_386.s#L34) 将整块内存的内容复制到目标的内存区域中：
 
-![[Pasted image 20221204214706.png]]
+![20240721231126](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20240721231126.png)
 
 相比于依次复制元素，这种方式能够提供更好的性能。不过，整块复制内存仍然会占用非常多的资源，对大切片执行复制操作时一定要注意对性能的影响。
 
@@ -302,7 +302,7 @@ arr = append(arr, 1, 2, 3, 4, 5)
 
 哈希函数映射的结果一定要尽可能均匀，结果不均匀的哈希函数会带来更多的哈希冲突以及更差的读写性能。
 
-![[Pasted image 20221204221354.png]]
+![20240721231215](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20240721231215.png)
 
 解决哈希冲突的常见方法有开放寻址法和拉链法。
 
@@ -316,7 +316,7 @@ index := hash("Key3") % array.len
 
 如下图所示，当 Key3 与已经存入哈希表中的两个键值对 Key1 和 Key2 发生冲突时，Key3 会被写入 Key2 后面的空闲位置。当我们再去读取 Key3 对应的值时就会先获取键的哈希并取模，这会先帮助我们找到 Key1，找到 Key1 后发现它与 Key 3 不相等，所以会继续查找后面的元素，直到内存为空或者找到目标元素。
 
-![[Pasted image 20221204223840.png]]
+![20240721231248](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20240721231248.png)
 
 开放寻址法中对性能影响最大的是装载因子，它是数组中元素的数量与数组大小的比值。随着装载因子的增加，线性探测的平均用时就会逐渐增加，这会影响哈希表的读写性能。当装载率超过 70% 之后，哈希表的性能就会急剧下降，而一旦装载率达到 100%，整个哈希表就会完全失效，这时查找和插入任意元素的时间复杂度都是 𝑂(𝑛) 的，即需要遍历数组中的全部元素。
 
@@ -324,7 +324,7 @@ index := hash("Key3") % array.len
 
 大多数编程语言都采用拉链法，它的平均查找时间较短且可以动态申请内存以减少内存占用。实现拉链法一般会使用数组加上链表，我们可以将它看成可以扩展的二维数组：
 
-![[Pasted image 20221204224617.png]]
+![20240721231307](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20240721231307.png)
 
 和开放地址法一样，选择桶的方式是直接对哈希函数返回的结果取模：
 
@@ -365,7 +365,7 @@ type mapextra struct {
 }
 ```
 
-![[Pasted image 20221204231720.png]]
+![20240721231338](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20240721231338.png)
 
 如上图所示哈希表 [runtime.hmap](https://github.com/golang/go/blob/4c50f9162cafaccc1ab1bc26b0dea18f124b536d/src/runtime/map.go#L117) 的桶是 [runtime.bmap](https://github.com/golang/go/blob/4c50f9162cafaccc1ab1bc26b0dea18f124b536d/src/runtime/map.go#L151)，后者能存储 8 个键值对。当哈希表中存储的数据过多，单个桶已经装满时就会使用`extra.nextOverflow`中的桶存储溢出的数据。
 
@@ -386,7 +386,7 @@ type bmap struct {
 }
 ```
 
-![[Pasted image 20221204234422.png]]
+![20240721231404](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20240721231404.png)
 
 ### 初始化
 
@@ -521,7 +521,7 @@ bucketloop:
 
 如下图所示，正是因为每个桶都是一片连续的内存空间，我们才能通过 [runtime.add](https://github.com/golang/go/blob/4c50f9162cafaccc1ab1bc26b0dea18f124b536d/src/runtime/stubs.go#L15) 操作指针以访问桶中存储的键。
 
-![[Pasted image 20221205221842.png]]
+![20240721231456](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20240721231456.png)
 
 另外，选择桶序号时用的是键的哈希值的最低几位（`hash&m`），而加速访问用的是键的哈希值的高 8 位，这种设计能够减少同一个桶中有大量相等`tophash`的概率以免影响性能。
 
@@ -684,7 +684,7 @@ func hashGrow(t *maptype, h *hmap) {
 }
 ```
 
-![[Pasted image 20221206234604.png]]
+![20240721231524](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20240721231524.png)
 
 我们可以看出，等量扩容创建的新桶数量和旧桶一样，而增量扩容创建的新桶则为原来的两倍。`hashGrow`只是创建了新桶，并没有对数据进行复制和转移。哈希表的数据迁移是由 [runtime.evacuate](https://github.com/golang/go/blob/4c50f9162cafaccc1ab1bc26b0dea18f124b536d/src/runtime/map.go#L1164) 完成的，它会对桶中的元素分流：
 
@@ -757,7 +757,7 @@ func evacuate(t *maptype, h *hmap, oldbucket uintptr) {
 
 举例来说，旧桶数量是 4，新桶数量是 8。则旧桶的掩码是 $11_2$，新桶的掩码是 $111_2$。那么旧桶中 3 号桶的元素（哈希值后两位为 $11$）就会被分流到新桶中的 3 号桶（哈希值后三位为 $011$）和 7 号桶（哈希值后三位为 $111$）：
 
-![[Pasted image 20221207000509.png]]
+![20240721231551](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20240721231551.png)
 
 之前在分析访问哈希表时其实省略了扩容期间获取键值对的逻辑，当哈希表的`oldbuckets`存在时，会先定位到旧桶并在该桶没有被迁移时从中获取键值对。
 
@@ -795,7 +795,7 @@ func growWork(t *maptype, h *hmap, bucket uintptr) {
 
 Go 语言中的字符串是一个只读的字节数组：
 
-![[Pasted image 20221209001155.png]]
+![20240721231616](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20240721231616.png)
 
 不过我们仍然可以通过在`string`和`[]byte`类型之间反复转换实现修改这一目的：
 
@@ -829,7 +829,7 @@ type String struct {
 
 正常情况下，运行时会调用`copy`将输入的多个字符串复制到目标字符串所在的内存空间。新的字符串是一片新的内存空间，与原来的字符串也没有任何关联，一旦需要拼接的字符串非常大，复制带来的性能损失是无法忽略的。
 
-![[Pasted image 20240714210009.png]]
+![20240721231645](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20240721231645.png)
 
 > 如果需要拼接多次，应使用`strings.Builder`，最小化内存复制次数。
 
