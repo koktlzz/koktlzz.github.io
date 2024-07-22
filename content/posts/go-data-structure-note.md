@@ -49,7 +49,7 @@ arr2 := [...]int{1, 2, 3}
 
 不过第一种方式声明的数组的大小在 [类型检查](/posts/go-compiler-principle-note/#类型检查) 阶段就会被提取出来，而第二种方式则需要编译器通过遍历元素来计算。因此，`[...]T` 这种初始化方式其实是 Go 语言为我们提供的一种语法糖。
 
-对于一个由字面量（Literal）组成的数组，根据数组元素数量的不同，编译器会在负责初始化字面量的 [cmd/compile/internal/walk.anylit](https://github.com/golang/go/blob/4c50f9162cafaccc1ab1bc26b0dea18f124b536d/src/cmd/compile/internal/walk/complit.go#L527) 函数中做两种不同的优化：
+对于一个由字面量（Literal）组成的数组，根据数组元素数量的不同，编译器会在负责初始化字面量的 [cmd/compile/internal/walk.anylit](https://github.com/golang/go/blob/4c50f9162cafaccc1ab1bc26b0dea18f124b536d/src/cmd/compile/internal/walk/complit.go#L527) 函数中做出两种不同的优化：
 
 1. 当元素数量小于或者等于 4 个时，会直接将数组中的元素放置在栈上；
 2. 当元素数量大于 4 个时，会将数组中的元素放置到静态区并在运行时复制到栈中。
@@ -195,7 +195,7 @@ func makeslice(et *_type, len, cap int) unsafe.Pointer {
 
 ### 访问元素
 
-使用 `len` 和 `cap` 获取长度或者容量是切片最常见的操作，编译器将这它们看成两种特殊操作，即 [OLEN` 和 `OCAP](https://github.com/golang/go/blob/4c50f9162cafaccc1ab1bc26b0dea18f124b536d/src/cmd/compile/internal/typecheck/typecheck.go#L393)。
+使用 `len` 和 `cap` 获取长度或者容量是切片最常见的操作，编译器将这它们看成两种特殊操作，即 [OLEN 和 OCAP](https://github.com/golang/go/blob/4c50f9162cafaccc1ab1bc26b0dea18f124b536d/src/cmd/compile/internal/typecheck/typecheck.go#L393)。
 
 在编译期间，对切片中元素的访问操作 [OINDEX](https://github.com/golang/go/blob/4c50f9162cafaccc1ab1bc26b0dea18f124b536d/src/cmd/compile/internal/typecheck/typecheck.go#L360) 会被转换成对地址的直接访问，而包含`range`关键字的遍历则被转换成形式更简单的循环。
 
@@ -218,7 +218,7 @@ if uint(len) > uint(cap) {
 return makeslice(ptr, len, cap)
 ```
 
-如果`append`返回的切片会覆盖原切片：
+如果 [append](https://github.com/golang/go/blob/4c50f9162cafaccc1ab1bc26b0dea18f124b536d/src/cmd/compile/internal/ssagen/ssa.go#L3511) 返回的切片会覆盖原切片：
 
 ```go
 // s = append(s, 1, 2, 3)
@@ -242,7 +242,7 @@ if uint(len) > uint(cap) {
 
 ![20240721231049](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20240721231049.png)
 
-扩容是为切片分配新的内存空间并复制原切片中元素的过程，[runtime.growslice](https://github.com/golang/go/blob/4c50f9162cafaccc1ab1bc26b0dea18f124b536d/src/runtime/slice.go#L155) 函数最终会返回一个新的切片，其中包含了新的数组指针、大小和容量。[runtime.nextslicecap](https://github.com/golang/go/blob/4c50f9162cafaccc1ab1bc26b0dea18f124b536d/src/runtime/slice.go#L267) 则根据切片的当前容量选择不同的策略进行扩容：
+扩容是为切片分配新的内存空间并复制原切片中元素的过程，[runtime.growslice](https://github.com/golang/go/blob/4c50f9162cafaccc1ab1bc26b0dea18f124b536d/src/runtime/slice.go#L155) 函数最终会返回一个新的切片，其中包含了新的数组指针、大小和容量。[runtime.nextslicecap](https://github.com/golang/go/blob/4c50f9162cafaccc1ab1bc26b0dea18f124b536d/src/runtime/slice.go#L267) 则根据切片的期望容量和当前容量选择不同的策略进行扩容：
 
 ```go
 // nextslicecap computes the next appropriate slice length.
@@ -279,7 +279,7 @@ func nextslicecap(newLen, oldCap int) int {
 }
 ```
 
-当我们执行如下代码时，会触发 [runtime.growslice](https://github.com/golang/go/blob/4c50f9162cafaccc1ab1bc26b0dea18f124b536d/src/runtime/slice.go#L155) 函数扩容`arr`切片并传入期望的新容量 5，此时期望分配的内存大小为 40 字节。不过切片中的元素大小应等于`sys.PtrSize`，所以运行时会调用 [runtime.roundupsize](https://github.com/golang/go/blob/4c50f9162cafaccc1ab1bc26b0dea18f124b536d/src/runtime/msize_noallocheaders.go#L17) 向上取整内存的大小到 48 字节，新切片的容量为 48 / 8 = 6：
+当我们执行如下代码时，会触发 [runtime.growslice](https://github.com/golang/go/blob/4c50f9162cafaccc1ab1bc26b0dea18f124b536d/src/runtime/slice.go#L155) 函数扩容`arr`切片并传入期望的新容量 5，此时期望分配的内存大小为 40 字节。不过切片中的元素大小应等于 [internal/goarch.PtrSize](https://github.com/golang/go/blob/4c50f9162cafaccc1ab1bc26b0dea18f124b536d/src/internal/goarch/goarch.go#L33)，所以运行时会调用 [runtime.roundupsize](https://github.com/golang/go/blob/4c50f9162cafaccc1ab1bc26b0dea18f124b536d/src/runtime/msize_noallocheaders.go#L17) 向上取整内存的大小到 48 字节，新切片的容量为 48 / 8 = 6：
 
 ```go
 var arr []int64
@@ -678,15 +678,29 @@ func hashGrow(t *maptype, h *hmap) {
     h.noverflow = 0
 
     // 溢出桶采用相同的逻辑
-    h.extra.oldoverflow = h.extra.overflow
-    h.extra.overflow = nil
-    h.extra.nextOverflow = nextOverflow
+    if h.extra != nil && h.extra.overflow != nil {
+        // Promote current overflow buckets to the old generation.
+        if h.extra.oldoverflow != nil {
+            throw("oldoverflow is not nil")
+        }
+        h.extra.oldoverflow = h.extra.overflow
+        h.extra.overflow = nil
+    }
+    if nextOverflow != nil {
+        if h.extra == nil {
+            h.extra = new(mapextra)
+        }
+        h.extra.nextOverflow = nextOverflow
+    }
+
+    // the actual copying of the hash table data is done incrementally
+    // by growWork() and evacuate().
 }
 ```
 
 ![20240721231524](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20240721231524.png)
 
-我们可以看出，等量扩容创建的新桶数量和旧桶一样，而增量扩容创建的新桶则为原来的两倍。`hashGrow`只是创建了新桶，并没有对数据进行复制和转移。哈希表的数据迁移是由 [runtime.evacuate](https://github.com/golang/go/blob/4c50f9162cafaccc1ab1bc26b0dea18f124b536d/src/runtime/map.go#L1164) 完成的，它会对桶中的元素分流：
+我们可以看出，等量扩容创建的新桶数量和旧桶一样，而增量扩容创建的新桶则为原来的两倍。`hashGrow`只是创建了新桶，并没有对数据进行复制和转移。哈希表的数据迁移是由 [runtime.growWork](https://github.com/golang/go/blob/4c50f9162cafaccc1ab1bc26b0dea18f124b536d/src/runtime/map.go#L1140) 和 [runtime.evacuate](https://github.com/golang/go/blob/4c50f9162cafaccc1ab1bc26b0dea18f124b536d/src/runtime/map.go#L1164) 共同完成的，后者会对桶中的元素分流：
 
 ```go
 func evacuate(t *maptype, h *hmap, oldbucket uintptr) {
@@ -810,7 +824,7 @@ func growWork(t *maptype, h *hmap, bucket uintptr) {
 }
 ```
 
-传入该函数的`bucket`参数是我们即将访问的某一个新桶，`bucket&h.oldbucketmask()`是与之对应的旧桶地址。举例来说，旧桶数量是 4，新桶数量是 8，旧桶的掩码是 $11_2$。如果`bucket`指向新桶中的 5 号桶，那么它在旧桶中的序号就应当是 $0101\space \& \space 0011 = 0001$，即 1 号。该函数仅操作单个桶而非整个`bmap`数组，因此 Go 语言中哈希的扩容是渐进式的，每次最多迁移两个桶。
+传入该函数的`bucket`参数是我们即将访问的某一个新桶，`bucket&h.oldbucketmask()`是与之对应的旧桶地址。举例来说，旧桶数量是 4，新桶数量是 8，旧桶的掩码是 $11_2$。如果`bucket`指向新桶中的 5 号桶，那么它在旧桶中的序号就应当是 $0101_2 \And 0011_2$，即 1 号。该函数仅操作单个桶而非整个`bmap`数组，因此 Go 语言中哈希的扩容是渐进式的，每次最多迁移两个桶。
 
 #### 删除
 
