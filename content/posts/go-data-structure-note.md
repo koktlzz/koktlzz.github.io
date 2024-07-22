@@ -279,7 +279,7 @@ func nextslicecap(newLen, oldCap int) int {
 }
 ```
 
-当我们执行如下代码时，会触发 [runtime.growslice](https://github.com/golang/go/blob/4c50f9162cafaccc1ab1bc26b0dea18f124b536d/src/runtime/slice.go#L155) 函数扩容`arr`切片并传入期望的新容量 5，此时期望分配的内存大小为 40 字节。不过切片中的元素大小应等于 [internal/goarch.PtrSize](https://github.com/golang/go/blob/4c50f9162cafaccc1ab1bc26b0dea18f124b536d/src/internal/goarch/goarch.go#L33)，所以运行时会调用 [runtime.roundupsize](https://github.com/golang/go/blob/4c50f9162cafaccc1ab1bc26b0dea18f124b536d/src/runtime/msize_noallocheaders.go#L17) 向上取整内存的大小到 48 字节，新切片的容量为 48 / 8 = 6：
+当我们执行如下代码时，会触发 [runtime.growslice](https://github.com/golang/go/blob/4c50f9162cafaccc1ab1bc26b0dea18f124b536d/src/runtime/slice.go#L155) 函数扩容`arr`切片并传入期望的新容量 5，此时期望分配的内存大小为 40 字节。不过运行时会调用 [runtime.roundupsize](https://github.com/golang/go/blob/4c50f9162cafaccc1ab1bc26b0dea18f124b536d/src/runtime/msize_noallocheaders.go#L17) 将切片占用的内存大小对齐到 48 字节，因此新切片的容量为 48 / 8 = 6：
 
 ```go
 var arr []int64
