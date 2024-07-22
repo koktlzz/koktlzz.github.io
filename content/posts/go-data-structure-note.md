@@ -700,58 +700,83 @@ func evacuate(t *maptype, h *hmap, oldbucket uintptr) {
         // 它们分别指向一个新桶
         var xy [2]evacDst
         x := &xy[0]
-        // 迁移到 x 执行的桶序号不变
+        // 迁移到 x 的桶序号不变
         x.b = (*bmap)(add(h.buckets, oldbucket*uintptr(t.BucketSize)))
         x.k = add(unsafe.Pointer(x.b), dataOffset)
         x.e = add(x.k, bucketCnt*uintptr(t.KeySize))
 
-        // 只有在翻倍扩容的情况下才计算 y
         if !h.sameSizeGrow() {
+            // 只有在翻倍扩容的情况下才计算 y
             y := &xy[1]
-            // 迁移到 y 指向的桶序号增加扩容前桶的数量
+            // 迁移到 y 的桶序号增加扩容前桶的数量
             y.b = (*bmap)(add(h.buckets, (oldbucket+newbit)*uintptr(t.BucketSize)))
             y.k = add(unsafe.Pointer(y.b), dataOffset)
             y.e = add(y.k, bucketCnt*uintptr(t.KeySize))
         }
-
         // 遍历所有的正常桶和溢出桶
         for ; b != nil; b = b.overflow(t) {
             k := add(unsafe.Pointer(b), dataOffset)
             e := add(k, bucketCnt*uintptr(t.KeySize))
-            // 遍历桶 b 中的所有元素
+            // // 遍历桶 b 中的所有元素
             for i := 0; i < bucketCnt; i, k, e = i+1, add(k, uintptr(t.KeySize)), add(e, uintptr(t.ValueSize)) {
                 top := b.tophash[i]
+                // 若为空位，则直接跳过
+                if isEmpty(top) {
+                    b.tophash[i] = evacuatedEmpty
+                    continue
+                }
                 k2 := k
                 var useY uint8
-                hash := t.hasher(k2, uintptr(h.hash0))
-                // 确定该元素应当迁移到 x 指向的桶还是 y 指向的桶
-                if hash&newbit != 0 {
-                    useY = 1
+                if !h.sameSizeGrow() {
+                    // 计算哈希值确定该元素应当迁移到 x 指向的桶还是 y 指向的桶
+                    hash := t.Hasher(k2, uintptr(h.hash0))
+                    // k2 为特殊值时的处理
+                    if h.flags&iterator != 0 && !t.ReflexiveKey() && !t.Key.Equal(k2, k2) {.
+                        useY = top & 1
+                        top = tophash(hash)
+                    } else {
+                        // 常规情况下的处理
+                        if hash&newbit != 0 {
+                            // 元素应当迁移到 y 指向的桶
+                            useY = 1
+                        }
+                    }
                 }
+                ...
+                // 更新 tophash 以标记对应的元素已经被迁移
                 b.tophash[i] = evacuatedX + useY
-                dst := &xy[useY]
-
+                // 确定元素最终的迁移位置
+                dst := &xy[useY]     
+                // 若新桶已满，则创建溢出桶
                 if dst.i == bucketCnt {
                     dst.b = h.newoverflow(t, dst.b)
                     dst.i = 0
                     dst.k = add(unsafe.Pointer(dst.b), dataOffset)
                     dst.e = add(dst.k, bucketCnt*uintptr(t.KeySize))
                 }
-                dst.b.tophash[dst.i&(bucketCnt-1)] = top
-                // 将键值对复制到目标桶中
-                typedmemmove(t.Key, dst.k, k)
-                typedmemmove(t.Elem, dst.e, e)
+                // 复制键值对到新 bucket
+                dst.b.tophash[dst.i&(bucketCnt-1)] = top // mask dst.i as an optimization, to avoid a bounds check
+                if t.IndirectKey() {
+                    *(*unsafe.Pointer)(dst.k) = k2 // copy pointer
+                } else {
+                    typedmemmove(t.Key, dst.k, k) // copy elem
+                }
+                if t.IndirectElem() {
+                    *(*unsafe.Pointer)(dst.e) = *(*unsafe.Pointer)(e)
+                } else {
+                    typedmemmove(t.Elem, dst.e, e)
+                }
                 dst.i++
                 dst.k = add(dst.k, uintptr(t.KeySize))
                 dst.e = add(dst.e, uintptr(t.ValueSize))
             }
         }
         ...
-    // 若此次迁移的 bucket 代表当前迁移进度
-    // 则增加计数器 nevacuate 
-    // 并在所有旧桶迁移完成后清空 oldbuckets 和 oldoverflow
-    if oldbucket == h.nevacuate {  
-        advanceEvacuationMark(h, t, newbit)  
+    }
+    // 若所有旧桶迁移完成，则清空 oldbuckets 和 oldoverflow
+    if oldbucket == h.nevacuate {
+        advanceEvacuationMark(h, t, newbit)
+    }
 }
 ```
 
