@@ -195,7 +195,7 @@ func makeslice(et *_type, len, cap int) unsafe.Pointer {
 
 ### 访问元素
 
-使用 `len` 和 `cap` 获取长度或者容量是切片最常见的操作，编译器将这它们看成两种特殊操作，即 [OLEN 和 OCAP](https://github.com/golang/go/blob/4c50f9162cafaccc1ab1bc26b0dea18f124b536d/src/cmd/compile/internal/typecheck/typecheck.go#L393)。
+使用`len`和`cap`获取长度或者容量是切片最常见的操作，编译器将这它们看成两种特殊操作，即 [OLEN 和 OCAP](https://github.com/golang/go/blob/4c50f9162cafaccc1ab1bc26b0dea18f124b536d/src/cmd/compile/internal/typecheck/typecheck.go#L393)。
 
 在编译期间，对切片中元素的访问操作 [OINDEX](https://github.com/golang/go/blob/4c50f9162cafaccc1ab1bc26b0dea18f124b536d/src/cmd/compile/internal/typecheck/typecheck.go#L360) 会被转换成对地址的直接访问，而包含`range`关键字的遍历则被转换成形式更简单的循环。
 
