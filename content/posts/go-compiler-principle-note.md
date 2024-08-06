@@ -48,7 +48,7 @@ x_2 := 2
 y_1 := x_2
 ```
 
-编译器便可以清楚地发现`x_1`和`y_1`没有任何关系，它在生成机器码时就可以省去 `x := 1` 的赋值，从而通过减少需要执行的指令来优化这段代码。
+编译器便可以清楚地发现`x_1`和`y_1`没有任何关系，它在生成机器码时就可以省去`x := 1`的赋值，从而通过减少需要执行的指令来优化这段代码。
 
 编译器前端负责将源代码翻译成与编程语言无关的中间代码，后端主要负责目标代码的生成和优化。因为 SSA 的主要作用是对代码进行优化，所以它是编译器后端的一部分。
 
@@ -61,7 +61,7 @@ y_1 := x_2
 
 ### 词法分析
 
-词法分析的作用是解析源代码文件，它将文件中的字符串序列转换成 Token 序列（即分词），如`package`, `json`, `import`, ……，方便后面的处理和解析。我们一般会把执行词法分析的程序称为词法解析器（Lexer）。
+词法分析的作用是解析源代码文件，它将文件中的字符串序列转换成 Token 序列（即分词），如`package`,`json`,`import`, ……，方便后面的处理和解析。我们一般会把执行词法分析的程序称为词法解析器（Lexer）。
 
 从 Go 语言中定义的 Token 类型，我们可以将元素分成几个不同的类别，分别是名称和字面量、操作符、分隔符和关键字。词法分析主要由 [cmd/compile/internal/syntax.scanner](https://github.com/golang/go/blob/4e548f2c8e489a408033c8aab336077b16bc8cf7/src/cmd/compile/internal/syntax/scanner.go#L30) 结构体的 [next](https://github.com/golang/go/blob/4e548f2c8e489a408033c8aab336077b16bc8cf7/src/cmd/compile/internal/syntax/scanner.go#L88) 方法驱动，该结构体会持有当前被扫描到的 Token，而该函数的主体则是一个`switch/case`结构。
 
@@ -116,7 +116,7 @@ type (
 
 编译器遍历抽象语法树以保证节点不存在类型错误，所有的类型错误和不匹配都会在这一个阶段被暴露出来（强类型），包括结构体对接口的实现。
 
-Go 语言的编译器不仅使用静态类型检查来保证程序运行的类型安全，还会在编译期间引入类型信息，让工程师能够使用反射来判断参数和变量的类型。当我们想要将 `interface{}` 转换成具体类型时会进行动态类型检查，如果无法发生转换程序就会崩溃。
+Go 语言的编译器不仅使用静态类型检查来保证程序运行的类型安全，还会在编译期间引入类型信息，让工程师能够使用反射来判断参数和变量的类型。当我们想要将`interface{}`转换成具体类型时会进行动态类型检查，如果无法发生转换程序就会崩溃。
 
 编译器类型检查的主要逻辑都在 [cmd/compile/internal/typecheck.typecheck](https://github.com/golang/go/blob/4e548f2c8e489a408033c8aab336077b16bc8cf7/src/cmd/compile/internal/typecheck/typecheck.go#L150) 和 [cmd/compile/internal/typecheck.typecheck1](https://github.com/golang/go/blob/4e548f2c8e489a408033c8aab336077b16bc8cf7/src/cmd/compile/internal/typecheck/typecheck.go#L218) 中，后者是类型检查的核心。该函数根据传入 [节点](https://github.com/golang/go/blob/4b27560db937aa104753a96bf011d7f13c4aedc3/src/cmd/compile/internal/ir/node.go#L20) 的操作类型进入不同分支：
 
