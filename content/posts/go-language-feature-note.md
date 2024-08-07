@@ -418,7 +418,7 @@ func (v Value) Bytes() []byte
 
 #### 第一法则
 
-函数 [reflect.TypeOf](https://github.com/golang/go/blob/8c8adffd5301b5e40a8c39e92030c53c856fb1a6/src/reflect/type.go#L1160) 和 [reflect.ValueOf](https://github.com/golang/go/blob/8c8adffd5301b5e40a8c39e92030c53c856fb1a6/src/reflect/value.go#L3260) 的入参均为`interface{}`类型，所以类似`reflect.ValueOf(1)`这样的调用实际上首先完成了隐式的类型转换。上述两个函数是连接 Go 语言类型和反射类型的桥梁：
+函数 [reflect.TypeOf](https://github.com/golang/go/blob/8c8adffd5301b5e40a8c39e92030c53c856fb1a6/src/reflect/type.go#L1160) 和 [reflect.ValueOf](https://github.com/golang/go/blob/8c8adffd5301b5e40a8c39e92030c53c856fb1a6/src/reflect/value.go#L3260) 的入参均为`any`类型（即`interface{}`的别名），所以类似`reflect.ValueOf(1)`这样的调用实际上首先完成了隐式的类型转换。上述两个函数是连接 Go 语言类型和反射类型的桥梁：
 
 ![20240806170008](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20240806170008.png)
 
@@ -492,7 +492,7 @@ type emptyInterface struct {
 函数 [reflect.TypeOf](https://github.com/golang/go/blob/8c8adffd5301b5e40a8c39e92030c53c856fb1a6/src/reflect/type.go#L1160) 会将传入的变量隐式地转换为`reflect.emptyInterface`类型并获取其中存储的类型信息 [reflect.rtype](https://github.com/golang/go/blob/8c8adffd5301b5e40a8c39e92030c53c856fb1a6/src/reflect/type.go#L296)：
 
 ```go
-func TypeOf(i interface{}) Type {
+func TypeOf(i any) Type {
     eface := *(*emptyInterface)(unsafe.Pointer(&i))
     return toType((*abi.Type)(noescape(unsafe.Pointer(eface.typ))))
 }
