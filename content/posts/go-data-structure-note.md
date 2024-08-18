@@ -2,7 +2,7 @@
 title: "《Go 语言设计与实现》读书笔记：数据结构"
 date: 2024-07-18T13:26:42+01:00
 draft: false
-series: ["《Go 语言设计与实现》数据结构"]
+series: ["《Go 语言设计与实现》读书笔记"]
 tags: ["Go","Data-structure"]
 summary: "抽象语法树（Abstract Syntax Tree，AST），是源代码语法的结构的一种抽象表示。它用树状的方式表示编程语言的语法结构，每个节点都表示源代码中的一个元素，每一颗子树都表示一个语法元素 ..."
 ---
