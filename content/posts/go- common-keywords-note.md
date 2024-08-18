@@ -24,7 +24,7 @@ for Ninit; Left; Right {
 }
 ```
 
-在生成 [[编译原理#中间代码生成|SSA 中间代码]] 的阶段，[`cmd/compile/internal/ssagen.stmt`](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/cmd/compile/internal/ssagen/ssa.go#L1431) 会将循环中的代码分成不同的块：
+在生成 [[编译原理#中间代码生成|SSA 中间代码]] 的阶段，[cmd/compile/internal/ssagen.stmt](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/cmd/compile/internal/ssagen/ssa.go#L1431) 会将循环中的代码分成不同的块：
 
 ```go
 // stmt converts the statement n to SSA and adds it to s.
@@ -54,7 +54,7 @@ func (s *state) stmt(n ir.Node) {
 
 ### 数组和切片
 
-对于数组和切片来说，Go 语言有三种不同的遍历方式，分别对应着代码中的不同条件。它们会在 [`cmd/compile/internal/walk.walkRange`](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/cmd/compile/internal/walk/range.go#L95) 函数中转换成不同的控制逻辑：
+对于数组和切片来说，Go 语言有三种不同的遍历方式，分别对应着代码中的不同条件。它们会在 [cmd/compile/internal/walk.walkRange](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/cmd/compile/internal/walk/range.go#L95) 函数中转换成不同的控制逻辑：
 
 1. 遍历数组和切片清空元素的情况；
 2. 使用 `for range a {}` 遍历数组和切片；
@@ -63,7 +63,7 @@ func (s *state) stmt(n ir.Node) {
 
 #### 遍历清空元素
 
-相比于依次清除数组或者切片中的数据，Go 语言会直接使用 [`runtime.memclrNoHeapPointers`](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/runtime/memclr_386.s#L13) 或者 [`runtime.memclrHasPointers`](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/runtime/mbarrier.go#L369) 清除目标数组内存空间中的全部数据，并在执行完成后更新遍历数组的索引：
+相比于依次清除数组或者切片中的数据，Go 语言会直接使用 [runtime.memclrNoHeapPointers](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/runtime/memclr_386.s#L13) 或者 [runtime.memclrHasPointers](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/runtime/mbarrier.go#L369) 清除目标数组内存空间中的全部数据，并在执行完成后更新遍历数组的索引：
 
 ```go
 // 原代码
@@ -110,7 +110,7 @@ for ; hv1 < hn; hv1++ {
 
 #### `for i, elem := range a {}`
 
-调用者同时关心数组的索引和切片，循环会被编译器转换成如下形式：：
+调用者同时关心数组的索引和切片，循环会被编译器转换成如下形式：
 
 ```go
 ha := a
@@ -180,7 +180,7 @@ addr: 0xc000012068  value: 3
 
 ### 哈希表
 
-[`runtime.hiter`](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/runtime/map.go#L166) 是 Go 语言内部用于哈希表迭代的结构体：
+[runtime.hiter](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/runtime/map.go#L166) 是 Go 语言内部用于哈希表迭代的结构体：
 
 ```go
 type hiter struct {
@@ -202,7 +202,7 @@ type hiter struct {
 }
 ```
 
-在遍历哈希表时，编译器会使用 [`runtime.mapiterinit`](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/runtime/map.go#L816) 和 [`runtime.mapiternext`](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/runtime/map.go#L862) 重写原始的 for-range 循环。前者首先初始化 [`runtime.hiter`](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/runtime/map.go#L166) 结构体中的字段并保存当前桶的状态，然后随机选择一个桶作为遍历的起始位置：
+在遍历哈希表时，编译器会使用 [runtime.mapiterinit](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/runtime/map.go#L816) 和 [runtime.mapiternext](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/runtime/map.go#L862) 重写原始的 for-range 循环。前者首先初始化 [runtime.hiter](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/runtime/map.go#L166) 结构体中的字段并保存当前桶的状态，然后随机选择一个桶作为遍历的起始位置：
 
 ```go
 func mapiterinit(t *maptype, h *hmap, it *hiter) {
@@ -229,7 +229,7 @@ func mapiterinit(t *maptype, h *hmap, it *hiter) {
 }
 ```
 
-[`runtime.mapiternext`](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/runtime/map.go#L862) 函数的执行主要分为桶的选择和桶内元素遍历两部分：
+[runtime.mapiternext](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/runtime/map.go#L862) 函数的执行主要分为桶的选择和桶内元素遍历两部分：
 
 ```go
 func mapiternext(it *hiter) {
@@ -376,7 +376,7 @@ Go 语言的 `defer` 会在当前函数返回前执行传入的函数，经常
 
 ### 数据结构
 
-[`runtime._defer`](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/runtime/runtime2.go#L1026) 结构体是延迟调用链表中的一个元素，所有的结构体都会通过 `link` 字段串联成链表：
+[runtime._defer](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/runtime/runtime2.go#L1026) 结构体是延迟调用链表中的一个元素，所有的结构体都会通过 `link` 字段串联成链表：
 
 ```go
 type _defer struct {
@@ -395,7 +395,7 @@ type _defer struct {
 
 ![[Pasted image 20240811180122.png]]
 
-`fn`字段表示`defer`关键字传入的函数，曾经是`*funcval`类型，其指向的函数可以拥有任意签名。而在 [runtime: use func() for deferred functions](https://go-review.googlesource.com/c/go/+/337650/3/src/runtime/runtime2.go) 提交之后，该字段就变成了没有参数和返回值的`func()`类型。这是因为 Go 语言会在类型检查阶段调用 [`cmd/compile/internal/typecheck.normalizeGoDeferCall`](https://github.com/golang/go/blob/0a525a3ed0effd31749a0d56f9349cf533f90ce9/src/cmd/compile/internal/typecheck/stmt.go#L220) 将`OGO`和`ODEFER`声明中形如`f(x, y)`的函数标准化为：
+`fn`字段表示`defer`关键字传入的函数，曾经是`*funcval`类型，其指向的函数可以拥有任意签名。而在 [runtime: use func() for deferred functions](https://go-review.googlesource.com/c/go/+/337650/3/src/runtime/runtime2.go) 提交之后，该字段就变成了没有参数和返回值的`func()`类型。这是因为 Go 语言会在类型检查阶段调用 [cmd/compile/internal/typecheck.normalizeGoDeferCall](https://github.com/golang/go/blob/0a525a3ed0effd31749a0d56f9349cf533f90ce9/src/cmd/compile/internal/typecheck/stmt.go#L220) 将`OGO`和`ODEFER`声明中形如`f(x, y)`的函数标准化为：
 
 ```go
 x1, y1 := x, y          // added to init
@@ -404,7 +404,7 @@ func() { f(x1, y1) }()  // result
 
 ### 执行机制
 
-中间代码生成阶段的 [`cmd/compile/internal/ssagen.stmt`](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/cmd/compile/internal/ssagen/ssa.go#L1431) 负责处理程序中的 `defer`关键字，该函数会根据情况使用三种不同的执行机制：
+中间代码生成阶段的 [cmd/compile/internal/ssagen.stmt](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/cmd/compile/internal/ssagen/ssa.go#L1431) 负责处理程序中的 `defer`关键字，该函数会根据情况使用三种不同的执行机制：
 
 ```go
 // stmt converts the statement n to SSA and adds it to s.
@@ -428,13 +428,13 @@ func (s *state) stmt(n ir.Node) {
 }
 ```
 
-- 早期的 Go 语言会在堆上分配 [`runtime._defer`](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/runtime/runtime2.go#L1026) 结构体，不过实现的性能较差；
+- 早期的 Go 语言会在堆上分配 [runtime._defer](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/runtime/runtime2.go#L1026) 结构体，不过实现的性能较差；
 - 1.13 版本的 Go 语言引入栈上分配的`defer`，减少了 30% 的额外开销，详见：[runtime: allocate defer records on the stack](https://go-review.googlesource.com/c/go/+/171758)；
 - 1.14 版本的 Go 语言引入了基于开放编码的`defer`，使其额外开销可以忽略不计，详见：[runtime: make defers low-cost through inline code and extra funcdata](https://go-review.googlesource.com/c/go/+/190098/6)。
 
 ### 堆中分配
 
-堆中分配 [`runtime._defer`](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/runtime/runtime2.go#L1026) 结构体是默认的兜底方案。在编译器看来，`defer`也是函数调用，因此会执行 [`cmd/compile/internal/ssagen.call`](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/cmd/compile/internal/ssagen/ssa.go#L5299) 为其生成中间代码：
+堆中分配 [runtime._defer](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/runtime/runtime2.go#L1026) 结构体是默认的兜底方案。在编译器看来，`defer`也是函数调用，因此会执行 [cmd/compile/internal/ssagen.call](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/cmd/compile/internal/ssagen/ssa.go#L5299) 为其生成中间代码：
 
 ```go
 func (s *state) call(n *ir.CallExpr, k callKind, returnResultAddr bool, deferExtra ir.Expr) *ssa.Value {
@@ -452,7 +452,7 @@ func (s *state) call(n *ir.CallExpr, k callKind, returnResultAddr bool, deferExt
 }
 ```
 
-Go 语言的编译器不仅将`defer`转换成了 [`runtime.deferproc`](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/runtime/panic.go#L271)，还通过以下三个步骤为所有调用`defer`的函数末尾插入 [`runtime.deferreturn`](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/runtime/panic.go#L592)：
+Go 语言的编译器不仅将`defer`转换成了 [runtime.deferproc](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/runtime/panic.go#L271)，还通过以下三个步骤为所有调用`defer`的函数末尾插入 [runtime.deferreturn](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/runtime/panic.go#L592)：
 
 ```go
 // cmd/compile/internal/walk.walkStmt
@@ -491,8 +491,8 @@ func (s *state) exit() *ssa.Block {
 
 上述两个函数是`defer`运行时机制的入口，分别承担了不同的工作：
 
-- [`runtime.deferproc`](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/runtime/panic.go#L271) 负责创建新的延迟调用；
-- [`runtime.deferreturn`](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/runtime/panic.go#L592) 负责在函数调用结束时执行所有的延迟调用。
+- [runtime.deferproc](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/runtime/panic.go#L271) 负责创建新的延迟调用；
+- [runtime.deferreturn](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/runtime/panic.go#L592) 负责在函数调用结束时执行所有的延迟调用。
 
 #### 创建延迟调用
 
@@ -511,7 +511,7 @@ func deferproc(fn func()) {
 }
 ```
 
-[`runtime.newdefer`](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/runtime/panic.go#L501) 的作用是想尽办法获得 [`runtime._defer`](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/runtime/runtime2.go#L1026) 结构体，包含三种方式：
+[runtime.newdefer](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/runtime/panic.go#L501) 的作用是想尽办法获得 [runtime._defer](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/runtime/runtime2.go#L1026) 结构体，包含三种方式：
 
 ```go
 func newdefer() *_defer {
@@ -548,7 +548,7 @@ func newdefer() *_defer {
 }
 ```
 
-无论使用哪种方式，[`runtime._defer`](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/runtime/runtime2.go#L1026) 结构体都会被追加到所在 Goroutine `_defer`链表的最前面。`defer` 关键字的插入顺序是从后向前的，而执行则是从前向后的，这也解释了为什么后调用的 `defer` 会先执行：
+无论使用哪种方式，[runtime._defer](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/runtime/runtime2.go#L1026) 结构体都会被追加到所在 Goroutine `_defer`链表的最前面。`defer` 关键字的插入顺序是从后向前的，而执行则是从前向后的，这也解释了为什么后调用的 `defer` 会先执行：
 
 ```go
 func main() {
@@ -563,7 +563,7 @@ $ go run main.go
 0
 ```
 
-另外，[`runtime.deferproc`](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/runtime/panic.go#L271) 在创建延迟调用时会立刻复制函数的参数，因此后者不会等到真正执行时计算：
+另外，[runtime.deferproc](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/runtime/panic.go#L271) 在创建延迟调用时会立刻复制函数的参数，因此后者不会等到真正执行时计算：
 
 ```go
 func main() {  
@@ -582,7 +582,7 @@ $ go run main.go
 
 #### 执行延迟调用
 
-[`runtime.deferreturn`](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/runtime/panic.go#L592) 会在函数返回之前执行 Goroutine `_defer`链表中注册的所有函数：
+[runtime.deferreturn](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/runtime/panic.go#L592) 会在函数返回之前执行 Goroutine `_defer`链表中注册的所有函数：
 
 ```go
 func deferreturn() {
@@ -605,7 +605,7 @@ func deferreturn() {
 
 ### 栈上分配
 
-当`defer`在函数体中最多执行一次时，[`runtime._defer`](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/runtime/runtime2.go#L1026) 会在编译期间被分配到栈上：
+当`defer`在函数体中最多执行一次时，[runtime._defer](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/runtime/runtime2.go#L1026) 会在编译期间被分配到栈上：
 
 ```go
 // cmd/compile/internal/ssagen.call
@@ -627,7 +627,7 @@ func (s *state) call(n *ir.CallExpr, k callKind, returnResultAddr bool, deferExt
 }
 ```
 
-[`runtime.deferprocStack`](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/runtime/panic.go#L462) 只需要设置一些未在编译期间初始化的字段，就可以把`defer`结构体追加到 Goroutine 的延迟调用链表中：
+[runtime.deferprocStack](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/runtime/panic.go#L462) 只需要设置一些未在编译期间初始化的字段，就可以把`defer`结构体追加到 Goroutine 的延迟调用链表中：
 
 ```go
 func deferprocStack(d *_defer) {
@@ -656,7 +656,7 @@ func deferprocStack(d *_defer) {
 
 开放编码是一种使用代码内联优化`defer`关键字的方法，只在满足以下条件时启用：
 
-- 函数的`defer`数量少于或者等于 8 个;
+- 函数的`defer`数量少于或者等于 8 个；
 - 函数的`defer`关键字不能在循环中执行；
 - 函数的`return`语句与`defer`语句的乘积小于或者等于 15 个。
 
@@ -664,7 +664,7 @@ func deferprocStack(d *_defer) {
 
 #### 启用优化
 
-Go 语言会在编译期间决定是否启用开放编码。在编译器生成中间代码之前，[`cmd/compile/internal/walk.walkStmt`](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/cmd/compile/internal/walk/stmt.go#L15) 会 [[编译原理#遍历和替换|修改已经生成的抽象语法树]]，设置函数体上的`OpenCodedDeferDisallowed`属性：
+Go 语言会在编译期间决定是否启用开放编码。在编译器生成中间代码之前，[cmd/compile/internal/walk.walkStmt](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/cmd/compile/internal/walk/stmt.go#L15) 会 [[编译原理#遍历和替换|修改已经生成的抽象语法树]]，设置函数体上的`OpenCodedDeferDisallowed`属性：
 
 ```go
 func walkStmt(n ir.Node) ir.Node {
@@ -684,7 +684,7 @@ func walkStmt(n ir.Node) ir.Node {
 }
 ```
 
-我们在 SSA 中间代码生成阶段的 [`cmd/compile/internal/ssagen.buildssa`](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/cmd/compile/internal/ssagen/ssa.go#L293C6-L293C14) 函数中也能够看到启用开放编码优化的其他条件：
+我们在 SSA 中间代码生成阶段的 [cmd/compile/internal/ssagen.buildssa](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/cmd/compile/internal/ssagen/ssa.go#L293C6-L293C14) 函数中也能够看到启用开放编码优化的其他条件：
 
 ```go
 func buildssa(fn *ir.Func, worker int) *ssa.Func {
@@ -702,13 +702,13 @@ func buildssa(fn *ir.Func, worker int) *ssa.Func {
 
 #### 延迟记录
 
-延迟比特和延迟记录是使用开放编码实现`defer`的两个最重要结构，Go 语言会在编译期间调用 [`cmd/compile/internal/ssagen.buildssa`](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/cmd/compile/internal/ssagen/ssa.go#L435) 在栈上初始化大小为 8 个比特的`deferBits`变量。
+延迟比特和延迟记录是使用开放编码实现`defer`的两个最重要结构，Go 语言会在编译期间调用 [cmd/compile/internal/ssagen.buildssa](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/cmd/compile/internal/ssagen/ssa.go#L435) 在栈上初始化大小为 8 个比特的`deferBits`变量。
 
 该变量中的每个比特位都表示对应的`defer`关键字是否需要被执行。如下图所示，倒数第二个比特位被设置成了 1，那么其对应的函数将在函数返回前执行：
 
 ![[Pasted image 20240812165156.png]]
 
-编译器还会通过 [`cmd/compile/internal/ssagen.openDeferRecord`](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/cmd/compile/internal/ssagen/ssa.go#L5136) 添加代码以评估和存储`defer`调用的函数，并记录有关`defer`的信息。传入`defer`的函数和参数存储在 [`cmd/compile/internal/ssagen.openDeferInfo`](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/cmd/compile/internal/ssagen/ssa.go#L827) 结构体中：
+编译器还会通过 [cmd/compile/internal/ssagen.openDeferRecord](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/cmd/compile/internal/ssagen/ssa.go#L5136) 添加代码以评估和存储`defer`调用的函数，并记录有关`defer`的信息。传入`defer`的函数和参数存储在 [cmd/compile/internal/ssagen.openDeferInfo](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/cmd/compile/internal/ssagen/ssa.go#L827) 结构体中：
 
 ```go
 func (s *state) openDeferRecord(n *ir.CallExpr) {
@@ -733,7 +733,7 @@ func (s *state) openDeferRecord(n *ir.CallExpr) {
 }
 ```
 
-在函数返回前，[`cmd/compile/internal/ssagen.openDeferExit`](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/cmd/compile/internal/ssagen/ssa.go#L5219) 将处理所有使用开放编码优化的`defer`关键字，检查延迟比特的每个位以确定是否执行了相应的`defer`语句:
+在函数返回前，[cmd/compile/internal/ssagen.openDeferExit](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/cmd/compile/internal/ssagen/ssa.go#L5219) 将处理所有使用开放编码优化的`defer`关键字，检查延迟比特的每个位以确定是否执行了相应的`defer`语句：
 
 ```go
 // cmd/compile/internal/ssagen.exit
@@ -774,7 +774,7 @@ if deferBits & 1<<0 != 0 {   // 00000001 & 00000001 != 0
 }
 ```
 
-综上所述，开放编码使用延迟比特和 [`cmd/compile/internal/ssagen.openDeferInfo`](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/cmd/compile/internal/ssagen/ssa.go#L827) 结构体存储`defer`的相关信息，将其直接在当前函数内展开，并在返回前根据延迟比特位决定是否执行调用。这种方法只使用了少量的位运算指令和内存资源，因此性能最好。
+综上所述，开放编码使用延迟比特和 [cmd/compile/internal/ssagen.openDeferInfo](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/cmd/compile/internal/ssagen/ssa.go#L827) 结构体存储`defer`的相关信息，将其直接在当前函数内展开，并在返回前根据延迟比特位决定是否执行调用。这种方法只使用了少量的位运算指令和内存资源，因此性能最好。
 
 ## Panic & Recover
 
@@ -839,7 +839,7 @@ type _panic struct {
 }
 ```
 
-[`runtime._panic`](https://github.com/golang/go/blob/0a525a3ed0effd31749a0d56f9349cf533f90ce9/src/runtime/runtime2.go#L1047) 中的`link`字段与 [`runtime._defer`](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/runtime/runtime2.go#L1026) 类似，因此`panic`关键字也支持嵌套调用：
+[runtime._panic](https://github.com/golang/go/blob/0a525a3ed0effd31749a0d56f9349cf533f90ce9/src/runtime/runtime2.go#L1047) 中的`link`字段与 [runtime._defer](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/runtime/runtime2.go#L1026) 类似，因此`panic`关键字也支持嵌套调用：
 
 ```go
 func main() {
@@ -867,7 +867,7 @@ exit status 2
 
 ### 程序崩溃
 
-编译器会将关键字`panic`转换成 [`runtime.gopanic`](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/runtime/panic.go#L720)：
+编译器会将关键字`panic`转换成 [runtime.gopanic](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/runtime/panic.go#L720)：
 
 ```go
 func gopanic(e any) {
@@ -896,7 +896,7 @@ func gopanic(e any) {
 }
 ```
 
-该函数最后调用的 [`runtime.fatalpanic`](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/runtime/panic.go#L1217) 实现了无法被恢复的程序崩溃：
+该函数最后调用的 [runtime.fatalpanic](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/runtime/panic.go#L1217) 实现了无法被恢复的程序崩溃：
 
 ```go
 func fatalpanic(msgs *_panic) {
@@ -927,7 +927,7 @@ func fatalpanic(msgs *_panic) {
 
 ### 崩溃恢复
 
-编译器会将关键字`recover`转换为 [`runtime.gorecover`](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/runtime/panic.go#L984)：
+编译器会将关键字`recover`转换为 [runtime.gorecover](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/runtime/panic.go#L984)：
 
 ```go
 func gorecover(argp uintptr) any {
@@ -964,7 +964,7 @@ goroutine 1 [running]:
 exit status 2
 ```
 
-`argp == uintptr(p.argp)`：[`runtime.gorecover`](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/runtime/panic.go#L984) 的参数`argp`是当前栈帧的栈指针，而`p.argp`则是发生`panic`时执行`defer`调用的参数的指针。因此，下面两段代码，第一段的`panic`可以`recover`，第二段则不会：
+`argp == uintptr(p.argp)`：[runtime.gorecover](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/runtime/panic.go#L984) 的参数`argp`是当前栈帧的栈指针，而`p.argp`则是发生`panic`时执行`defer`调用的参数的指针。因此，下面两段代码，第一段的`panic`可以`recover`，第二段则不会：
 
 ```go
 // 第一段
@@ -986,7 +986,7 @@ func main() {
 }
 ```
 
- [`runtime.gorecover`](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/runtime/panic.go#L984) 中并不包含恢复程序的逻辑，这项工作是由 [`runtime.recovery`](https://github.com/golang/go/blob/0a525a3ed0effd31749a0d56f9349cf533f90ce9/src/runtime/panic.go#L1063) 完成的：
+ [runtime.gorecover](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/runtime/panic.go#L984) 中并不包含恢复程序的逻辑，这项工作是由 [runtime.recovery](https://github.com/golang/go/blob/0a525a3ed0effd31749a0d56f9349cf533f90ce9/src/runtime/panic.go#L1063) 完成的：
 
 ```go
 func gopanic(e any) {
@@ -1032,7 +1032,7 @@ func recovery(gp *g) {
 }
 ```
 
-`runtime.deferproc`的 [注释](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/runtime/panic.go#L288) 表明，当函数的返回值为 1 时，编译器生成的代码会直接跳转到 [`runtime.deferreturn`](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/runtime/panic.go#L592) 并恢复到正常的执行流程。
+`runtime.deferproc`的 [注释](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/runtime/panic.go#L288) 表明，当函数的返回值为 1 时，编译器生成的代码会直接跳转到 [runtime.deferreturn](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/runtime/panic.go#L592) 并恢复到正常的执行流程。
 
 ## Make & New
 
@@ -1045,7 +1045,7 @@ func recovery(gp *g) {
 
 ### New
 
-编译器在中间代码生成的 [[编译原理#遍历和替换]] 阶段调用 [`cmd/compile/internal/walk.walkExpr1`](https://github.com/golang/go/blob/0a525a3ed0effd31749a0d56f9349cf533f90ce9/src/cmd/compile/internal/walk/expr.go#L83) 和 [`cmd/compile/internal/walk.walkNew`](https://github.com/golang/go/blob/0a525a3ed0effd31749a0d56f9349cf533f90ce9/src/cmd/compile/internal/walk/builtin.go#L521) 决定变量的分配方式：
+编译器在中间代码生成的 [[编译原理#遍历和替换]] 阶段调用 [cmd/compile/internal/walk.walkExpr1](https://github.com/golang/go/blob/0a525a3ed0effd31749a0d56f9349cf533f90ce9/src/cmd/compile/internal/walk/expr.go#L83) 和 [cmd/compile/internal/walk.walkNew](https://github.com/golang/go/blob/0a525a3ed0effd31749a0d56f9349cf533f90ce9/src/cmd/compile/internal/walk/builtin.go#L521) 决定变量的分配方式：
 
 ```go
 func walkExpr1(n ir.Node, init *ir.Nodes) ir.Node {
@@ -1080,7 +1080,7 @@ func walkNew(n *ir.UnaryExpr, init *ir.Nodes) ir.Node {
 }
 ```
 
-如果变量需要被分配到堆上，`new`关键字后续将由 [`cmd/compile/internal/ssagen.*state.expr`](https://github.com/golang/go/blob/0a525a3ed0effd31749a0d56f9349cf533f90ce9/src/cmd/compile/internal/ssagen/ssa.go#L2755) 等函数处理：
+如果变量需要被分配到堆上，`new`关键字后续将由 [cmd/compile/internal/ssagen.*state.expr](https://github.com/golang/go/blob/0a525a3ed0effd31749a0d56f9349cf533f90ce9/src/cmd/compile/internal/ssagen/ssa.go#L2755) 等函数处理：
 
 ```go
 func (s *state) expr(n ir.Node) *ssa.Value {
@@ -1115,7 +1115,7 @@ func (s *state) newObject(typ *types.Type, rtype *ssa.Value) *ssa.Value {
 }
 ```
 
- [`runtime.newobject`](https://github.com/golang/go/blob/0a525a3ed0effd31749a0d56f9349cf533f90ce9/src/runtime/malloc.go#L1389) 根据传入类型所占空间的大小，调用 [`runtime.mallocgc`](https://github.com/golang/go/blob/0a525a3ed0effd31749a0d56f9349cf533f90ce9/src/runtime/malloc.go#L971) 在堆中申请一块内存并返回指向它的指针：
+ [runtime.newobject](https://github.com/golang/go/blob/0a525a3ed0effd31749a0d56f9349cf533f90ce9/src/runtime/malloc.go#L1389) 根据传入类型所占空间的大小，调用 [runtime.mallocgc](https://github.com/golang/go/blob/0a525a3ed0effd31749a0d56f9349cf533f90ce9/src/runtime/malloc.go#L971) 在堆中申请一块内存并返回指向它的指针：
 
 ```go
 func newobject(typ *_type) unsafe.Pointer {
@@ -1149,4 +1149,4 @@ func (s *state) newHeapaddr(n *ir.Name) {
 
 ## Future Work
 
-- ~~在阅读源码时发现了书中未提到的 [`runtime.deferrangefunc`](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/runtime/panic.go#L373) 和 [`runtime.deferprocat`](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/runtime/panic.go#L402) 函数，它们的作用是什么？~~ 两者用于实现 Go 1.22 版本的新特性：[Go Wiki: Rangefunc Experiment](https://go.dev/wiki/RangefuncExperiment)；
+- ~~在阅读源码时发现了书中未提到的 [runtime.deferrangefunc](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/runtime/panic.go#L373) 和 [runtime.deferprocat](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/runtime/panic.go#L402) 函数，它们的作用是什么？~~ 两者用于实现 Go 1.22 版本的新特性：[Go Wiki: Rangefunc Experiment](https://go.dev/wiki/RangefuncExperiment)；
