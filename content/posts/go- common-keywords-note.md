@@ -4,7 +4,7 @@ date: 2024-08-17T23:09:42+01:00
 draft: false
 series: ["《Go 语言设计与实现》读书笔记"]
 tags: ["Go"]
-summary: "Go 语言中的经典循环在编译器看来是一个`OFOR`类型的节点，这个节点由以下四个部分组成： ..."
+summary: "Go 语言中的经典循环在编译器看来是一个`OFOR`类型的节点，这个节点由以下四个部分组成：1. 初始化循环的`Ninit`；2. 循环的继续条件`Left`；3. 循环体结束时执行的`Right`；4. 循环体`NBody` ..."
 ---
 
 > 原书中的代码片段基于 Go 1.15，笔记则根据 Go 1.22 版本的更新进行了相应替换。
@@ -24,7 +24,7 @@ for Ninit; Left; Right {
 }
 ```
 
-在生成 [[编译原理#中间代码生成|SSA 中间代码]] 的阶段，[cmd/compile/internal/ssagen.stmt](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/cmd/compile/internal/ssagen/ssa.go#L1431) 会将循环中的代码分成不同的块：
+在生成 [SSA 中间代码](/posts/go-compiler-principle-note/#中间代码生成) 的阶段，[cmd/compile/internal/ssagen.stmt](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/cmd/compile/internal/ssagen/ssa.go#L1431) 会将循环中的代码分成不同的块：
 
 ```go
 // stmt converts the statement n to SSA and adds it to s.
@@ -48,7 +48,7 @@ func (s *state) stmt(n ir.Node) {
 
 这些代码块之间的连接表示汇编语言中的跳转关系，与我们理解的`for`循环控制结构没有太多的差别：
 
-![[Pasted image 20230614112320.png]]
+![20240818171951](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20240818171951.png)
 
 除了使用经典的三段式循环之外，Go 语言还引入了另一个关键字`range`帮助我们快速遍历数组、切片、哈希表以及管道等集合类型。编译器会在编译期间将所有 for-range 循环变成普通 for 循环，即将`ORANGE`类型的节点转换成`OFOR`节点。我们将按照元素类型依次介绍遍历数组和切片、哈希表、字符串以及管道的过程。
 
@@ -393,7 +393,7 @@ type _defer struct {
 }
 ```
 
-![[Pasted image 20240811180122.png]]
+![20240818172027](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20240818172027.png)
 
 `fn`字段表示`defer`关键字传入的函数，曾经是`*funcval`类型，其指向的函数可以拥有任意签名。而在 [runtime: use func() for deferred functions](https://go-review.googlesource.com/c/go/+/337650/3/src/runtime/runtime2.go) 提交之后，该字段就变成了没有参数和返回值的`func()`类型。这是因为 Go 语言会在类型检查阶段调用 [cmd/compile/internal/typecheck.normalizeGoDeferCall](https://github.com/golang/go/blob/0a525a3ed0effd31749a0d56f9349cf533f90ce9/src/cmd/compile/internal/typecheck/stmt.go#L220) 将`OGO`和`ODEFER`声明中形如`f(x, y)`的函数标准化为：
 
@@ -664,7 +664,7 @@ func deferprocStack(d *_defer) {
 
 #### 启用优化
 
-Go 语言会在编译期间决定是否启用开放编码。在编译器生成中间代码之前，[cmd/compile/internal/walk.walkStmt](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/cmd/compile/internal/walk/stmt.go#L15) 会 [[编译原理#遍历和替换|修改已经生成的抽象语法树]]，设置函数体上的`OpenCodedDeferDisallowed`属性：
+Go 语言会在编译期间决定是否启用开放编码。在编译器生成中间代码之前，[cmd/compile/internal/walk.walkStmt](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/cmd/compile/internal/walk/stmt.go#L15) 会 [修改已经生成的抽象语法树](/posts/go-compiler-principle-note/#遍历和替换)，设置函数体上的`OpenCodedDeferDisallowed`属性：
 
 ```go
 func walkStmt(n ir.Node) ir.Node {
@@ -706,7 +706,7 @@ func buildssa(fn *ir.Func, worker int) *ssa.Func {
 
 该变量中的每个比特位都表示对应的`defer`关键字是否需要被执行。如下图所示，倒数第二个比特位被设置成了 1，那么其对应的函数将在函数返回前执行：
 
-![[Pasted image 20240812165156.png]]
+![20240818172235](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20240818172235.png)
 
 编译器还会通过 [cmd/compile/internal/ssagen.openDeferRecord](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/cmd/compile/internal/ssagen/ssa.go#L5136) 添加代码以评估和存储`defer`调用的函数，并记录有关`defer`的信息。传入`defer`的函数和参数存储在 [cmd/compile/internal/ssagen.openDeferInfo](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/cmd/compile/internal/ssagen/ssa.go#L827) 结构体中：
 
@@ -1045,7 +1045,7 @@ func recovery(gp *g) {
 
 ### New
 
-编译器在中间代码生成的 [[编译原理#遍历和替换]] 阶段调用 [cmd/compile/internal/walk.walkExpr1](https://github.com/golang/go/blob/0a525a3ed0effd31749a0d56f9349cf533f90ce9/src/cmd/compile/internal/walk/expr.go#L83) 和 [cmd/compile/internal/walk.walkNew](https://github.com/golang/go/blob/0a525a3ed0effd31749a0d56f9349cf533f90ce9/src/cmd/compile/internal/walk/builtin.go#L521) 决定变量的分配方式：
+编译器在中间代码生成的 [遍历和替换](/posts/go-compiler-principle-note/#遍历和替换) 阶段调用 [cmd/compile/internal/walk.walkExpr1](https://github.com/golang/go/blob/0a525a3ed0effd31749a0d56f9349cf533f90ce9/src/cmd/compile/internal/walk/expr.go#L83) 和 [cmd/compile/internal/walk.walkNew](https://github.com/golang/go/blob/0a525a3ed0effd31749a0d56f9349cf533f90ce9/src/cmd/compile/internal/walk/builtin.go#L521) 决定变量的分配方式：
 
 ```go
 func walkExpr1(n ir.Node, init *ir.Nodes) ir.Node {
