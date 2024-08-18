@@ -4,19 +4,19 @@ date: 2024-08-17T23:09:42+01:00
 draft: false
 series: ["《Go 语言设计与实现》读书笔记"]
 tags: ["Go"]
-summary: "函数是 Go 语言的一等公民，这意味着它可以作为参数传递给其他函数、作为其他函数的返回以及分配给变量或存储在数据结构中 ..."
+summary: "Go 语言中的经典循环在编译器看来是一个`OFOR`类型的节点，这个节点由以下四个部分组成： ..."
 ---
 
 > 原书中的代码片段基于 Go 1.15，笔记则根据 Go 1.22 版本的更新进行了相应替换。
 
 ## For 和 Range
 
-Go 语言中的经典循环在编译器看来是一个 `OFOR` 类型的节点，这个节点由以下四个部分组成：
+Go 语言中的经典循环在编译器看来是一个`OFOR`类型的节点，这个节点由以下四个部分组成：
 
-1. 初始化循环的 `Ninit`；
-2. 循环的继续条件 `Left`；
-3. 循环体结束时执行的 `Right`；
-4. 循环体 `NBody`：
+1. 初始化循环的`Ninit`；
+2. 循环的继续条件`Left`；
+3. 循环体结束时执行的`Right`；
+4. 循环体`NBody`：
 
 ```go
 for Ninit; Left; Right {
@@ -50,16 +50,16 @@ func (s *state) stmt(n ir.Node) {
 
 ![[Pasted image 20230614112320.png]]
 
-除了使用经典的三段式循环之外，Go 语言还引入了另一个关键字`range`帮助我们快速遍历数组、切片、哈希表以及管道等集合类型。编译器会在编译期间将所有 for-range 循环变成普通 for 循环，即将 `ORANGE` 类型的节点转换成 `OFOR` 节点。我们将按照元素类型依次介绍遍历数组和切片、哈希表、字符串以及管道的过程。
+除了使用经典的三段式循环之外，Go 语言还引入了另一个关键字`range`帮助我们快速遍历数组、切片、哈希表以及管道等集合类型。编译器会在编译期间将所有 for-range 循环变成普通 for 循环，即将`ORANGE`类型的节点转换成`OFOR`节点。我们将按照元素类型依次介绍遍历数组和切片、哈希表、字符串以及管道的过程。
 
 ### 数组和切片
 
 对于数组和切片来说，Go 语言有三种不同的遍历方式，分别对应着代码中的不同条件。它们会在 [cmd/compile/internal/walk.walkRange](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/cmd/compile/internal/walk/range.go#L95) 函数中转换成不同的控制逻辑：
 
 1. 遍历数组和切片清空元素的情况；
-2. 使用 `for range a {}` 遍历数组和切片；
-3. 使用 `for i := range a {}` 遍历数组和切片；
-4. 使用 `for i, elem := range a {}` 遍历数组和切片；
+2. 使用`for range a {}`遍历数组和切片；
+3. 使用`for i := range a {}`遍历数组和切片；
+4. 使用`for i, elem := range a {}`遍历数组和切片；
 
 #### 遍历清空元素
 
@@ -123,7 +123,7 @@ for ; hv1 < hn; hv1++ {
 }
 ```
 
-对于所有的 for-range 循环，Go 语言都会在编译期将原切片或者数组赋值给一个新变量 `ha`，在赋值的过程中发生了拷贝。而我们又通过 `len` 关键字预先获取了切片的长度，所以在循环中追加新的元素并不会改变循环执行的次数：
+对于所有的 for-range 循环，Go 语言都会在编译期将原切片或者数组赋值给一个新变量`ha`，在赋值的过程中发生了拷贝。而我们又通过`len`关键字预先获取了切片的长度，所以在循环中追加新的元素并不会改变循环执行的次数：
 
 ```go
 func main() {
@@ -332,7 +332,7 @@ C 23
 
 ### 字符串
 
-字符串的遍历过程与数组、切片和哈希表非常相似，只是会将字符串中的字节转换成`rune`类型。`for i, r := range s {}` 的结构会被转换成如下所示的形式：
+字符串的遍历过程与数组、切片和哈希表非常相似，只是会将字符串中的字节转换成`rune`类型。`for i, r := range s {}`的结构会被转换成如下所示的形式：
 
 ```go
 ha := s
@@ -352,7 +352,7 @@ for hv1 := 0; hv1 < len(ha); {
 
 ### 管道
 
-使用`range`遍历管道也是比较常见的做法，一个形如 `for v := range ch {}` 的语句最终会被转换成如下的格式：
+使用`range`遍历管道也是比较常见的做法，一个形如`for v := range ch {}`的语句最终会被转换成如下的格式：
 
 ```go
 ha := a
@@ -372,11 +372,11 @@ for ; hb != false; hv1, hb = <-ha {
 
 ## Defer
 
-Go 语言的 `defer` 会在当前函数返回前执行传入的函数，经常用于关闭文件描述符、关闭数据库连接以及解锁资源。
+Go 语言的`defer`会在当前函数返回前执行传入的函数，经常用于关闭文件描述符、关闭数据库连接以及解锁资源。
 
 ### 数据结构
 
-[runtime._defer](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/runtime/runtime2.go#L1026) 结构体是延迟调用链表中的一个元素，所有的结构体都会通过 `link` 字段串联成链表：
+[runtime._defer](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/runtime/runtime2.go#L1026) 结构体是延迟调用链表中的一个元素，所有的结构体都会通过`link`字段串联成链表：
 
 ```go
 type _defer struct {
@@ -404,7 +404,7 @@ func() { f(x1, y1) }()  // result
 
 ### 执行机制
 
-中间代码生成阶段的 [cmd/compile/internal/ssagen.stmt](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/cmd/compile/internal/ssagen/ssa.go#L1431) 负责处理程序中的 `defer`关键字，该函数会根据情况使用三种不同的执行机制：
+中间代码生成阶段的 [cmd/compile/internal/ssagen.stmt](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/cmd/compile/internal/ssagen/ssa.go#L1431) 负责处理程序中的`defer`关键字，该函数会根据情况使用三种不同的执行机制：
 
 ```go
 // stmt converts the statement n to SSA and adds it to s.
@@ -548,7 +548,7 @@ func newdefer() *_defer {
 }
 ```
 
-无论使用哪种方式，[runtime._defer](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/runtime/runtime2.go#L1026) 结构体都会被追加到所在 Goroutine `_defer`链表的最前面。`defer` 关键字的插入顺序是从后向前的，而执行则是从前向后的，这也解释了为什么后调用的 `defer` 会先执行：
+无论使用哪种方式，[runtime._defer](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/runtime/runtime2.go#L1026) 结构体都会被追加到所在 Goroutine `_defer`链表的最前面。`defer`关键字的插入顺序是从后向前的，而执行则是从前向后的，这也解释了为什么后调用的`defer`会先执行：
 
 ```go
 func main() {
