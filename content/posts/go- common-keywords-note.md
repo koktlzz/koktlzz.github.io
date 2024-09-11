@@ -434,7 +434,15 @@ func (s *state) stmt(n ir.Node) {
 
 ### 堆中分配
 
-堆中分配 [runtime._defer](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/runtime/runtime2.go#L1026) 结构体是默认的兜底方案。在编译器看来，`defer`也是函数调用，因此会执行 [cmd/compile/internal/ssagen.call](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/cmd/compile/internal/ssagen/ssa.go#L5299) 为其生成中间代码：
+```go
+func main() {
+  for i := 0; i < unpredictableNumber; i++ {
+    defer fmt.Println(i) // Heap-allocated defer
+  }
+}
+```
+
+编译器无法预测示例代码中循环的迭代次数，[runtime._defer](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/runtime/runtime2.go#L1026) 的数量会在运行期间改变，因此该结构体只能在堆中分配。在编译器看来，`defer`也是函数调用，因此会执行 [cmd/compile/internal/ssagen.call](https://github.com/golang/go/blob/cb4eee693c382bea4222f20837e26501d40ed892/src/cmd/compile/internal/ssagen/ssa.go#L5299) 为其生成中间代码：
 
 ```go
 func (s *state) call(n *ir.CallExpr, k callKind, returnResultAddr bool, deferExtra ir.Expr) *ssa.Value {
@@ -654,13 +662,13 @@ func deferprocStack(d *_defer) {
 
 ### 开放编码
 
-开放编码是一种使用代码内联优化`defer`关键字的方法，只在满足以下条件时启用：
+开放编码将`defer`调用直接内联到函数末尾以及汇编代码中每一个返回语句之前，仅在满足以下条件时启用：
 
 - 函数的`defer`数量少于或者等于 8 个；
 - 函数的`defer`关键字不能在循环中执行；
 - 函数的`return`语句与`defer`语句的乘积小于或者等于 15 个。
 
-除上述几个条件外，也有其他条件会限制开放编码的使用。不过它们都是不太重要的细节，这里不会深究。
+否则，最终生成的二进制代码将会非常臃肿。除上述几个条件外，也有其他条件会限制开放编码的使用。不过它们都是不太重要的细节，这里不会深究。
 
 #### 启用优化
 
