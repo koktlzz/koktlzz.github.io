@@ -370,6 +370,192 @@ for ; hb != false; hv1, hb = <-ha {
 
 这里的代码可能与编译器生成的稍微有一些出入，但是结构和效果是完全相同的。
 
+## Select
+
+C 语言中的系统调用 [select](/posts/concurrent-programming-note/#使用-io-多路复用实现并发) 可以同时监听多个文件描述符的可读或者可写的状态，Go 语言中的`select`也能够让 Goroutine 同时等待多个管道可读或者可写。
+
+`select`是与`switch`相似的控制结构。与`switch`不同的是，`select`中虽然也有多个`case`，但是这些`case`中的表达式都必须是管道的收发操作。当`select`中的两个`case`同时触发时，会随机执行其中一个（避免饥饿问题的出现）。
+
+### 数据结构
+
+Go 语言的源代码中没有`select`对应的结构体，但其控制结构中的`case`关键字是由[`runtime.scase`](https://github.com/golang/go/blob/29252e4c5a6fe19bc90fc8b335b3d1c29ae582cb/src/runtime/select.go#L19) 结构体表示的：
+
+```go
+type scase struct {
+    c    *hchan         // chan
+    elem unsafe.Pointer // data element
+}
+```
+
+因为非`default`的`case`都与管道的发送和接收有关，所以该结构体中也包含了一个[`runtime.hchan`](https://github.com/golang/go/blob/29252e4c5a6fe19bc90fc8b335b3d1c29ae582cb/src/runtime/chan.go#L33) 类型的字段存储`case`中使用的管道。
+
+### 实现原理
+
+编译器在中间代码生成期间会根据以下四种情况对控制语句进行优化：
+
+1. `select`不存在任何的`case`；
+2. `select`只存在一个`case`；
+3. `select`存在两个`case`，其中一个`case`是`default`；
+4. `select`存在多个`case`；
+
+上述过程均发生在[`cmd/compile/internal/walk.walkSelectCases`](https://github.com/golang/go/blob/29252e4c5a6fe19bc90fc8b335b3d1c29ae582cb/src/cmd/compile/internal/walk/select.go#L33) 函数中。
+
+#### 直接阻塞
+
+如果`select`中不存在任何`case`：
+
+```go
+func walkSelectCases(cases []*ir.CommClause) []ir.Node {
+    ncas := len(cases)
+
+    if ncas == 0 {
+    // mkcallstmt 调用 runtime.block 函数
+    return []ir.Node{mkcallstmt("block")}
+    }
+    ...
+}
+
+func block() {
+    // 当前 Goroutine 让出对处理器的使用权
+    // 传入等待原因 waitReasonSelectNoCases
+    gopark(nil, nil, waitReasonSelectNoCases, traceBlockForever, 1)
+}
+```
+
+因此，空的`select`语句会直接阻塞当前 Goroutine，导致其进入无法被唤醒的永久休眠状态。
+
+#### 单一管道
+
+如果当前的`select`中只包含一个 `case`，那么编译器会将其改写为：
+
+```go
+// 改写前
+select {
+case v, ok <-ch: // case ch <- v
+    ...    
+}
+
+// 改写后
+if ch == nil {
+    // 若 case 中的 ch 为空，当前 Goroutine 会被挂起并陷入永久休眠
+    block()
+}
+v, ok := <-ch // case ch <- v
+...
+```
+
+#### 非阻塞操作
+
+当`select`中仅包含两个 `case`，并且其中一个是 `default` 时，Go 语言的编译器就会认为这是一次非阻塞的收发操作。[`cmd/compile/internal/walk.walkSelectCases`](https://github.com/golang/go/blob/29252e4c5a6fe19bc90fc8b335b3d1c29ae582cb/src/cmd/compile/internal/walk/select.go#L33) 会对这种情况单独处理。
+
+##### 发送
+
+当`case`中表达式的类型是`OSEND`时，编译器会使用条件语句和[`runtime.selectnbsend`](https://github.com/golang/go/blob/29252e4c5a6fe19bc90fc8b335b3d1c29ae582cb/src/runtime/chan.go#L693) 函数改写代码：
+
+```go
+// 改写前
+select {
+case ch <- v:
+    ... foo
+default:
+    ... bar
+}
+
+// 改写后
+if selectnbsend(ch, v) {
+    ... foo
+} else {
+    ... bar
+}
+```
+
+[`runtime.selectnbsend`](https://github.com/golang/go/blob/29252e4c5a6fe19bc90fc8b335b3d1c29ae582cb/src/runtime/chan.go#L693) 向[`runtime.chansend`](https://github.com/golang/go/blob/b4086b7c1668716c9a7b565b708ea49e1d35fadc/src/runtime/chan.go#L160) 函数传入的`block`参数为`false`，因此当无缓冲管道不存在等待的接收者或有缓冲管道的缓冲区空间不足时，当前 Goroutine 不会被阻塞而是直接返回。详见：[发送数据](/posts/go-concurrent-programming-note/#发送数据)。
+
+```go
+func selectnbsend(c *hchan, elem unsafe.Pointer) (selected bool) {
+    return chansend(c, elem, false, getcallerpc())
+}
+```
+
+##### 接收
+
+当`case`中表达式的类型是`OSELRECV2`时，编译器会使用条件语句和[`runtime.selectnbrecv`](https://github.com/golang/go/blob/29252e4c5a6fe19bc90fc8b335b3d1c29ae582cb/src/runtime/chan.go#L713) 函数改写代码：
+
+```go
+// 改写前
+select {  
+case v, ok = <-c:  
+    ... foo  
+default:  
+    ... bar  
+}
+
+// 改写后
+if selected, ok = selectnbrecv(&v, c); selected {  
+    ... foo  
+} else {  
+    ... bar  
+}
+```
+
+[`runtime.selectnbrecv`](https://github.com/golang/go/blob/29252e4c5a6fe19bc90fc8b335b3d1c29ae582cb/src/runtime/chan.go#L713) 向[`runtime.chanrecv`](https://github.com/golang/go/blob/b4086b7c1668716c9a7b565b708ea49e1d35fadc/src/runtime/chan.go#L457) 函数传入的`block`参数为`false`，因此当不存在等待的发送者且缓冲区中也没有数据时，当前 Goroutine 不会被阻塞而是直接返回。详见：[接收数据](/posts/go-concurrent-programming-note/#接收数据)。
+
+```go
+func selectnbrecv(elem unsafe.Pointer, c *hchan) (selected, received bool) {
+    return chanrecv(c, elem, false)
+}
+```
+
+#### 常见流程
+
+在默认的情况下，编译器会使用如下的流程处理`select`语句：
+
+1. 将所有的`case`转换成包含管道和类型等信息的[`runtime.scase`](https://github.com/golang/go/blob/29252e4c5a6fe19bc90fc8b335b3d1c29ae582cb/src/runtime/select.go#L19) 结构体；
+2. 调用运行时函数[`runtime.selectgo`](https://github.com/golang/go/blob/29252e4c5a6fe19bc90fc8b335b3d1c29ae582cb/src/runtime/select.go#L121) 从多个准备就绪的管道中选择一个可执行的[`runtime.scase`](https://github.com/golang/go/blob/29252e4c5a6fe19bc90fc8b335b3d1c29ae582cb/src/runtime/select.go#L19) 结构体；
+3. 通过`for`循环生成一组`if`语句，在语句中判断自己是不是被选中的`case`。
+
+上述流程可以用示例代码表示：
+
+```go
+sel := make([]scase, len(cases))  
+nsends, nrecvs := 0, 0  
+dflt := -1  
+for i, rc := range cases {  
+    var j int  
+    switch rc.dir {  
+    case selectDefault:  
+       dflt = i  
+       continue  
+    case selectSend:  
+       j = nsends  
+       nsends++  
+    case selectRecv:  
+       nrecvs++  
+       j = len(cases) - nrecvs  
+    }  
+  
+    sel[j] = scase{c: rc.ch, elem: rc.val}  
+}
+
+order := make([]uint16, 2*(nsends+nrecvs))
+var pc0 *uintptr
+chosen, recvOK := selectgo(&sel[0], &order[0], pc0, nsends, nrecvs, dflt == -1)
+
+if chosen == 0 {
+    ...
+    break
+}
+if chosen == 1 {
+    ...
+    break
+}
+...
+if chosen == len(cases) {
+    ...
+    break
+}
+```
+
 ## Defer
 
 Go 语言的`defer`会在当前函数返回前执行传入的函数，经常用于关闭文件描述符、关闭数据库连接以及解锁资源。
