@@ -372,9 +372,9 @@ for ; hb != false; hv1, hb = <-ha {
 
 ## Select
 
-C 语言中的系统调用 [select](/posts/concurrent-programming-note/#使用-io-多路复用实现并发) 可以同时监听多个文件描述符的可读或者可写的状态，Go 语言中的`select`也能够让 Goroutine 同时等待多个管道可读或者可写。
+C 语言中的系统调用 [select](/posts/concurrent-programming-note/#使用-io-多路复用实现并发) 可以同时监听多个文件描述符的可读或者可写的状态，而 Go 语言中的`select`关键字也能让 Goroutine 同时等待多个管道可读或者可写。
 
-`select`是与`switch`相似的控制结构。与`switch`不同的是，`select`中虽然也有多个`case`，但是这些`case`中的表达式都必须是管道的收发操作。当`select`中的两个`case`同时触发时，会随机执行其中一个（避免饥饿问题的出现）。
+`select`是与`switch`相似的控制结构，但与后者不同的是，前者中的`case`表达式必须是管道的收发操作。当`select`中的两个`case`同时触发时，会随机执行其中一个以避免饥饿问题的出现。
 
 ### 数据结构
 
@@ -387,16 +387,16 @@ type scase struct {
 }
 ```
 
-因为非`default`的`case`都与管道的发送和接收有关，所以该结构体中也包含了一个 [runtime.hchan](https://github.com/golang/go/blob/29252e4c5a6fe19bc90fc8b335b3d1c29ae582cb/src/runtime/chan.go#L33) 类型的字段存储`case`中使用的管道。
+非`default`的`case`都与管道的发送和接收有关，因此该结构体中也包含了一个 [runtime.hchan](https://github.com/golang/go/blob/29252e4c5a6fe19bc90fc8b335b3d1c29ae582cb/src/runtime/chan.go#L33) 类型的字段存储`case`中使用的管道。
 
 ### 实现原理
 
 编译器在中间代码生成期间会根据以下四种情况对控制语句进行优化：
 
-1. `select`不存在任何的`case`；
-2. `select`只存在一个`case`；
-3. `select`存在两个`case`，其中一个`case`是`default`；
-4. `select`存在多个`case`；
+- `select`不存在任何的`case`；
+- `select`只存在一个`case`；
+- `select`存在两个`case`，其中一个`case`是`default`；
+- `select`存在多个`case`；
 
 上述过程均发生在 [cmd/compile/internal/walk.walkSelectCases](https://github.com/golang/go/blob/29252e4c5a6fe19bc90fc8b335b3d1c29ae582cb/src/cmd/compile/internal/walk/select.go#L33) 函数中。
 
@@ -426,7 +426,7 @@ func block() {
 
 #### 单一管道
 
-如果当前的`select`中只包含一个 `case`，那么编译器会将其改写为：
+如果当前`select`中只包含一个 `case`，那么编译器会将其改写为：
 
 ```go
 // 改写前
@@ -508,13 +508,13 @@ func selectnbrecv(elem unsafe.Pointer, c *hchan) (selected, received bool) {
 
 #### 常见流程
 
-在默认的情况下，编译器会使用如下的流程处理`select`语句：
+在默认情况下，编译器会使用如下流程处理`select`语句：
 
-1. 将所有的`case`转换成包含管道和类型等信息的 [runtime.scase](https://github.com/golang/go/blob/29252e4c5a6fe19bc90fc8b335b3d1c29ae582cb/src/runtime/select.go#L19) 结构体；
-2. 调用运行时函数 [runtime.selectgo](https://github.com/golang/go/blob/29252e4c5a6fe19bc90fc8b335b3d1c29ae582cb/src/runtime/select.go#L121) 从多个准备就绪的管道中选择一个可执行的 [runtime.scase](https://github.com/golang/go/blob/29252e4c5a6fe19bc90fc8b335b3d1c29ae582cb/src/runtime/select.go#L19) 结构体；
-3. 通过`for`循环生成一组`if`语句，在语句中判断自己是不是被选中的`case`。
+- 将所有的`case`转换成包含管道和类型等信息的 [runtime.scase](https://github.com/golang/go/blob/29252e4c5a6fe19bc90fc8b335b3d1c29ae582cb/src/runtime/select.go#L19) 结构体；
+- 调用运行时函数 [runtime.selectgo](https://github.com/golang/go/blob/29252e4c5a6fe19bc90fc8b335b3d1c29ae582cb/src/runtime/select.go#L121) 从多个准备就绪的管道中选择一个可执行的 [runtime.scase](https://github.com/golang/go/blob/29252e4c5a6fe19bc90fc8b335b3d1c29ae582cb/src/runtime/select.go#L19) 结构体；
+- 通过`for`循环生成一组`if`语句，从而判断自己是否为被选中的`case`。
 
-上述流程可以用示例代码表示：
+上述过程可以用示例代码表示：
 
 ```go
 sel := make([]scase, len(cases))  
