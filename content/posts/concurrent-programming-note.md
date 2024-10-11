@@ -3,7 +3,7 @@ title: "CSAPP 读书笔记：并发编程"
 date: 2022-08-25T15:31:42+01:00
 draft: false
 series: ["CSAPP 读书笔记"]
-tags: ["OS", " Concurrent"]
+tags: ["OS", "Concurrent"]
 summary: "根据第八章介绍的内容，两个在时间上重叠的逻辑控制流是并发的。硬件异常处理程序、进程和 Linux 信号处理程序等都是计算机系统在不同层级上对并发的应用。现代操作系统为构建并发程序提供了三种基本方法 ..."
 ---
 
