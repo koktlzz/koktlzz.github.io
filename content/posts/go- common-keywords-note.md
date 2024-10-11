@@ -378,7 +378,7 @@ C 语言中的系统调用 [select](/posts/concurrent-programming-note/#使用-i
 
 ### 数据结构
 
-Go 语言的源代码中没有`select`对应的结构体，但其控制结构中的`case`关键字是由[`runtime.scase`](https://github.com/golang/go/blob/29252e4c5a6fe19bc90fc8b335b3d1c29ae582cb/src/runtime/select.go#L19) 结构体表示的：
+Go 语言的源代码中没有`select`对应的结构体，但其控制结构中的`case`关键字是由 [runtime.scase](https://github.com/golang/go/blob/29252e4c5a6fe19bc90fc8b335b3d1c29ae582cb/src/runtime/select.go#L19) 结构体表示的：
 
 ```go
 type scase struct {
@@ -387,7 +387,7 @@ type scase struct {
 }
 ```
 
-因为非`default`的`case`都与管道的发送和接收有关，所以该结构体中也包含了一个[`runtime.hchan`](https://github.com/golang/go/blob/29252e4c5a6fe19bc90fc8b335b3d1c29ae582cb/src/runtime/chan.go#L33) 类型的字段存储`case`中使用的管道。
+因为非`default`的`case`都与管道的发送和接收有关，所以该结构体中也包含了一个 [runtime.hchan](https://github.com/golang/go/blob/29252e4c5a6fe19bc90fc8b335b3d1c29ae582cb/src/runtime/chan.go#L33) 类型的字段存储`case`中使用的管道。
 
 ### 实现原理
 
@@ -398,7 +398,7 @@ type scase struct {
 3. `select`存在两个`case`，其中一个`case`是`default`；
 4. `select`存在多个`case`；
 
-上述过程均发生在[`cmd/compile/internal/walk.walkSelectCases`](https://github.com/golang/go/blob/29252e4c5a6fe19bc90fc8b335b3d1c29ae582cb/src/cmd/compile/internal/walk/select.go#L33) 函数中。
+上述过程均发生在 [cmd/compile/internal/walk.walkSelectCases](https://github.com/golang/go/blob/29252e4c5a6fe19bc90fc8b335b3d1c29ae582cb/src/cmd/compile/internal/walk/select.go#L33) 函数中。
 
 #### 直接阻塞
 
@@ -446,11 +446,11 @@ v, ok := <-ch // case ch <- v
 
 #### 非阻塞操作
 
-当`select`中仅包含两个 `case`，并且其中一个是 `default` 时，Go 语言的编译器就会认为这是一次非阻塞的收发操作。[`cmd/compile/internal/walk.walkSelectCases`](https://github.com/golang/go/blob/29252e4c5a6fe19bc90fc8b335b3d1c29ae582cb/src/cmd/compile/internal/walk/select.go#L33) 会对这种情况单独处理。
+当`select`中仅包含两个 `case`，并且其中一个是 `default` 时，Go 语言的编译器就会认为这是一次非阻塞的收发操作。[cmd/compile/internal/walk.walkSelectCases](https://github.com/golang/go/blob/29252e4c5a6fe19bc90fc8b335b3d1c29ae582cb/src/cmd/compile/internal/walk/select.go#L33) 会对这种情况单独处理。
 
 ##### 发送
 
-当`case`中表达式的类型是`OSEND`时，编译器会使用条件语句和[`runtime.selectnbsend`](https://github.com/golang/go/blob/29252e4c5a6fe19bc90fc8b335b3d1c29ae582cb/src/runtime/chan.go#L693) 函数改写代码：
+当`case`中表达式的类型是`OSEND`时，编译器会使用条件语句和 [runtime.selectnbsend](https://github.com/golang/go/blob/29252e4c5a6fe19bc90fc8b335b3d1c29ae582cb/src/runtime/chan.go#L693) 函数改写代码：
 
 ```go
 // 改写前
@@ -469,7 +469,7 @@ if selectnbsend(ch, v) {
 }
 ```
 
-[`runtime.selectnbsend`](https://github.com/golang/go/blob/29252e4c5a6fe19bc90fc8b335b3d1c29ae582cb/src/runtime/chan.go#L693) 向[`runtime.chansend`](https://github.com/golang/go/blob/b4086b7c1668716c9a7b565b708ea49e1d35fadc/src/runtime/chan.go#L160) 函数传入的`block`参数为`false`，因此当无缓冲管道不存在等待的接收者或有缓冲管道的缓冲区空间不足时，当前 Goroutine 不会被阻塞而是直接返回。详见：[发送数据](/posts/go-concurrent-programming-note/#发送数据)。
+[runtime.selectnbsend](https://github.com/golang/go/blob/29252e4c5a6fe19bc90fc8b335b3d1c29ae582cb/src/runtime/chan.go#L693) 向 [runtime.chansend](https://github.com/golang/go/blob/b4086b7c1668716c9a7b565b708ea49e1d35fadc/src/runtime/chan.go#L160) 函数传入的`block`参数为`false`，因此当无缓冲管道不存在等待的接收者或有缓冲管道的缓冲区空间不足时，当前 Goroutine 不会被阻塞而是直接返回。详见：[发送数据](/posts/go-concurrent-programming-note/#发送数据)。
 
 ```go
 func selectnbsend(c *hchan, elem unsafe.Pointer) (selected bool) {
@@ -479,7 +479,7 @@ func selectnbsend(c *hchan, elem unsafe.Pointer) (selected bool) {
 
 ##### 接收
 
-当`case`中表达式的类型是`OSELRECV2`时，编译器会使用条件语句和[`runtime.selectnbrecv`](https://github.com/golang/go/blob/29252e4c5a6fe19bc90fc8b335b3d1c29ae582cb/src/runtime/chan.go#L713) 函数改写代码：
+当`case`中表达式的类型是`OSELRECV2`时，编译器会使用条件语句和 [runtime.selectnbrecv](https://github.com/golang/go/blob/29252e4c5a6fe19bc90fc8b335b3d1c29ae582cb/src/runtime/chan.go#L713) 函数改写代码：
 
 ```go
 // 改写前
@@ -498,7 +498,7 @@ if selected, ok = selectnbrecv(&v, c); selected {
 }
 ```
 
-[`runtime.selectnbrecv`](https://github.com/golang/go/blob/29252e4c5a6fe19bc90fc8b335b3d1c29ae582cb/src/runtime/chan.go#L713) 向[`runtime.chanrecv`](https://github.com/golang/go/blob/b4086b7c1668716c9a7b565b708ea49e1d35fadc/src/runtime/chan.go#L457) 函数传入的`block`参数为`false`，因此当不存在等待的发送者且缓冲区中也没有数据时，当前 Goroutine 不会被阻塞而是直接返回。详见：[接收数据](/posts/go-concurrent-programming-note/#接收数据)。
+[runtime.selectnbrecv](https://github.com/golang/go/blob/29252e4c5a6fe19bc90fc8b335b3d1c29ae582cb/src/runtime/chan.go#L713) 向 [runtime.chanrecv](https://github.com/golang/go/blob/b4086b7c1668716c9a7b565b708ea49e1d35fadc/src/runtime/chan.go#L457) 函数传入的`block`参数为`false`，因此当不存在等待的发送者且缓冲区中也没有数据时，当前 Goroutine 不会被阻塞而是直接返回。详见：[接收数据](/posts/go-concurrent-programming-note/#接收数据)。
 
 ```go
 func selectnbrecv(elem unsafe.Pointer, c *hchan) (selected, received bool) {
@@ -510,8 +510,8 @@ func selectnbrecv(elem unsafe.Pointer, c *hchan) (selected, received bool) {
 
 在默认的情况下，编译器会使用如下的流程处理`select`语句：
 
-1. 将所有的`case`转换成包含管道和类型等信息的[`runtime.scase`](https://github.com/golang/go/blob/29252e4c5a6fe19bc90fc8b335b3d1c29ae582cb/src/runtime/select.go#L19) 结构体；
-2. 调用运行时函数[`runtime.selectgo`](https://github.com/golang/go/blob/29252e4c5a6fe19bc90fc8b335b3d1c29ae582cb/src/runtime/select.go#L121) 从多个准备就绪的管道中选择一个可执行的[`runtime.scase`](https://github.com/golang/go/blob/29252e4c5a6fe19bc90fc8b335b3d1c29ae582cb/src/runtime/select.go#L19) 结构体；
+1. 将所有的`case`转换成包含管道和类型等信息的 [runtime.scase](https://github.com/golang/go/blob/29252e4c5a6fe19bc90fc8b335b3d1c29ae582cb/src/runtime/select.go#L19) 结构体；
+2. 调用运行时函数 [runtime.selectgo](https://github.com/golang/go/blob/29252e4c5a6fe19bc90fc8b335b3d1c29ae582cb/src/runtime/select.go#L121) 从多个准备就绪的管道中选择一个可执行的 [runtime.scase](https://github.com/golang/go/blob/29252e4c5a6fe19bc90fc8b335b3d1c29ae582cb/src/runtime/select.go#L19) 结构体；
 3. 通过`for`循环生成一组`if`语句，在语句中判断自己是不是被选中的`case`。
 
 上述流程可以用示例代码表示：
