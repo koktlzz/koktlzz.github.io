@@ -247,10 +247,10 @@ Linux 使用内存映射（Memory Mapping）技术初始化虚拟内存区域并
 
 如果进程调用 [`execve`](/posts/exception-control-flow-note/#加载并运行程序) 函数，如`execve("a.out", NULL, NULL)`，则加载并运行`a.out`的步骤如下：
 
-1. 删除当前进程虚拟地址空间中用户区域的`vm_area_structs`；
-2. 为新程序的代码、数据、bss 和堆栈区域创建`vm_area_structs`。这些区域都是私有写时复制的，代码和数据区域被映射到`a.out`文件中的 [.text 和 .data](/posts/linking-note/#可重定位目标文件)，bss 区域则被映射到大小包含在`a.out`内的匿名文件。堆栈的初始长度均为 0，其页面是零需求的；
-3. 如果`a.out`文件链接了共享库，如 C 标准库`libc.so`，那么还需要把这些对象动态链接到程序中，并将其映射到虚拟地址空间中的共享区域内；
-4. 使当前进程上下文中的程序计数器指向新程序代码区域的入口点。
+- 删除当前进程虚拟地址空间中用户区域的`vm_area_structs`；
+- 为新程序的代码、数据、bss 和堆栈区域创建`vm_area_structs`。这些区域都是私有写时复制的，代码和数据区域被映射到`a.out`文件中的 [.text 和 .data](/posts/linking-note/#可重定位目标文件)，bss 区域则被映射到大小包含在`a.out`内的匿名文件。堆栈的初始长度均为 0，其页面是零需求的；
+- 如果`a.out`文件链接了共享库，如 C 标准库`libc.so`，那么还需要把这些对象动态链接到程序中，并将其映射到虚拟地址空间中的共享区域内；
+- 使当前进程上下文中的程序计数器指向新程序代码区域的入口点。
 
 ![20220613213646](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20220613213646.png)
 
