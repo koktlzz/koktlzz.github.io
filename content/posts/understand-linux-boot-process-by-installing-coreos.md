@@ -10,13 +10,10 @@ summary: "OpenShift 4.X 版本要求安装在操作系统为 CoreOS 的机器上
 
 OpenShift 4.X 版本要求安装在操作系统为 CoreOS 的机器上，因此 [官方文档](https://docs.openshift.com/container-platform/4.6/installing/installing_bare_metal/installing-restricted-networks-bare-metal.html#installation-user-infra-machines-pxe_installing-restricted-networks-bare-metal) 给出了使用 PXE 或 IPXE 引导 CoreOS 系统的方法。我们可以参考其操作流程，将一台 CentOS 7.X 的机器改写为 CoreOS 系统，步骤如下：
 
-1. 从 [镜像下载页](https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/4.6/?extIdCarryOver=true&sc_cid=701f2000001Css5AAC) 下载安装所需版本的 kernel、initramfs 和 rootfs 文件，并将 rootfs 和点火文件（*.ign）上传到自建的 HTTP 服务器上；
-
-2. 将 kernel 和 initramfs 文件拷贝到 CentOS 7.X 机器的 /boot 目录下；
-
-3. 根据需求修改 /boot/grub2 目录下的 grub.cfg 文件；
-
-4. 重启机器。
+- 从 [镜像下载页](https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/4.6/?extIdCarryOver=true&sc_cid=701f2000001Css5AAC) 下载安装所需版本的 kernel、initramfs 和 rootfs 文件，并将 rootfs 和点火文件（*.ign）上传到自建的 HTTP 服务器上；
+- 将 kernel 和 initramfs 文件拷贝到 CentOS 7.X 机器的 /boot 目录下；
+- 根据需求修改 /boot/grub2 目录下的 grub.cfg 文件；
+- 重启机器。
 
 对于操作系统初学者（比如我）来说，很难想象仅依靠添加和修改文件就能改变一台计算机的操作系统。为了解其实现原理，我们将对 Linux 的启动流程进行讨论，并从中说明上述操作是如何影响操作系统的。
 
