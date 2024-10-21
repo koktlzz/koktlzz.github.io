@@ -344,7 +344,7 @@ $$Ingested \space samples/second$$
 
 > 译者注：本文从宏观的角度介绍了 Prometheus 需要解决的问题，以及 1.X 版本（V2 存储系统）和 2.X 版本（V3 存储系统）的设计理念。想要了解其实现细节，除了阅读源码外还可以参考以下内容：
 >
-> - 关于 Promtheus 中的内存数据库：[Prometheus TSDB (Part 1): The Head Block](https://ganeshvernekar.com/blog/prometheus-tsdb-the-head-block/)；
+> - 关于 Prometheus 中的内存数据库：[Prometheus TSDB (Part 1): The Head Block](https://ganeshvernekar.com/blog/prometheus-tsdb-the-head-block/)；
 >
 > - 关于预写日志和 Checkpoint：[Prometheus TSDB (Part 2): WAL and Checkpoint](https://ganeshvernekar.com/blog/prometheus-tsdb-wal-and-checkpoint/)；[Write-Ahead Log](https://martinfowler.com/articles/patterns-of-distributed-systems/wal.html)；
 >
