@@ -59,11 +59,13 @@ y_1 := x_2
 
 ## 编译原理
 
+![20251009192428](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20251009192428.png)
+
 ### 词法分析
 
 词法分析的作用是解析源代码文件，它将文件中的字符串序列转换成 Token 序列（即分词），如`package`,`json`,`import`, ……，方便后面的处理和解析。我们一般会把执行词法分析的程序称为词法解析器（Lexer）。
 
-从 Go 语言中定义的 Token 类型，我们可以将元素分成几个不同的类别，分别是名称和字面量、操作符、分隔符和关键字。词法分析主要由 [cmd/compile/internal/syntax.scanner](https://github.com/golang/go/blob/4e548f2c8e489a408033c8aab336077b16bc8cf7/src/cmd/compile/internal/syntax/scanner.go#L30) 结构体的 [next](https://github.com/golang/go/blob/4e548f2c8e489a408033c8aab336077b16bc8cf7/src/cmd/compile/internal/syntax/scanner.go#L88) 方法驱动，该结构体会持有当前被扫描到的 Token，而该函数的主体则是一个`switch/case`结构。
+从 Go 语言中定义的 Token 类型，我们可以将元素分成几个不同的类别，分别是名称、字面量、操作符、分隔符和关键字。词法分析主要由 [cmd/compile/internal/syntax.scanner](https://github.com/golang/go/blob/4e548f2c8e489a408033c8aab336077b16bc8cf7/src/cmd/compile/internal/syntax/scanner.go#L30) 结构体的 [next](https://github.com/golang/go/blob/4e548f2c8e489a408033c8aab336077b16bc8cf7/src/cmd/compile/internal/syntax/scanner.go#L88) 方法驱动，该结构体会持有当前被扫描到的 Token，而该函数的主体则是一个`switch/case`结构。
 
 ### 语法分析
 
