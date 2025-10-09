@@ -61,6 +61,8 @@ y_1 := x_2
 
 ![20251009192428](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20251009192428.png)
 
+> 原图链接：[Understanding Go Compiler](https://www.linkedin.com/pulse/understanding-go-compiler-kanishka-naik-sbmwc/)
+
 ### 词法分析
 
 词法分析的作用是解析源代码文件，它将文件中的字符串序列转换成 Token 序列（即分词），如`package`,`json`,`import`, ……，方便后面的处理和解析。我们一般会把执行词法分析的程序称为词法解析器（Lexer）。
