@@ -141,13 +141,13 @@ slice := make([]int, 10) // 使用关键字 make 创建切片
 当我们使用字面量`[]int{1, 2, 3}`创建新的切片时，[cmd/compile/internal/walk.slicelit](https://github.com/golang/go/blob/4c50f9162cafaccc1ab1bc26b0dea18f124b536d/src/cmd/compile/internal/walk/complit.go#L288) 函数会在编译期间将它展开成如下所示的代码片段：
 
 ```go
-// 根据切片元素数量创建底层数组
+// 根据切片元素数量创建底层数组 vstat，位于栈上
 var vstat [3]int
 // 将字面量元素存储到初始化的数组中
 // 如 vstat[0] = 1
 vstat = constpart{}
-// 创建一个指向 [3]int 类型的数组指针
-// 并在堆上为其分配内存
+// 在堆上分配一块存储 [3]int 数组的内存
+// 并返回指向该内存的指针 vauto
 var vauto *[3]int = new([3]int)
 // 将数组 vstat 复制到 vauto 指向的数组
 // 注意，Go 语言的数组名是值而非 C 中的隐式指针
@@ -238,11 +238,18 @@ if uint(len) > uint(cap) {
 *(ptr+(len-1)) = e3
 ```
 
-两者的逻辑其实差不多，最大的区别在于得到的新切片是否会赋值回原变量。
+两者的逻辑其实差不多，最大的区别在于得到的新切片是否会赋值回原变量。如果我们选择覆盖原有的变量，就不需要担心切片发生拷贝影响性能，因为 Go 语言编译器已经对这种常见的情况做出了优化。
 
 ![20240721231049](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20240721231049.png)
 
-扩容是为切片分配新的内存空间并复制原切片中元素的过程，[runtime.growslice](https://github.com/golang/go/blob/4c50f9162cafaccc1ab1bc26b0dea18f124b536d/src/runtime/slice.go#L155) 函数最终会返回一个新的切片，其中包含了新的数组指针、大小和容量。[runtime.nextslicecap](https://github.com/golang/go/blob/4c50f9162cafaccc1ab1bc26b0dea18f124b536d/src/runtime/slice.go#L267) 则根据切片的期望容量和当前容量选择不同的策略进行扩容：
+扩容是为切片分配新的内存空间并复制原切片中元素的过程，[runtime.growslice](https://github.com/golang/go/blob/5817e650946aaa0ac28956de96b3f9aa1de4b299/src/runtime/slice.go#L155) 函数最终会返回一个新的切片，其中包含了新的数组指针、大小和容量。[runtime.nextslicecap](https://github.com/golang/go/blob/4c50f9162cafaccc1ab1bc26b0dea18f124b536d/src/runtime/slice.go#L267) 则根据切片的所需长度和当前容量选择不同的策略进行扩容：
+
+- 当所需长度 newLen 超过原容量 oldCap 的 2 倍时，直接以所需长度作为新容量 newcap；
+- 否则：
+  - 小切片（原容量 < 256）：翻倍扩容；
+  - 大切片（原容量 ≥ 256）：
+    - 缓慢扩容（约 1.25 倍增长），直到新容量超过所需长度；
+    - 若新容量溢出则直接使用所需长度作为新容量。
 
 ```go
 // nextslicecap computes the next appropriate slice length.
