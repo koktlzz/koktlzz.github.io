@@ -711,7 +711,7 @@ func hashGrow(t *maptype, h *hmap) {
 
 ![20240721231524](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20240721231524.png)
 
-我们可以看出，等量扩容创建的新桶数量和旧桶一样，而增量扩容创建的新桶则为原来的两倍。`hashGrow`只是创建了新桶，并没有对数据进行复制和转移。数据迁移是在后续对哈希表进行写入操作时由 [runtime.growWork](https://github.com/golang/go/blob/4c50f9162cafaccc1ab1bc26b0dea18f124b536d/src/runtime/map.go#L1140) 和 [runtime.evacuate](https://github.com/golang/go/blob/4c50f9162cafaccc1ab1bc26b0dea18f124b536d/src/runtime/map.go#L1164) 共同完成的，后者会对桶中的元素分流：
+我们可以看出，等量扩容创建的新桶数量和旧桶一样，而增量扩容创建的新桶则为原来的两倍。`hashGrow`只是创建了新桶，并没有对数据进行复制和转移。数据迁移是在后续对哈希表进行写入或删除操作时由 [runtime.growWork](https://github.com/golang/go/blob/4c50f9162cafaccc1ab1bc26b0dea18f124b536d/src/runtime/map.go#L1140) 和 [runtime.evacuate](https://github.com/golang/go/blob/4c50f9162cafaccc1ab1bc26b0dea18f124b536d/src/runtime/map.go#L1164) 共同完成的，后者会对桶中的元素分流：
 
 ```go
 func evacuate(t *maptype, h *hmap, oldbucket uintptr) {
@@ -812,7 +812,7 @@ func evacuate(t *maptype, h *hmap, oldbucket uintptr) {
 
 之前在分析访问哈希表时其实省略了扩容期间获取键值对的逻辑，当哈希表的`oldbuckets`存在时，会先定位到旧桶并在该桶没有被迁移时从中获取键值对。
 
-而当哈希表正在处于扩容状态时，只有向哈希表写入值时才会触发 [runtime.growWork](https://github.com/golang/go/blob/4c50f9162cafaccc1ab1bc26b0dea18f124b536d/src/runtime/map.go#L1140) 增量复制哈希表中的内容。先迁移旧桶，再完成写入：
+而当哈希表正在处于扩容状态时，只有向哈希表写入或删除时才会触发 [runtime.growWork](https://github.com/golang/go/blob/4c50f9162cafaccc1ab1bc26b0dea18f124b536d/src/runtime/map.go#L1140) 增量复制哈希表中的内容。先迁移旧桶，再完成写入：
 
 ```go
 func mapassign(t *maptype, h *hmap, key unsafe.Pointer) unsafe.Pointer {
