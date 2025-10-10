@@ -248,7 +248,7 @@ if uint(len) > uint(cap) {
 - 否则：
   - 小切片（原容量 < 256）：翻倍扩容；
   - 大切片（原容量 ≥ 256）：
-    - 缓慢扩容（约 1.25 倍增长），直到新容量超过所需长度；
+    - 渐进扩容（约 1.25 倍增长），直到新容量超过所需长度；
     - 若新容量溢出则直接使用所需长度作为新容量。
 
 ```go
@@ -325,7 +325,7 @@ index := hash("Key3") % array.len
 
 ![20240721231248](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20240721231248.png)
 
-开放寻址法中对性能影响最大的是装载因子，它是数组中元素的数量与数组大小的比值。随着装载因子的增加，线性探测的平均用时就会逐渐增加，这会影响哈希表的读写性能。当装载率超过 70% 之后，哈希表的性能就会急剧下降，而一旦装载率达到 100%，整个哈希表就会完全失效，这时查找和插入任意元素的时间复杂度都是 𝑂(𝑛) 的，即需要遍历数组中的全部元素。
+开放寻址法中对性能影响最大的是装载因子，它是数组中元素的数量与数组大小的比值。随着装载因子的增加，线性探测的平均用时就会逐渐增加，这会影响哈希表的读写性能。当装载率超过 70% 之后，哈希表的性能就会急剧下降。而一旦装载率达到 100%，整个哈希表就会完全失效，这时查找和插入元素的时间复杂度都是 𝑂(𝑛)，即需要遍历数组中的全部元素。
 
 #### 拉链法
 
@@ -333,7 +333,7 @@ index := hash("Key3") % array.len
 
 ![20240721231307](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20240721231307.png)
 
-和开放地址法一样，选择桶的方式是直接对哈希函数返回的结果取模：
+和开放地址法一样，选择桶（链表）的方式是直接对哈希函数返回的结果取模：
 
 ```go
 index := hash("Key6") % array.len
@@ -354,7 +354,7 @@ Go 语言运行时同时使用了多个数据结构组合表示哈希表，其�
 type hmap struct {
     count     int              // 当前哈希表中的元素数量
     flags     uint8
-    B         uint8            // 当前哈希表的桶数量为 2 ^ B
+    B         uint8            // 当前哈希表正常桶的数量为 2 ^ B
     noverflow uint16           // 使用的溢出桶数量
     hash0     uint32           // 为哈希函数引入随机性种子
 
@@ -507,6 +507,8 @@ bucketloop:
         for i := uintptr(0); i < bucketCnt; i++ {
             // 将 key 对应的哈希值的高八位与桶中存储的 tophash 进行比较
             if b.tophash[i] != top {
+                // emptyRest = 0: this cell is empty, 
+                // and there are no more non-empty cells at higher indexes or overflows.
                 if b.tophash[i] == emptyRest {
                     break bucketloop
                 }
@@ -564,7 +566,7 @@ bucketloop:
             if b.tophash[i] != top {
                 // 若不相等，则判断是否为空位
                 if isEmpty(b.tophash[i]) && inserti == nil {
-                    // 若为空位，则将其标记为键值对插入的位置
+                    // 若为空位，则将其标记为候选插入位置
                     inserti = &b.tophash[i]
                     insertk = add(unsafe.Pointer(b), dataOffset+i*uintptr(t.KeySize))
                     elem = add(unsafe.Pointer(b), dataOffset+bucketCnt*uintptr(t.KeySize)+i*uintptr(t.ValueSize))
@@ -603,16 +605,18 @@ bucketloop:
     }
 
     // 若 key 在哈希表中不存在，则为新键值对规划内存
+    // 间接存储 key（如大尺寸 key，存指针节省内存）
     if t.indirectkey() {
         kmem := newobject(t.Key)
         *(*unsafe.Pointer)(insertk) = kmem
         insertk = kmem
     }
+    // 间接存储 value（如大尺寸 value）
     if t.indirectelem() {
         vmem := newobject(t.Elem)
         *(*unsafe.Pointer)(elem) = vmem
     }
-    // 通过 runtime.typedmemmove 将 key 移动到对应的内存空间中
+    // 通过 runtime.typedmemmove 将 key 移动到 insertk 指向的内存空间
     typedmemmove(t.Key, insertk, key)
     *inserti = top
     h.count++
@@ -632,7 +636,7 @@ done:
 00027 (5) MOVQ AX, (DI)                 ;; *DI = AX
 ```
 
-[runtime.mapassign_fast64](https://github.com/golang/go/blob/4c50f9162cafaccc1ab1bc26b0dea18f124b536d/src/runtime/map_fast64.go#L93) 与 [runtime.mapassign](https://github.com/golang/go/blob/ac0ba6707c1655ea4316b41d06571a0303cc60eb/src/runtime/map.go#L571) 函数的逻辑差不多，我们需要关注的是后面的三行代码。其中`24(SP)`是该函数返回的值地址，我们通过`LEAQ`指令将字符串的地址存储到寄存器`AX`中，`MOVQ` 指令将字符串`"88"`存储到了目标地址上从而完成了这次哈希的写入。
+[runtime.mapassign_fast64](https://github.com/golang/go/blob/4c50f9162cafaccc1ab1bc26b0dea18f124b536d/src/runtime/map_fast64.go#L93) 与 [runtime.mapassign](https://github.com/golang/go/blob/ac0ba6707c1655ea4316b41d06571a0303cc60eb/src/runtime/map.go#L571) 函数的逻辑差不多，我们需要关注的是后面的三行代码。其中`24(SP)`是该函数返回值的地址，我们通过`LEAQ`指令将字符串的地址存储到寄存器`AX`中，`MOVQ` 指令将字符串`"88"`存储到了目标地址上从而完成了这次哈希的写入。
 
 #### 扩容
 
@@ -677,14 +681,14 @@ func hashGrow(t *maptype, h *hmap) {
 
     h.B += bigger
     h.flags = flags
-    //将 oldbucket 设为原有的桶
+    // 将 oldbucket 设为原有的桶
     h.oldbuckets = oldbuckets
     // 将 bucket 设为新的新的空桶
     h.buckets = newbuckets
     h.nevacuate = 0
     h.noverflow = 0
 
-    // 溢出桶采用相同的逻辑
+    // 更新新桶的溢出桶相关字段
     if h.extra != nil && h.extra.overflow != nil {
         // Promote current overflow buckets to the old generation.
         if h.extra.oldoverflow != nil {
@@ -707,11 +711,11 @@ func hashGrow(t *maptype, h *hmap) {
 
 ![20240721231524](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20240721231524.png)
 
-我们可以看出，等量扩容创建的新桶数量和旧桶一样，而增量扩容创建的新桶则为原来的两倍。`hashGrow`只是创建了新桶，并没有对数据进行复制和转移。哈希表的数据迁移是由 [runtime.growWork](https://github.com/golang/go/blob/4c50f9162cafaccc1ab1bc26b0dea18f124b536d/src/runtime/map.go#L1140) 和 [runtime.evacuate](https://github.com/golang/go/blob/4c50f9162cafaccc1ab1bc26b0dea18f124b536d/src/runtime/map.go#L1164) 共同完成的，后者会对桶中的元素分流：
+我们可以看出，等量扩容创建的新桶数量和旧桶一样，而增量扩容创建的新桶则为原来的两倍。`hashGrow`只是创建了新桶，并没有对数据进行复制和转移。数据迁移是在后续对哈希表进行写入操作时由 [runtime.growWork](https://github.com/golang/go/blob/4c50f9162cafaccc1ab1bc26b0dea18f124b536d/src/runtime/map.go#L1140) 和 [runtime.evacuate](https://github.com/golang/go/blob/4c50f9162cafaccc1ab1bc26b0dea18f124b536d/src/runtime/map.go#L1164) 共同完成的，后者会对桶中的元素分流：
 
 ```go
 func evacuate(t *maptype, h *hmap, oldbucket uintptr) {
-    // 计算要迁移的旧桶 b 的地址
+    // 计算要迁移的旧桶 b 的地址，oldbucket 是其索引
     b := (*bmap)(add(h.oldbuckets, oldbucket*uintptr(t.BucketSize)))
     // 计算扩容前桶的数量
     newbit := h.noldbuckets()
@@ -741,7 +745,7 @@ func evacuate(t *maptype, h *hmap, oldbucket uintptr) {
             // // 遍历桶 b 中的所有元素
             for i := 0; i < bucketCnt; i, k, e = i+1, add(k, uintptr(t.KeySize)), add(e, uintptr(t.ValueSize)) {
                 top := b.tophash[i]
-                // 若为空位，则直接跳过
+                // 若为空位，则标记为 evacuatedEmpty: cell is empty, bucket is evacuated
                 if isEmpty(top) {
                     b.tophash[i] = evacuatedEmpty
                     continue
@@ -751,7 +755,7 @@ func evacuate(t *maptype, h *hmap, oldbucket uintptr) {
                 if !h.sameSizeGrow() {
                     // 计算哈希值确定该元素应当迁移到 x 指向的桶还是 y 指向的桶
                     hash := t.Hasher(k2, uintptr(h.hash0))
-                    // k2 为特殊值时的处理
+                    // k2 为特殊值(NaN)时的处理
                     if h.flags&iterator != 0 && !t.ReflexiveKey() && !t.Key.Equal(k2, k2) {.
                         useY = top & 1
                         top = tophash(hash)
@@ -764,7 +768,7 @@ func evacuate(t *maptype, h *hmap, oldbucket uintptr) {
                     }
                 }
                 ...
-                // 更新 tophash 以标记对应的元素已经被迁移
+                // 更新 tophash 以标记元素已被迁移到 x 指向的桶还是 y 指向的桶
                 b.tophash[i] = evacuatedX + useY
                 // 确定元素最终的迁移位置
                 dst := &xy[useY]     
@@ -787,6 +791,7 @@ func evacuate(t *maptype, h *hmap, oldbucket uintptr) {
                 } else {
                     typedmemmove(t.Elem, dst.e, e)
                 }
+                // 更新目标桶 x 或 y 的索引和键值对地址
                 dst.i++
                 dst.k = add(dst.k, uintptr(t.KeySize))
                 dst.e = add(dst.e, uintptr(t.ValueSize))
@@ -794,14 +799,14 @@ func evacuate(t *maptype, h *hmap, oldbucket uintptr) {
         }
         ...
     }
-    // 若所有旧桶迁移完成，则清空 oldbuckets 和 oldoverflow
+    // 若当前迁移的桶正是 nevacuate 所记录的，则更新迁移进度
     if oldbucket == h.nevacuate {
         advanceEvacuationMark(h, t, newbit)
     }
 }
 ```
 
-举例来说，旧桶数量是 4，新桶数量是 8。则旧桶的掩码是 $11_2$，新桶的掩码是 $111_2$。那么旧桶中 3 号桶的元素（哈希值后两位为 $11$）就会被分流到新桶中的 3 号桶（哈希值后三位为 $011$）和 7 号桶（哈希值后三位为 $111$）：
+举例来说，旧桶数量是 4，新桶数量是 8，`newbit`为 二进制 100。那么旧桶中 3 号桶的元素就会被分流到新桶中的 3 号桶（键哈希值倒数第三位为 0，如 011 & 100 = 000 == 0）和 7 号桶（键哈希值倒数第三位为 1，如 111 & 100 = 100 != 0）：
 
 ![20240721231551](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20240721231551.png)
 
