@@ -80,7 +80,40 @@ Go 语言中的接口是一种内置的类型，它定义了一组方法的签�
 
 #### 隐式接口
 
-Go 语言中接口的实现都是隐式的，且只会在传递参数、返回参数以及变量赋值时才会对某个类型是否实现接口进行检查。
+Go 语言中接口的实现都是隐式的，且只会在传递参数、返回参数以及变量赋值时才会对某个类型是否实现接口进行检查。示例代码在 [编译期间](/posts/go-compiler-principle-note/) 总共触发了三次类型检查：
+
+```go
+
+type RPCError struct {
+    Code    int64
+    Message string
+}
+
+func (e *RPCError) Error() string {
+    return fmt.Sprintf("%s, code=%d", e.Message, e.Code)
+}
+
+func main() {
+    var rpcErr error = NewRPCError(400, "unknown err") // typecheck1
+    err := AsErr(rpcErr) // typecheck2
+    println(err)
+}
+
+func NewRPCError(code int64, msg string) error {
+    return &RPCError{ // typecheck3
+    Code:    code,
+    Message: msg,
+    }
+}
+
+func AsErr(err error) error {
+    return err
+}
+```
+
+1. 将`*RPCError`类型的变量赋值给`error`类型的变量`rpcErr`；
+2. 将`*RPCError`类型的变量`rpcErr`传递给签名中参数类型为`error`的`AsErr`函数；
+3. 将`*RPCError`类型的变量从函数签名的返回值类型为`error`的`NewRPCError`函数中返回。
 
 #### 类型
 
@@ -143,14 +176,12 @@ func main() {
 }
 ```
 
-这是因为编译器会自动生成一个接收者为`*Cat`类型的`Quack()`方法：
+这是因为调用`c.Quack()`会发生值的复制：
 
-```shell
-$ go tool compile -l  -p main main.go
-$ go tool nm main.o | grep 'T' | grep Cat
-    2403 T main.(*Cat).Quack
-    1e86 T main.Cat.Quack
-```
+![20260126214850](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20260126214850.png)
+
+- 如上图左侧，`&Cat{}`与拷贝得到的新的指针指向相同并且唯一的结构体，所以编译器可以隐式的对变量解引用（dereference）获取指针指向的结构体；
+- 如上图右侧，`Quack`方法接受了一个全新的`Cat{}`变量。由于方法的入参是`*Cat`，即使编译器创建一个新的指针，后者指向的也不是最初调用该方法的结构体。
 
 #### nil 和 non-nil
 
@@ -206,7 +237,7 @@ type Type struct {
     TFlag       TFlag   
     Align_      uint8   
     FieldAlign_ uint8   
-    Kind_       uint8  
+    Kind_       uint8   // 对应 reflect.Kind 枚举类型，如 reflect.Int、reflect.Interface
     // 判断当前类型的多个对象是否相等
     Equal func(unsafe.Pointer, unsafe.Pointer) bool
     GCData    *byte
@@ -222,7 +253,9 @@ type Type struct {
 type itab struct { 
     inter *interfacetype  // 接口类型
     _type *_type          // 具体类型
-    hash  uint32          // 对 _type.hash 的拷贝，用于类型转换
+    // 对 _type.Hash 的拷贝
+    // 将 interface 类型转换成具体类型时，快速判断两者 runtime._type 是否一致
+    hash  uint32          
     _     [4]byte
     // 一个用于动态派发的虚函数表，存储了一组函数指针
     // 虽然被声明成大小固定的数组，但在使用时会通过原始指针获取其中的数据
@@ -254,26 +287,36 @@ func main() {
 }
 ```
 
-`Cat`结构体的初始化和赋值触发的类型转换过程对应的汇编代码经简化后如下：
+`Cat`结构体初始化对应的汇编代码经简化后如下：
 
 ```nasm
-LEAQ    main..autotmp_3+40(SP), DX  ;; DX = SP + 40 + autotmp_3
-MOVQ    $6, 8(DX)                   ;; (DX + 8) = 6
-LEAQ    go:string."draven"(SB), SI  ;; SI = &"draven"
-MOVQ    SI, (DX)                    ;; (DX) = SI
-LEAQ    go:itab.*<unlinkable>.Cat,<unlinkable>.Duck(SB), AX
-MOVQ    AX, main.c+24(SP)           ;; (SP + 24) = &go:itab.*.Cat,.Duck
-MOVQ    DX, main.c+32(SP)           ;; (SP + 32) = &Cat
+LEAQ    type."".Cat(SB), AX         ;; AX = &type."".Cat 
+MOVQ    AX, (SP)                    ;; SP = &type."".Cat 
+CALL    runtime.newobject(SB)       ;; SP + 8 = &Cat{}   
+MOVQ    8(SP), DI                   ;; DI = &Cat{}       
+MOVQ    $6, 8(DI)                   ;; StringHeader(DI.Name).Len = 6
+LEAQ    go.string."draven"(SB), AX  ;; AX = &"draven"
+MOVQ    AX, (DI)                    ;; StringHeader(DI.Name).Data = &"draven"
 ```
 
-![20240806165711](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20240806165711.png)
+1. 获取`Cat`结构体的类型指针并将其作为参数放到 SP；
+2. 以结构体类型指针作为入参申请一块内存空间并将指向这块空间的指针返回到 SP+8，最后拷贝到 DI；
+3. 最后三行汇编指令等价于`cat.Name = "draven"`
 
-SP + 24 ～ SP + 32 共同构成了 [runtime.iface](https://github.com/golang/go/blob/4c50f9162cafaccc1ab1bc26b0dea18f124b536d/src/runtime/runtime2.go#L205) 结构体，因此可以作为`Quack()`方法的入参。[runtime.itab](https://github.com/golang/go/blob/4c50f9162cafaccc1ab1bc26b0dea18f124b536d/src/runtime/runtime2.go#L997) 结构体的`fun`字段位于其内部的第 24 字节，而`Duck`接口只有一个方法，因此`itab.fun[0]`存储的就是指向`Quack`方法的指针：
+![20260126220314](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20260126220314.png)
+
+将`*Cat`转换成`Duck`类型的过程如下，SP ～ SP + 16 共同构成了 [runtime.iface](https://github.com/golang/go/blob/4c50f9162cafaccc1ab1bc26b0dea18f124b536d/src/runtime/runtime2.go#L205) 结构体，因此可以作为`Quack()`方法的入参：
 
 ```nasm
-MOVQ    24(AX), CX    ;; CX = AX.fun[0] = Cat.Quack
-CALL    CX            
+LEAQ    go.itab.*"".Cat,"".Duck(SB), AX    ;; AX = *itab(go.itab.*"".Cat,"".Duck)
+MOVQ    DI, (SP)                           ;; SP = AX
+
+CALL    "".(*Cat).Quack(SB)                ;; SP.Quack()  
 ```
+
+![20260127114418](https://cdn.jsdelivr.net/gh/koktlzz/ImgBed@master/20260127114418.png)
+
+之所以代码中调用的是`Duck.Quack`但生成的汇编是`Cat.Quack`，是因为编译器会将一些需要 [动态派发](/posts/go-language-feature-note/#动态派发) 的方法改写成对目标方法的直接调用，以减少性能开销。如果在这里禁用编译器优化，就会看到动态派发的过程。
 
 #### 使用结构体类型实现接口
 
@@ -297,34 +340,21 @@ func main() {
 }
 ```
 
-`Cat`结构体的初始化和赋值触发的类型转换过程与上一节相似：
+`Cat`结构体的初始化与上一节的区别主要在于其分配在栈上而非堆上：
 
 ```nasm
-LEAQ    go:string."draven"(SB), DX   ;; DX = &"draven"
-MOVQ    DX, main..autotmp_2+40(SP)   ;; (SP + 40 + tmp) = DX
-MOVQ    $6, main..autotmp_2+48(SP)   ;; (SP + 48 + tmp) = 6
-LEAQ    go:itab.<unlinkable>.Cat,<unlinkable>.Duck(SB), DX
-MOVQ    DX, main.c+24(SP)            ;; (SP + 24) = &go:itab..Cat,.Duck
-LEAQ    main..autotmp_2+40(SP), DX   ;; DX = SP + 40 + tmp
-MOVQ    DX, main.c+32(SP)            ;; (SP + 32) = DX
-```
-
-变量`c`调用接口方法`Quack()`对应的汇编代码经简化后如下。之所以代码中调用的是`Duck.Quack`但生成的汇编是`Cat.Quack`，是因为编译器会将一些需要 [动态派发](/posts/go-language-feature-note/#动态派发) 的方法改写成对目标方法的直接调用，以减少性能开销。
-
-```nasm
-MOVQ    main.c+24(SP), AX            ;; AX = &go:itab..Cat,.Duck
-LEAQ    go:itab.main.Cat,main.Duck(SB), SI
-CMPQ    AX, SI                       ;; 检查 c 的具体类型是否为 Cat
-JEQ     111                          ;; 如果是，跳转到方法调用
-JMP     139                          ;; 否则跳转到 runtime.panicdottypeI
-CALL    main.Cat.Quack(SB)
+XORPS   X0, X0                          ;; X0 = 0
+MOVUPS  X0, ""..autotmp_1+32(SP)        ;; StringHeader(SP+32).Data = 0
+LEAQ    go.string."draven"(SB), AX      ;; AX = &"draven"
+MOVQ    AX, ""..autotmp_1+32(SP)        ;; StringHeader(SP+32).Data = AX
+MOVQ    $6, ""..autotmp_1+40(SP)        ;; StringHeader(SP+32).Len = 6
 ```
 
 如果我们在初始化变量时使用指针类型`&Cat{Name: "draven"}`，生成的汇编代码便与上一节几乎完全相同。
 
 ### 类型断言
 
-基本概念详见：[类型断言：如何检测和转换接口变量的类型](https://github.com/unknwon/the-way-to-go_ZH_CN/blob/master/eBook/11.3.md)。
+基本概念详见：[类型断言：如何检测和转换接口变量的类型](https://github.com/unknwon/the-way-to-go_ZH_CN/blob/master/eBook/11.3.md) 和 [类型判断：type-switch](https://github.com/unknwon/the-way-to-go_ZH_CN/blob/master/eBook/11.4.md)。
 
 #### 非空接口转换为具体类型
 
@@ -339,7 +369,7 @@ func main() {
 }
 ```
 
-Switch 语句生成的汇编指令会将目标类型的`Hash`字段与接口变量中的`itab.hash`字段进行比较。
+示例代码将`Duck`转换回`Cat`结构体，Switch 语句生成的汇编指令会将目标类型的`Hash`字段与接口变量中的`itab.hash`字段进行比较。
 
 #### 空接口转换为具体类型
 
@@ -398,6 +428,9 @@ type Type interface {
 ```go
 type Value struct {
     // 包含过滤的或者未导出的字段
+    typ_ *abi.Type
+    ptr unsafe.Pointer
+    flag
 }
 
 func (v Value) Addr() Value
@@ -440,7 +473,7 @@ v.Interface().(int)
 
 #### 第三法则
 
-如果我们要更新一个`reflect.Value`，那么它“持有”的值一定是可以被更新的：
+如果我们要更新一个 [reflect.Value](https://github.com/golang/go/blob/8c8adffd5301b5e40a8c39e92030c53c856fb1a6/src/reflect/value.go#L39)，那么它“持有”的值一定是可以被更新的：
 
 ```go
 func main() {
@@ -489,7 +522,7 @@ type emptyInterface struct {
 }
 ```
 
-函数 [reflect.TypeOf](https://github.com/golang/go/blob/8c8adffd5301b5e40a8c39e92030c53c856fb1a6/src/reflect/type.go#L1160) 会将传入的变量隐式地转换为`reflect.emptyInterface`类型并获取其中存储的类型信息 [reflect.rtype](https://github.com/golang/go/blob/8c8adffd5301b5e40a8c39e92030c53c856fb1a6/src/reflect/type.go#L296)：
+函数 [reflect.TypeOf](https://github.com/golang/go/blob/8c8adffd5301b5e40a8c39e92030c53c856fb1a6/src/reflect/type.go#L1160) 会将传入的变量隐式地转换为 [reflect.emptyInterface](https://github.com/golang/go/blob/8c8adffd5301b5e40a8c39e92030c53c856fb1a6/src/reflect/value.go#L206) 类型并获取其中存储的类型信息 [reflect.rtype](https://github.com/golang/go/blob/8c8adffd5301b5e40a8c39e92030c53c856fb1a6/src/reflect/type.go#L296)：
 
 ```go
 func TypeOf(i any) Type {
@@ -509,7 +542,7 @@ func toRType(t *abi.Type) *rtype {
 }
 ```
 
-`reflect.rtype`是一个实现了`reflect.Type`接口的结构体，其 [String](https://github.com/golang/go/blob/8c8adffd5301b5e40a8c39e92030c53c856fb1a6/src/reflect/type.go#L548) 方法可以帮助我们获取当前类型的名称：
+[reflect.rtype](https://github.com/golang/go/blob/8c8adffd5301b5e40a8c39e92030c53c856fb1a6/src/reflect/type.go#L296) 是一个实现了 [reflect.Type](https://github.com/golang/go/blob/8c8adffd5301b5e40a8c39e92030c53c856fb1a6/src/reflect/type.go#L39) 接口的结构体，其 [String](https://github.com/golang/go/blob/8c8adffd5301b5e40a8c39e92030c53c856fb1a6/src/reflect/type.go#L548) 方法可以帮助我们获取当前类型的名称：
 
 ```go
 func (t *rtype) String() string {
@@ -521,7 +554,7 @@ func (t *rtype) String() string {
 }
 ```
 
-函数 [reflect.ValueOf](https://github.com/golang/go/blob/8c8adffd5301b5e40a8c39e92030c53c856fb1a6/src/reflect/value.go#L3260) 的实现也非常简单，它调用 [reflect.unpackEface](https://github.com/golang/go/blob/8c8adffd5301b5e40a8c39e92030c53c856fb1a6/src/reflect/value.go#L156) 从接口中获取`reflect.Value`结构体：
+函数 [reflect.ValueOf](https://github.com/golang/go/blob/8c8adffd5301b5e40a8c39e92030c53c856fb1a6/src/reflect/value.go#L3260) 的实现也非常简单，它调用 [reflect.unpackEface](https://github.com/golang/go/blob/8c8adffd5301b5e40a8c39e92030c53c856fb1a6/src/reflect/value.go#L156) 从接口中获取 [reflect.Value](https://github.com/golang/go/blob/8c8adffd5301b5e40a8c39e92030c53c856fb1a6/src/reflect/value.go#L39) 结构体：
 
 ```go
 func ValueOf(i any) Value {
@@ -547,7 +580,7 @@ func unpackEface(i any) Value {
 }
 ```
 
-实际上，当我们要将一个变量转换成反射对象时，其类型和值在编译期间就会被转换成`interface{}`。
+实际上，当我们要将一个变量转换成反射对象时，其类型和值在编译期间就会被转换成`interface{}`，并等待运行期间使用 [reflect](https://golang.org/pkg/reflect/) 包获取接口中存储的信息。
 
 ### 更新变量
 
@@ -609,7 +642,7 @@ func (v Value) assignTo(context string, dst *rtype, target unsafe.Pointer) Value
 
 ### 实现协议
 
-[reflect.rtype.Implements](https://github.com/golang/go/blob/8c8adffd5301b5e40a8c39e92030c53c856fb1a6/src/reflect/type.go#L1247) 方法可以用于判断某些类型是否遵循特定的接口，示例代码如下：
+[reflect.rtype.Implements](https://github.com/golang/go/blob/8c8adffd5301b5e40a8c39e92030c53c856fb1a6/src/reflect/type.go#L1247) 方法可以用于判断某些类型是否实现了特定的接口，示例代码如下：
 
 ```go
 type CustomError struct{}
@@ -620,7 +653,7 @@ func (*CustomError) Error() string {
 
 func main() {
     // 获取内置接口类型 error 的反射类型比较复杂
-    // (*error)(nil) 是一个指向 error 的空指针
+    // (*error)(nil) 是一个 *error 类型的空指针
     // reflect.TypeOf((*error)(nil)) 获取空指针的类型信息
     // Elem() 获取 *error 指针指向的元素类型，即 error 接口类型本身
     typeOfError := reflect.TypeOf((*error)(nil)).Elem()
@@ -648,6 +681,7 @@ func implements(T, V *abi.Type) bool {
     i := 0
     vmethods := v.methods()
     // 遍历接口和类型的方法
+    // i，j 分别代表 T（接口）和 V（反射类型）中的方法索引
     // 方法均按字母顺序存储，复杂度为 O(N)
     for j := 0; j < int(v.Mcount); j++ {
         tm := &t.Methods[i]
@@ -724,7 +758,7 @@ func (v Value) Call(in []Value) []Value {
 反射可以用于实现通用函数，这些函数可以接受任意类型的参数：
 
 ```go
-func printTypeAndValue(x interface{}) {
+func printTypeAndValue(x any) {
     v := reflect.ValueOf(x)
     t := v.Type()
     fmt.Printf("Type: %s, Value: %v\n", t, v.Interface())
@@ -751,7 +785,7 @@ func goodbye() {
 }
 
 func callFunc(funcName string) {
-    funcs := map[string]interface{}{
+    funcs := map[string]any{
         "hello":   hello,
         "goodbye": goodbye,
     }
@@ -770,3 +804,7 @@ func main() {
 - 与反射相关的代码，经常是难以阅读的。在软件工程中，代码可读性也是一个非常重要的指标。
 - Go 语言作为一门静态语言，编码过程中，编译器能提前发现一些类型错误，但是对于反射代码是无能为力的。所以包含反射相关的代码，很可能会运行很久，才会出错，这时候经常是直接 panic，可能会造成严重的后果。
 - 反射对性能影响还是比较大的，比正常代码运行速度慢一到两个数量级。所以，对于一个项目中处于运行效率关键位置的代码，尽量避免使用反射特性。
+
+## Future Work
+
+1. Go 1.22 移除了 runtime.convT2I 函数，对 [使用结构体类型实现接口](/posts/go-language-feature-note/#使用结构体类型实现接口) 的类型转换过程需要重新分析；
