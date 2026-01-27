@@ -807,4 +807,4 @@ func main() {
 
 ## Future Work
 
-1. Go 1.22 移除了 runtime.convT2I 函数，对 [使用结构体类型实现接口](/posts/go-language-feature-note/#使用结构体类型实现接口) 的类型转换过程需要重新分析；
+Go 1.22 移除了 runtime.convT2I 函数，对 [使用结构体类型实现接口](/posts/go-language-feature-note/#使用结构体类型实现接口) 的类型转换过程需要重新分析。
