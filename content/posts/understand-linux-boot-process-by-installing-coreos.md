@@ -254,16 +254,10 @@ emergency.target                    v
 
 ## 参考文献
 
-[Creating Red Hat Enterprise Linux CoreOS (RHCOS) machines by PXE or iPXE Booting](https://docs.openshift.com/container-platform/4.6/installing/installing_bare_metal/installing-restricted-networks-bare-metal.html#installation-user-infra-machines-pxe_installing-restricted-networks-bare-metal)
-
-[BIOS - Wikipedia](https://zh.wikipedia.org/wiki/BIOS)
-
-[INT 13H - Wikipedia](https://en.wikipedia.org/wiki/INT_13H)
-
-[主引导记录 - Wikipedia](https://zh.wikipedia.org/wiki/%E4%B8%BB%E5%BC%95%E5%AF%BC%E8%AE%B0%E5%BD%95)
-
-[An Introduction To the Linux Boot and Startup Processes](https://opensource.com/article/17/2/linux-boot-and-startup)
-
-[GNU GRUB Manual 2.06](https://www.gnu.org/software/grub/manual/grub/grub.html)
-
-[Bootup(7) - Linux manual page](https://man7.org/linux/man-pages/man7/bootup.7.html)
+- [Creating Red Hat Enterprise Linux CoreOS (RHCOS) machines by PXE or iPXE Booting](https://docs.openshift.com/container-platform/4.6/installing/installing_bare_metal/installing-restricted-networks-bare-metal.html#installation-user-infra-machines-pxe_installing-restricted-networks-bare-metal)
+- [BIOS - Wikipedia](https://zh.wikipedia.org/wiki/BIOS)
+- [INT 13H - Wikipedia](https://en.wikipedia.org/wiki/INT_13H)
+- [主引导记录 - Wikipedia](https://zh.wikipedia.org/wiki/%E4%B8%BB%E5%BC%95%E5%AF%BC%E8%AE%B0%E5%BD%95)
+- [An Introduction To the Linux Boot and Startup Processes](https://opensource.com/article/17/2/linux-boot-and-startup)
+- [GNU GRUB Manual 2.06](https://www.gnu.org/software/grub/manual/grub/grub.html)
+- [Bootup(7) - Linux manual page](https://man7.org/linux/man-pages/man7/bootup.7.html)

@@ -73,14 +73,9 @@ Node1 上的 VTEP 收到 Pod1 发来的数据包后，首先会在本地的转�
 
 ## 参考文献
 
-[Software-defined networking - Wikipedia](https://en.wikipedia.org/wiki/Software-defined_networking)
-
-[About Kubernetes Networking](https://projectcalico.docs.tigera.io/about/about-k8s-networking)
-
-[使用 Terway 网络插件](https://help.aliyun.com/document_detail/97467.htm?spm=a2c4g.11186623.0.0.695c7dd0F8vevY#task-1797447)
-
-[边界网关协议 - Wikipedia](https://zh.wikipedia.org/wiki/%E8%BE%B9%E7%95%8C%E7%BD%91%E5%85%B3%E5%8D%8F%E8%AE%AE)
-
-[Configure BGP peering - Calico](https://docs.projectcalico.org/networking/bgp)
-
-[为什么集群需要 Overlay 网络](https://draveness.me/whys-the-design-overlay-network/)
+- [Software-defined networking - Wikipedia](https://en.wikipedia.org/wiki/Software-defined_networking)
+- [About Kubernetes Networking](https://projectcalico.docs.tigera.io/about/about-k8s-networking)
+- [使用 Terway 网络插件](https://help.aliyun.com/document_detail/97467.htm?spm=a2c4g.11186623.0.0.695c7dd0F8vevY#task-1797447)
+- [边界网关协议 - Wikipedia](https://zh.wikipedia.org/wiki/%E8%BE%B9%E7%95%8C%E7%BD%91%E5%85%B3%E5%8D%8F%E8%AE%AE)
+- [Configure BGP peering - Calico](https://docs.projectcalico.org/networking/bgp)
+- [为什么集群需要 Overlay 网络](https://draveness.me/whys-the-design-overlay-network/)

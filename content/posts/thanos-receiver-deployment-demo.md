@@ -182,10 +182,7 @@ spec:
 
 ## 参考文献
 
-[Multi cluster monitoring with Thanos · Banzai Cloud](https://banzaicloud.com/blog/multi-cluster-monitoring/)
-
-[Thanos Remote Write](https://thanos.io/v0.11/201812_thanos-remote-receive.md/)
-
-[Achieve Multi-tenancy in Monitoring with Prometheus & Thanos Receiver](https://www.infracloud.io/blogs/multi-tenancy-monitoring-thanos-receiver/)
-
-[Adopting Thanos at Lastpass](https://krisztianfekete.org/adopting-thanos-at-lastpass/)
+- [Multi cluster monitoring with Thanos · Banzai Cloud](https://banzaicloud.com/blog/multi-cluster-monitoring/)
+- [Thanos Remote Write](https://thanos.io/v0.11/201812_thanos-remote-receive.md/)
+- [Achieve Multi-tenancy in Monitoring with Prometheus & Thanos Receiver](https://www.infracloud.io/blogs/multi-tenancy-monitoring-thanos-receiver/)
+- [Adopting Thanos at Lastpass](https://krisztianfekete.org/adopting-thanos-at-lastpass/)

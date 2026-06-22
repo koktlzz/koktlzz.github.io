@@ -318,14 +318,9 @@ Chain OPENSHIFT-MASQUERADE (1 references)
 
 ## 参考文献
 
-[OpenFlow - Wikipedia](https://en.wikipedia.org/wiki/OpenFlow)
-
-[OVS 在云项目中的使用](https://medoc.readthedocs.io/en/latest/docs/ovs/sharing/cloud_usage.html)
-
-[OpenShift SDN - OpenShift Container Platform 3.11](https://docs.openshift.com/container-platform/3.11/architecture/networking/sdn.html)
-
-[理解 OpenShift（3）：网络之 SDN](https://www.cnblogs.com/sammyliu/p/10064450.html)
-
-[[译] 深入理解 iptables 和 netfilter 架构](https://arthurchiao.art/blog/deep-dive-into-iptables-and-netfilter-arch-zh/)
-
-[Linux Netfilter: How does connection tracking track connections changed by NAT?](https://superuser.com/questions/1269859/linux-netfilter-how-does-connection-tracking-track-connections-changed-by-nat)
+- [OpenFlow - Wikipedia](https://en.wikipedia.org/wiki/OpenFlow)
+- [OVS 在云项目中的使用](https://medoc.readthedocs.io/en/latest/docs/ovs/sharing/cloud_usage.html)
+- [OpenShift SDN - OpenShift Container Platform 3.11](https://docs.openshift.com/container-platform/3.11/architecture/networking/sdn.html)
+- [理解 OpenShift（3）：网络之 SDN](https://www.cnblogs.com/sammyliu/p/10064450.html)
+- [[译] 深入理解 iptables 和 netfilter 架构](https://arthurchiao.art/blog/deep-dive-into-iptables-and-netfilter-arch-zh/)
+- [Linux Netfilter: How does connection tracking track connections changed by NAT?](https://superuser.com/questions/1269859/linux-netfilter-how-does-connection-tracking-track-connections-changed-by-nat)
